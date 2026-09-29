@@ -54,6 +54,17 @@ describe('FixedStepClock', () => {
     expect(clock.advance(1000 / 30)).toBe(1);
   });
 
+  it('conta os ticks descartados pelo teto', () => {
+    const clock = new FixedStepClock({ ...config, maxTicksPerFrame: 5 });
+    clock.advance(1000 / 30);
+    expect(clock.droppedTicks).toBe(0);
+    clock.advance(10_000); // 300 devidos, 5 rodam
+    expect(clock.droppedTicks).toBe(295);
+    clock.setSpeed(3);
+    clock.advance(100); // 9 devidos, 5 rodam
+    expect(clock.droppedTicks).toBe(299);
+  });
+
   it('ignora delta zero, negativo ou inválido', () => {
     const clock = new FixedStepClock(config);
     expect(clock.advance(0)).toBe(0);

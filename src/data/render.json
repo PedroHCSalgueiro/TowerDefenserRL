@@ -14,7 +14,6 @@
     "alpha": 0.55
   },
   "selection": { "color": "#ffd24a", "lineWidth": 3 },
-  "debugLabel": { "x": 8, "y": 8, "fontSize": "14px", "color": "#e0e0e0", "lineHeight": 20 },
   "enemies": {
     "radius": 7,
     "outlineColor": "#1d1f21",
@@ -45,5 +44,13 @@
       "fillColor": "#e25555"
     },
     "attackLine": { "color": "#ffe08a", "width": 2, "durationMs": 120 }
-  }
+  },
+  "towers": {
+    "color": "#7aa6c2",
+    "outlineColor": "#1d1f21",
+    "outlineWidth": 1,
+    "width": 14,
+    "height": 18
+  },
+  "projectiles": { "color": "#ffe08a", "radius": 2.5 }
 }

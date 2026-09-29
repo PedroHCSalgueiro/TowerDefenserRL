@@ -1,0 +1,13 @@
+{
+  "dummyTower": { "damage": 10, "shotsPerSecond": 2, "range": 3, "projectileSpeed": 8 },
+  "maxSpawnPerCommand": 5000,
+  "defaults": { "enemyCount": 1000, "towerCount": 30, "spawnCount": 50 },
+  "perf": {
+    "recordSeconds": 20,
+    "warmupSeconds": 3,
+    "liveWindowSeconds": 2,
+    "worstFraction": 0.01,
+    "gate": { "minAvgFps": 58, "minLowFps": 45, "maxAvgTickMs": 4, "maxDroppedTicks": 0 }
+  },
+  "panel": { "toggleKey": "F2", "refreshMs": 250 }
+}

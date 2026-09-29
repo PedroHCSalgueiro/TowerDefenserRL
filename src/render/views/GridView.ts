@@ -9,21 +9,16 @@ import type { GridCoord, GridMap } from '../../sim/grid/map';
 import { IsoProjection } from '../iso';
 import { hexColor } from './color';
 
-const { grid: gridStyle, hover: hoverStyle, selection: selectionStyle, debugLabel } = renderConfig;
+const { grid: gridStyle, hover: hoverStyle, selection: selectionStyle } = renderConfig;
 
 function sameCell(a: GridCoord | null, b: GridCoord | null): boolean {
   return a === b || (a !== null && b !== null && a.x === b.x && a.y === b.y);
-}
-
-function formatCell(cell: GridCoord | null): string {
-  return cell ? `(${cell.x}, ${cell.y})` : '—';
 }
 
 export class GridView {
   readonly projection: IsoProjection;
   private readonly map: GridMap;
   private readonly overlay: Phaser.GameObjects.Graphics;
-  private readonly label: Phaser.GameObjects.Text;
   private hovered: GridCoord | null = null;
   private selected: GridCoord | null = null;
 
@@ -34,12 +29,6 @@ export class GridView {
 
     this.drawMap(scene.add.graphics());
     this.overlay = scene.add.graphics();
-    // Texto provisório; vai para o painel de debug quando ele existir.
-    this.label = scene.add.text(debugLabel.x, debugLabel.y, '', {
-      fontFamily: 'monospace',
-      fontSize: debugLabel.fontSize,
-      color: debugLabel.color,
-    });
     this.refresh();
 
     scene.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => {
@@ -55,6 +44,11 @@ export class GridView {
 
   get selectedCell(): GridCoord | null {
     return this.selected;
+  }
+
+  /** Casa sob o mouse (mostrada no painel de debug). */
+  get hoveredCell(): GridCoord | null {
+    return this.hovered;
   }
 
   private cellAt(pointer: Phaser.Input.Pointer): GridCoord | null {
@@ -88,7 +82,7 @@ export class GridView {
     return map.isPath(cell) ? gridStyle.pathColor : gridStyle.freeColor;
   }
 
-  /** Redesenha só a camada de destaque e o texto de debug. */
+  /** Redesenha só a camada de destaque. */
   private refresh(): void {
     const g = this.overlay;
     g.clear();
@@ -105,7 +99,6 @@ export class GridView {
       this.traceDiamond(g, this.selected);
       g.strokePath();
     }
-    this.label.setText(`Mouse: ${formatCell(this.hovered)}  Seleção: ${formatCell(this.selected)}`);
   }
 
   private traceDiamond(g: Phaser.GameObjects.Graphics, cell: GridCoord): void {

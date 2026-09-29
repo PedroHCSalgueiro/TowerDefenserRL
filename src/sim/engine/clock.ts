@@ -21,6 +21,7 @@ export class FixedStepClock {
   // Evita dividir por 1000/30, que não é exato em ponto flutuante.
   private accumulator = 0;
   private currentSpeed: number;
+  private dropped = 0;
   private readonly config: EngineConfig;
 
   constructor(config: EngineConfig) {
@@ -41,6 +42,11 @@ export class FixedStepClock {
       throw new RangeError(`Velocidade inválida: ${speed}`);
     }
     this.currentSpeed = speed;
+  }
+
+  /** Total de ticks descartados pelo teto `maxTicksPerFrame` desde a criação. */
+  get droppedTicks(): number {
+    return this.dropped;
   }
 
   get tickDurationMs(): number {
@@ -66,6 +72,7 @@ export class FixedStepClock {
     // Acima do teto o excedente é descartado (a simulação desacelera em vez
     // de travar o quadro); a fração do tick seguinte é preservada.
     const ticks = Math.min(due, this.config.maxTicksPerFrame);
+    this.dropped += due - ticks;
     this.accumulator = Math.max(0, this.accumulator - due * MS_PER_SECOND);
     return ticks;
   }

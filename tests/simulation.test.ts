@@ -131,4 +131,20 @@ describe('SimulationRunner', () => {
     expect(slow.sim.state.tick).toBe(150);
     expect(fast.sim.state).toEqual(slow.sim.state);
   });
+
+  it('mede cada tick com o relógio injetado, sem mudar o resultado', () => {
+    let clock = 0;
+    const durations: number[] = [];
+    const measured = new SimulationRunner(Simulation.create('prof', [testSystem]), config);
+    measured.profiler = {
+      now: () => (clock += 0.5),
+      recordTick: (ms) => durations.push(ms),
+    };
+    const plain = new SimulationRunner(Simulation.create('prof', [testSystem]), config);
+
+    measured.update(1000 / 10);
+    plain.update(1000 / 10);
+    expect(durations).toEqual([0.5, 0.5, 0.5]);
+    expect(measured.sim.state).toEqual(plain.sim.state);
+  });
 });

@@ -1,36 +1,41 @@
 /**
- * Sistemas dos inimigos: spawn (a partir da fila de ações) e movimento.
+ * Inimigos: spawn (chamado pelas ações e pelo modo estresse) e movimento.
  */
 
-import type { System } from '../engine/simulation';
+import type { System, TickContext } from '../engine/simulation';
 import { getEnemyType, type EnemyData } from './enemyData';
-import { acquireEnemy } from './pool';
+import { acquireEnemy, type Enemy } from './pool';
 import type { Routes } from './route';
 
-/** Aplica os `spawnEnemy` do tick: o inimigo nasce no início da sua rota. */
-export function createSpawnSystem(routes: Routes, data: EnemyData): System {
-  return (ctx) => {
-    for (const command of ctx.commands) {
-      if (command.type !== 'spawnEnemy') continue;
-      const type = getEnemyType(data, command.enemyType);
-      const enemy = acquireEnemy(ctx.state.enemies);
-      enemy.id = ctx.allocateId();
-      enemy.type = command.enemyType;
-      enemy.hp = type.hp;
-      enemy.maxHp = type.hp;
-      enemy.distance = 0;
-      routes[type.movement].sampleInto(0, enemy);
-      // Sem isso, um slot reaproveitado seria interpolado a partir da posição antiga.
-      enemy.prevX = enemy.x;
-      enemy.prevY = enemy.y;
-      ctx.emit({
-        type: 'enemySpawned',
-        tick: ctx.state.tick,
-        enemyId: enemy.id,
-        enemyType: enemy.type,
-      });
-    }
-  };
+/**
+ * Coloca um inimigo do tipo pedido a `distance` casas do início da sua rota
+ * (0 = na entrada) e emite `enemySpawned`.
+ */
+export function spawnEnemy(
+  ctx: TickContext,
+  routes: Routes,
+  data: EnemyData,
+  enemyType: string,
+  distance = 0,
+): Enemy {
+  const type = getEnemyType(data, enemyType);
+  const enemy = acquireEnemy(ctx.state.enemies);
+  enemy.id = ctx.allocateId();
+  enemy.type = enemyType;
+  enemy.hp = type.hp;
+  enemy.maxHp = type.hp;
+  enemy.distance = distance;
+  routes[type.movement].sampleInto(distance, enemy);
+  // Sem isso, um slot reaproveitado seria interpolado a partir da posição antiga.
+  enemy.prevX = enemy.x;
+  enemy.prevY = enemy.y;
+  ctx.emit({
+    type: 'enemySpawned',
+    tick: ctx.state.tick,
+    enemyId: enemy.id,
+    enemyType: enemy.type,
+  });
+  return enemy;
 }
 
 /**

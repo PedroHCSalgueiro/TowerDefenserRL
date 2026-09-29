@@ -2,14 +2,20 @@
  * Greybox dos inimigos: círculo com a cor do tipo e barra de vida. Voadores
  * são desenhados acima de uma sombra no chão.
  *
- * Um único Graphics é redesenhado a cada quadro, na posição interpolada entre
- * o tick anterior e o atual. Nenhum objeto do Phaser é criado por inimigo.
+ * Cada slot do pool de inimigos tem suas imagens (corpo, sombra, fundo e
+ * preenchimento da barra), criadas uma vez e reaproveitadas; o slot inativo
+ * só fica invisível. As texturas são geradas uma vez a partir de um Graphics.
+ * Isso troca o Graphics redesenhado a cada quadro (caro com 1.000 inimigos:
+ * a geometria era refeita toda vez) por imagens em lote.
+ *
+ * Tudo fica numa Layer própria, ordenada pela profundidade isométrica (quem
+ * está mais abaixo na tela é desenhado por cima), na posição interpolada
+ * entre o tick anterior e o atual.
  */
 
 import Phaser from 'phaser';
 import renderConfig from '../../data/render.json';
 import { getEnemyType, type EnemyData } from '../../sim/enemies/enemyData';
-import type { Enemy } from '../../sim/enemies/pool';
 import { lerp } from '../../sim/engine/clock';
 import type { RunState } from '../../sim/state';
 import type { IsoProjection } from '../iso';
@@ -18,69 +24,140 @@ import { hexColor } from './color';
 const style = renderConfig.enemies;
 const colors: Readonly<Record<string, string>> = style.colors;
 
+const TEXTURE_BODY = 'enemy-body';
+const TEXTURE_SHADOW = 'enemy-shadow';
+const TEXTURE_PIXEL = 'enemy-pixel';
+// Dentro da mesma profundidade: sombra, corpo e barra, nessa ordem.
+const DEPTH_STEP = 1e-3;
+
+interface SlotImages {
+  body: Phaser.GameObjects.Image;
+  shadow: Phaser.GameObjects.Image;
+  barBack: Phaser.GameObjects.Image;
+  barFill: Phaser.GameObjects.Image;
+  visible: boolean;
+  /** Tipo desenhado por último (a cor só muda quando o tipo muda). */
+  type: string;
+}
+
+function createTextures(scene: Phaser.Scene): void {
+  if (scene.textures.exists(TEXTURE_BODY)) return;
+  const g = scene.make.graphics({}, false);
+
+  const outline = style.outlineWidth;
+  const size = Math.ceil((style.radius + outline) * 2);
+  g.fillStyle(0xffffff);
+  g.fillCircle(size / 2, size / 2, style.radius);
+  g.lineStyle(outline, hexColor(style.outlineColor));
+  g.strokeCircle(size / 2, size / 2, style.radius);
+  g.generateTexture(TEXTURE_BODY, size, size);
+
+  g.clear();
+  const { shadow } = style;
+  g.fillStyle(hexColor(shadow.color), shadow.alpha);
+  g.fillEllipse(shadow.width / 2, shadow.height / 2, shadow.width, shadow.height);
+  g.generateTexture(TEXTURE_SHADOW, shadow.width, shadow.height);
+
+  g.clear();
+  g.fillStyle(0xffffff);
+  g.fillRect(0, 0, 1, 1);
+  g.generateTexture(TEXTURE_PIXEL, 1, 1);
+  g.destroy();
+}
+
 export class EnemyView {
-  private readonly g: Phaser.GameObjects.Graphics;
+  private readonly scene: Phaser.Scene;
+  private readonly layer: Phaser.GameObjects.Layer;
   private readonly projection: IsoProjection;
   private readonly data: EnemyData;
-  // Reaproveitados entre quadros: ordem de desenho e posição na tela por slot.
-  private readonly order: Enemy[] = [];
-  private screenX = new Float64Array(0);
-  private screenY = new Float64Array(0);
-  private readonly byDepth = (a: Enemy, b: Enemy): number =>
-    this.screenY[a.slot]! - this.screenY[b.slot]!;
+  private readonly images: SlotImages[] = [];
+  private readonly typeColor = new Map<string, number>();
+  private readonly barBackColor = hexColor(style.healthBar.backColor);
+  private readonly barFillColor = hexColor(style.healthBar.fillColor);
 
   constructor(scene: Phaser.Scene, projection: IsoProjection, data: EnemyData) {
-    this.g = scene.add.graphics();
+    this.scene = scene;
+    this.layer = scene.add.layer();
     this.projection = projection;
     this.data = data;
+    createTextures(scene);
   }
 
   draw(state: Readonly<RunState>, alpha: number): void {
     const { slots } = state.enemies;
-    if (this.screenX.length < slots.length) {
-      this.screenX = new Float64Array(slots.length * 2);
-      this.screenY = new Float64Array(slots.length * 2);
+    while (this.images.length < slots.length) {
+      this.images.push(this.createSlotImages());
     }
+    const bar = style.healthBar;
 
-    const order = this.order;
-    order.length = 0;
     for (const enemy of slots) {
-      if (!enemy.active) continue;
+      const images = this.images[enemy.slot]!;
+      if (!enemy.active) {
+        if (images.visible) this.setVisible(images, false);
+        continue;
+      }
+      if (!images.visible) this.setVisible(images, true);
+
       const p = this.projection.toScreen({
         x: lerp(enemy.prevX, enemy.x, alpha),
         y: lerp(enemy.prevY, enemy.y, alpha),
       });
-      this.screenX[enemy.slot] = p.x;
-      this.screenY[enemy.slot] = p.y;
-      order.push(enemy);
-    }
-    // Isométrico: quem está mais abaixo na tela é desenhado por cima.
-    order.sort(this.byDepth);
+      const flying = getEnemyType(this.data, enemy.type).movement === 'air';
+      const depth = p.y;
+      const y = flying ? p.y - style.flyingHeight : p.y;
 
-    const g = this.g;
-    g.clear();
-    for (const enemy of order) {
-      const x = this.screenX[enemy.slot]!;
-      let y = this.screenY[enemy.slot]!;
-      if (getEnemyType(this.data, enemy.type).movement === 'air') {
-        g.fillStyle(hexColor(style.shadow.color), style.shadow.alpha);
-        g.fillEllipse(x, y, style.shadow.width, style.shadow.height);
-        y -= style.flyingHeight;
+      if (images.type !== enemy.type) {
+        images.type = enemy.type;
+        images.body.setTint(this.colorOf(enemy.type));
       }
-      g.fillStyle(hexColor(colors[enemy.type] ?? style.fallbackColor));
-      g.fillCircle(x, y, style.radius);
-      g.lineStyle(style.outlineWidth, hexColor(style.outlineColor));
-      g.strokeCircle(x, y, style.radius);
-      this.drawHealthBar(x, y - style.healthBar.offsetY, enemy.hp / enemy.maxHp);
+      images.shadow.setVisible(flying);
+      if (flying) images.shadow.setPosition(p.x, p.y).setDepth(depth - DEPTH_STEP);
+      images.body.setPosition(p.x, y).setDepth(depth);
+
+      const left = p.x - bar.width / 2;
+      const top = y - bar.offsetY;
+      images.barBack.setPosition(left, top).setDepth(depth + DEPTH_STEP);
+      images.barFill
+        .setPosition(left, top)
+        .setScale(bar.width * Math.max(0, enemy.hp / enemy.maxHp), bar.height)
+        .setDepth(depth + 2 * DEPTH_STEP);
     }
   }
 
-  private drawHealthBar(cx: number, top: number, fraction: number): void {
+  private createSlotImages(): SlotImages {
+    const add = (texture: string): Phaser.GameObjects.Image => {
+      const image = new Phaser.GameObjects.Image(this.scene, 0, 0, texture).setVisible(false);
+      this.layer.add(image);
+      return image;
+    };
     const bar = style.healthBar;
-    const left = cx - bar.width / 2;
-    this.g.fillStyle(hexColor(bar.backColor));
-    this.g.fillRect(left, top, bar.width, bar.height);
-    this.g.fillStyle(hexColor(bar.fillColor));
-    this.g.fillRect(left, top, bar.width * Math.max(0, fraction), bar.height);
+    return {
+      shadow: add(TEXTURE_SHADOW),
+      body: add(TEXTURE_BODY),
+      barBack: add(TEXTURE_PIXEL)
+        .setOrigin(0, 0)
+        .setScale(bar.width, bar.height)
+        .setTint(this.barBackColor),
+      barFill: add(TEXTURE_PIXEL).setOrigin(0, 0).setTint(this.barFillColor),
+      visible: false,
+      type: '',
+    };
+  }
+
+  private setVisible(images: SlotImages, visible: boolean): void {
+    images.visible = visible;
+    images.body.setVisible(visible);
+    images.barBack.setVisible(visible);
+    images.barFill.setVisible(visible);
+    if (!visible) images.shadow.setVisible(false);
+  }
+
+  private colorOf(type: string): number {
+    let color = this.typeColor.get(type);
+    if (color === undefined) {
+      color = hexColor(colors[type] ?? style.fallbackColor);
+      this.typeColor.set(type, color);
+    }
+    return color;
   }
 }

@@ -87,12 +87,22 @@ export class Simulation {
 }
 
 /**
+ * Mede quanto tempo real cada tick leva. O relógio vem de fora (`now`), para
+ * a simulação continuar sem depender de tempo real: medir não muda o estado.
+ */
+export interface TickProfiler {
+  now(): number;
+  recordTick(durationMs: number): void;
+}
+
+/**
  * Liga a simulação ao relógio de passo fixo. A renderização só repassa o
  * delta de cada quadro e lê `alpha` para interpolar.
  */
 export class SimulationRunner {
   readonly sim: Simulation;
   readonly clock: FixedStepClock;
+  profiler: TickProfiler | null = null;
 
   constructor(sim: Simulation, config: EngineConfig = engineConfig) {
     this.sim = sim;
@@ -102,8 +112,15 @@ export class SimulationRunner {
   /** Roda os ticks devidos neste quadro e devolve os eventos emitidos. */
   update(deltaMs: number): SimEvent[] {
     const ticks = this.clock.advance(deltaMs);
+    const profiler = this.profiler;
     for (let i = 0; i < ticks; i++) {
-      this.sim.step();
+      if (profiler) {
+        const start = profiler.now();
+        this.sim.step();
+        profiler.recordTick(profiler.now() - start);
+      } else {
+        this.sim.step();
+      }
     }
     return this.sim.drainEvents();
   }

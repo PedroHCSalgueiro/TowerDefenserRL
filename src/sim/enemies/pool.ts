@@ -85,3 +85,10 @@ export function releaseEnemy(pool: EnemyPool, enemy: Enemy): void {
   pool.free.push(enemy.slot);
   pool.activeCount--;
 }
+
+/** Devolve todos os inimigos ativos ao pool, sem eventos (limpeza de debug). */
+export function releaseAllEnemies(pool: EnemyPool): void {
+  for (const enemy of pool.slots) {
+    if (enemy.active) releaseEnemy(pool, enemy);
+  }
+}

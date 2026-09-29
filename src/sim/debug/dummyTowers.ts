@@ -1,0 +1,120 @@
+/**
+ * Torres de teste da T05 (provisórias; a T06 as substitui).
+ *
+ * Cada torre ocupa uma casa livre e dispara um projétil no inimigo mais
+ * próximo dentro do alcance, com desempate pelo menor id (mira provisória,
+ * pergunta de design para a T06). A busca usa o índice espacial.
+ */
+
+import type { System } from '../engine/simulation';
+import type { GridCoord, GridMap } from '../grid/map';
+import { fireProjectile } from '../projectiles/systems';
+import type { SpatialIndex } from '../spatial/spatialIndex';
+import type { DebugLayout } from '../state';
+import type { DummyTowerData } from './debugData';
+
+export interface DummyTower {
+  id: number;
+  x: number;
+  y: number;
+  /** Ticks até o próximo disparo; 0 = pronta. */
+  cooldownTicks: number;
+}
+
+export function createDummyTowerSystem(
+  index: SpatialIndex,
+  data: DummyTowerData,
+  ticksPerSecond: number,
+): System {
+  const cooldownTicks = Math.max(1, Math.round(ticksPerSecond / data.shotsPerSecond));
+  return (ctx) => {
+    const { state } = ctx;
+    for (const tower of state.debug.towers) {
+      if (tower.cooldownTicks > 0) tower.cooldownTicks--;
+      if (tower.cooldownTicks > 0) continue;
+      const target = index.findNearest(state, tower.x, tower.y, data.range);
+      if (!target) continue;
+      tower.cooldownTicks = cooldownTicks;
+      ctx.emit({ type: 'towerFired', tick: state.tick, towerId: tower.id, targetId: target.id });
+      fireProjectile(
+        ctx,
+        {
+          sourceId: tower.id,
+          x: tower.x,
+          y: tower.y,
+          damage: data.damage,
+          speed: data.projectileSpeed,
+        },
+        target,
+      );
+    }
+  };
+}
+
+function byRowThenColumn(a: GridCoord, b: GridCoord): number {
+  return a.y - b.y || a.x - b.x;
+}
+
+/**
+ * Escolhe até `count` casas livres (fora do caminho e sem torre), em ordem
+ * determinística:
+ * - `clustered`: as mais próximas da entrada.
+ * - `spread`: as casas vizinhas do caminho (8 direções), distribuídas por
+ *   igual do começo ao fim do caminho; se faltar, completa pelas mais
+ *   próximas da entrada.
+ */
+export function pickTowerCells(
+  map: GridMap,
+  occupied: ReadonlySet<number>,
+  count: number,
+  layout: DebugLayout,
+): GridCoord[] {
+  const free: GridCoord[] = [];
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const cell = { x, y };
+      if (map.canPlaceTower(cell) && !occupied.has(map.indexOf(cell))) free.push(cell);
+    }
+  }
+  const { entrance } = map;
+  const entranceDistSq = (c: GridCoord): number =>
+    (c.x - entrance.x) ** 2 + (c.y - entrance.y) ** 2;
+  const byEntrance = [...free].sort(
+    (a, b) => entranceDistSq(a) - entranceDistSq(b) || byRowThenColumn(a, b),
+  );
+  if (layout === 'clustered' || count <= 0) return byEntrance.slice(0, Math.max(0, count));
+
+  // Índice, no caminho, da primeira casa de caminho vizinha de cada casa.
+  const pathIndex = new Map<number, number>();
+  map.pathCells.forEach((cell, i) => pathIndex.set(map.indexOf(cell), i));
+  const alongPath: { cell: GridCoord; order: number }[] = [];
+  for (const cell of free) {
+    let order = Infinity;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const n = { x: cell.x + dx, y: cell.y + dy };
+        if (!map.isPath(n)) continue;
+        order = Math.min(order, pathIndex.get(map.indexOf(n))!);
+      }
+    }
+    if (order !== Infinity) alongPath.push({ cell, order });
+  }
+  alongPath.sort((a, b) => a.order - b.order || byRowThenColumn(a.cell, b.cell));
+
+  const picked: GridCoord[] = [];
+  if (count >= alongPath.length) {
+    picked.push(...alongPath.map((c) => c.cell));
+  } else {
+    // Passo uniforme que inclui a primeira e a última casa ao longo do caminho.
+    for (let i = 0; i < count; i++) {
+      const at = count === 1 ? 0 : Math.round((i * (alongPath.length - 1)) / (count - 1));
+      picked.push(alongPath[at]!.cell);
+    }
+  }
+  const taken = new Set(picked.map((c) => map.indexOf(c)));
+  for (const cell of byEntrance) {
+    if (picked.length >= count) break;
+    if (!taken.has(map.indexOf(cell))) picked.push(cell);
+  }
+  return picked;
+}
