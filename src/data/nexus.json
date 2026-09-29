@@ -1,0 +1,4 @@
+{
+  "maxHp": 20,
+  "attack": { "damage": 2, "cooldownSeconds": 1, "range": 3 }
+}

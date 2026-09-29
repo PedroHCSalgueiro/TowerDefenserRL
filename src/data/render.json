@@ -14,5 +14,36 @@
     "alpha": 0.55
   },
   "selection": { "color": "#ffd24a", "lineWidth": 3 },
-  "debugLabel": { "x": 8, "y": 8, "fontSize": "14px", "color": "#e0e0e0" }
+  "debugLabel": { "x": 8, "y": 8, "fontSize": "14px", "color": "#e0e0e0", "lineHeight": 20 },
+  "enemies": {
+    "radius": 7,
+    "outlineColor": "#1d1f21",
+    "outlineWidth": 1,
+    "fallbackColor": "#ff00ff",
+    "colors": {
+      "common": "#d9d9d9",
+      "fast": "#f2c14e",
+      "armored": "#6c8ebf",
+      "flying": "#c77dff"
+    },
+    "flyingHeight": 14,
+    "shadow": { "color": "#000000", "alpha": 0.35, "width": 12, "height": 6 },
+    "healthBar": {
+      "width": 16,
+      "height": 3,
+      "offsetY": 12,
+      "backColor": "#3a0d0d",
+      "fillColor": "#5ad15a"
+    }
+  },
+  "nexus": {
+    "healthBar": {
+      "width": 48,
+      "height": 6,
+      "offsetY": 30,
+      "backColor": "#3a0d0d",
+      "fillColor": "#e25555"
+    },
+    "attackLine": { "color": "#ffe08a", "width": 2, "durationMs": 120 }
+  }
 }

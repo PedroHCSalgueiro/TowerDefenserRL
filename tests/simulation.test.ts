@@ -7,19 +7,29 @@ import { RUN_STATE_VERSION, createRunState, deserializeRunState } from '../src/s
 // estado dependa da semente, do número de ticks e das ações enfileiradas.
 const testSystem: System = (ctx) => {
   for (const command of ctx.commands) {
-    if (command.type === 'spawn') {
-      ctx.emit({ type: 'enemySpawned', tick: ctx.state.tick, enemyId: ctx.allocateId() });
+    if (command.type === 'spawnEnemy') {
+      ctx.emit({
+        type: 'enemySpawned',
+        tick: ctx.state.tick,
+        enemyId: ctx.allocateId(),
+        enemyType: 'common',
+      });
     }
   }
   if (ctx.rng.chance(0.3)) {
-    ctx.emit({ type: 'enemySpawned', tick: ctx.state.tick, enemyId: ctx.allocateId() });
+    ctx.emit({
+      type: 'enemySpawned',
+      tick: ctx.state.tick,
+      enemyId: ctx.allocateId(),
+      enemyType: 'common',
+    });
   }
 };
 
 // Ações aplicadas em ticks fixos, simulando o jogador.
 function runWithActions(sim: Simulation, ticks: number, events: SimEvent[] = []): void {
   for (let i = 0; i < ticks; i++) {
-    if (sim.state.tick % 7 === 0) sim.enqueue({ type: 'spawn' });
+    if (sim.state.tick % 7 === 0) sim.enqueue({ type: 'spawnEnemy', enemyType: 'common' });
     sim.step();
     events.push(...sim.drainEvents());
   }
@@ -65,7 +75,7 @@ describe('Simulation', () => {
 
   it('ações pendentes são salvas junto com o estado', () => {
     const a = Simulation.create('pending', [testSystem]);
-    a.enqueue({ type: 'spawn', payload: { lane: 0 } });
+    a.enqueue({ type: 'spawnEnemy', enemyType: 'fast' });
     const b = Simulation.restore(a.serialize(), [testSystem]);
     a.step();
     b.step();
@@ -92,7 +102,7 @@ describe('Simulation', () => {
 
   it('os eventos levam o tick em que aconteceram', () => {
     const sim = Simulation.create('ticks', [testSystem]);
-    sim.enqueue({ type: 'spawn' });
+    sim.enqueue({ type: 'spawnEnemy', enemyType: 'common' });
     sim.step();
     expect(sim.drainEvents()[0]).toMatchObject({ type: 'enemySpawned', tick: 1 });
   });

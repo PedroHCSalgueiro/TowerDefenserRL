@@ -1,0 +1,30 @@
+{
+  "armor": { "scale": 100 },
+  "types": {
+    "common": {
+      "hp": 30,
+      "speed": 1.0,
+      "armor": 0,
+      "nexusDamage": 1,
+      "gold": 1,
+      "movement": "ground"
+    },
+    "fast": {
+      "hp": 18,
+      "speed": 2.0,
+      "armor": 0,
+      "nexusDamage": 1,
+      "gold": 1,
+      "movement": "ground"
+    },
+    "armored": {
+      "hp": 60,
+      "speed": 0.7,
+      "armor": 50,
+      "nexusDamage": 2,
+      "gold": 2,
+      "movement": "ground"
+    },
+    "flying": { "hp": 24, "speed": 1.2, "armor": 0, "nexusDamage": 1, "gold": 2, "movement": "air" }
+  }
+}

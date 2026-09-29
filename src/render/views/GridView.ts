@@ -7,12 +7,9 @@ import Phaser from 'phaser';
 import renderConfig from '../../data/render.json';
 import type { GridCoord, GridMap } from '../../sim/grid/map';
 import { IsoProjection } from '../iso';
+import { hexColor } from './color';
 
 const { grid: gridStyle, hover: hoverStyle, selection: selectionStyle, debugLabel } = renderConfig;
-
-function hexColor(hex: string): number {
-  return parseInt(hex.slice(1), 16);
-}
 
 function sameCell(a: GridCoord | null, b: GridCoord | null): boolean {
   return a === b || (a !== null && b !== null && a.x === b.x && a.y === b.y);

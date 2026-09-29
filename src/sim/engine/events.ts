@@ -7,8 +7,13 @@
  */
 
 export interface SimEventPayloads {
-  enemySpawned: { enemyId: number };
-  enemyKilled: { enemyId: number; towerId: number };
+  enemySpawned: { enemyId: number; enemyType: string };
+  /** `towerId` é `null` quando quem matou foi o núcleo. */
+  enemyKilled: { enemyId: number; enemyType: string; towerId: number | null };
+  enemyReachedNexus: { enemyId: number; damage: number };
+  /** `x`/`y`: posição do alvo na grade no momento do ataque. */
+  nexusFired: { targetId: number; x: number; y: number };
+  runLost: Record<never, never>;
   towerFired: { towerId: number; targetId: number };
   triggerFired: { towerId: number; triggerId: string; depth: number };
   towersMerged: { towerId: number; stars: number };

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import './ui/ui.css';
 import { Boot } from './render/scenes/Boot';
 import { Game } from './render/scenes/Game';
 

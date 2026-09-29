@@ -5,11 +5,11 @@ describe('EventBus', () => {
   it('entrega os eventos em ordem e esvazia o buffer', () => {
     const bus = new EventBus();
     bus.emit({ type: 'waveStarted', tick: 1, wave: 1 });
-    bus.emit({ type: 'enemySpawned', tick: 1, enemyId: 7 });
+    bus.emit({ type: 'enemySpawned', tick: 1, enemyId: 7, enemyType: 'common' });
 
     expect(bus.drain()).toEqual([
       { type: 'waveStarted', tick: 1, wave: 1 },
-      { type: 'enemySpawned', tick: 1, enemyId: 7 },
+      { type: 'enemySpawned', tick: 1, enemyId: 7, enemyType: 'common' },
     ]);
     expect(bus.drain()).toEqual([]);
   });
@@ -20,11 +20,13 @@ describe('EventBus', () => {
     bus.on('enemyKilled', (event) => received.push(event));
 
     bus.emit({ type: 'towerFired', tick: 2, towerId: 1, targetId: 3 });
-    bus.emit({ type: 'enemyKilled', tick: 2, enemyId: 3, towerId: 1 });
+    bus.emit({ type: 'enemyKilled', tick: 2, enemyId: 3, enemyType: 'common', towerId: 1 });
     expect(received).toEqual([]);
 
     bus.drain();
-    expect(received).toEqual([{ type: 'enemyKilled', tick: 2, enemyId: 3, towerId: 1 }]);
+    expect(received).toEqual([
+      { type: 'enemyKilled', tick: 2, enemyId: 3, enemyType: 'common', towerId: 1 },
+    ]);
   });
 
   it('cancelar a assinatura para de entregar eventos', () => {
