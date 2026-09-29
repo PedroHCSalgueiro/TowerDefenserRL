@@ -19,7 +19,17 @@ describe('posicionar torre (ação placeTower)', () => {
     const events = run(sim, 1);
     const [tower] = sim.state.towers;
     expect(sim.state.towers).toHaveLength(1);
-    expect(tower).toEqual({ id: tower!.id, type: 'arrow', x: 0, y: 0, cooldownTicks: 0 });
+    expect(tower).toEqual({
+      id: tower!.id,
+      type: 'arrow',
+      x: 0,
+      y: 0,
+      cooldownTicks: 0,
+      triggerCounter: 0,
+      charges: 0,
+      activationReadyTick: 0,
+      lastEffect: null,
+    });
     expect(events).toEqual([
       { type: 'towerPlaced', tick: 1, towerId: tower!.id, towerType: 'arrow', x: 0, y: 0 },
     ]);
@@ -62,7 +72,7 @@ describe('ataque das torres', () => {
 
     const events = run(sim, 1);
     expect(events).toEqual([
-      { type: 'towerFired', tick: 1, towerId: tower.id, targetId: ahead.id },
+      { type: 'towerFired', tick: 1, towerId: tower.id, targetId: ahead.id, shot: 'normal' },
     ]);
     expect(state.projectiles.activeCount).toBe(1);
 
@@ -90,7 +100,16 @@ describe('ataque das torres', () => {
     const events = run(towersOnly(other), 2);
     expect(walker.active).toBe(false);
     expect(events.filter((e) => e.type === 'enemyKilled')).toEqual([
-      { type: 'enemyKilled', tick: 2, enemyId: walker.id, enemyType: 'walker', towerId: killer.id },
+      {
+        type: 'enemyKilled',
+        tick: 2,
+        enemyId: walker.id,
+        enemyType: 'walker',
+        towerId: killer.id,
+        x: 0,
+        y: 0.4,
+        weight: 1,
+      },
     ]);
   });
 
@@ -141,15 +160,24 @@ describe('tiro em área', () => {
       tick: 1,
       towerId: tower.id,
       targetId: target.id,
+      shot: 'normal',
     });
-    const impact = events.filter(
-      (e) => e.type === 'projectileExploded' || e.type === 'enemyKilled',
-    );
+    const impact = events.filter((e) => e.type === 'areaExploded' || e.type === 'enemyKilled');
+    const killed = (enemy: typeof target, enemyType: string, x: number, y: number) => ({
+      type: 'enemyKilled',
+      tick: 4,
+      enemyId: enemy.id,
+      enemyType,
+      towerId: tower.id,
+      x,
+      y,
+      weight: 1,
+    });
     expect(impact).toEqual([
-      { type: 'projectileExploded', tick: 4, towerId: tower.id, x: 2.8, y: 1, radius: 0.75 },
-      { type: 'enemyKilled', tick: 4, enemyId: flyer.id, enemyType: 'flyer', towerId: tower.id },
-      { type: 'enemyKilled', tick: 4, enemyId: behind.id, enemyType: 'walker', towerId: tower.id },
-      { type: 'enemyKilled', tick: 4, enemyId: target.id, enemyType: 'walker', towerId: tower.id },
+      { type: 'areaExploded', tick: 4, towerId: tower.id, x: 2.8, y: 1, radius: 0.75 },
+      killed(flyer, 'flyer', 2.8, 1.5),
+      killed(behind, 'walker', 3.3, 1),
+      killed(target, 'walker', 2.8, 1),
     ]);
     expect(outside.hp).toBe(4);
     expect(outside.active).toBe(true);

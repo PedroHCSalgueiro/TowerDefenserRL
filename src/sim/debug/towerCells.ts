@@ -6,6 +6,18 @@
 import type { GridCoord, GridMap } from '../grid/map';
 import type { DebugLayout } from '../state';
 
+/**
+ * Tipo da torre de uma casa quando o debug mistura vários tipos: o índice é
+ * `(x + 2y) mod n`. Com 4 tipos, as 4 vizinhas de lado de uma casa caem nos
+ * outros 3 tipos (x±1 → ±1, y±1 → ±2), então num bloco compacto cada torre
+ * encosta em todos os outros tipos. `null` se a lista estiver vazia.
+ */
+export function patternTowerType(types: readonly string[], cell: GridCoord): string | null {
+  if (types.length === 0) return null;
+  const n = types.length;
+  return types[(((cell.x + 2 * cell.y) % n) + n) % n]!;
+}
+
 function byRowThenColumn(a: GridCoord, b: GridCoord): number {
   return a.y - b.y || a.x - b.x;
 }

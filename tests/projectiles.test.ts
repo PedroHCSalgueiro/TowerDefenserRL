@@ -142,6 +142,7 @@ describe('projétil cujo alvo morreu', () => {
       tick: 1,
       towerId: expect.any(Number),
       targetId: leaving.id,
+      shot: 'normal',
     });
 
     const second = run(sim, 1);

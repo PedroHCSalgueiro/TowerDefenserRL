@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import debugConfig from '../src/data/debug.json';
-import { evaluateGate, stat, summarize, worstFps, type PerfSummary } from '../src/debug/metrics';
+import {
+  emptyTriggerSamples,
+  evaluateGate,
+  stat,
+  summarize,
+  summarizeTriggers,
+  worstFps,
+  type PerfSummary,
+} from '../src/debug/metrics';
 import { formatReport, type PerfReport } from '../src/debug/perfReport';
 import { linkWithSeed, resolveSeed, seedFromSearch } from '../src/debug/seed';
 
@@ -19,6 +27,32 @@ describe('métricas de desempenho', () => {
     expect(worstFps([], 0.01)).toBe(0);
   });
 
+  it('contadores de gatilhos: média e pior tick, profundidade, adiados e descartados', () => {
+    expect(
+      summarizeTriggers({
+        fired: [0, 10, 50, 20],
+        maxDepth: [0, 3, 9, 2],
+        deferred: [0, 0, 4, 1],
+        dropped: [0, 0, 2, 0],
+      }),
+    ).toEqual({
+      avgFired: 20,
+      maxFired: 50,
+      maxDepth: 9,
+      maxDeferred: 4,
+      deferredTicks: 2,
+      dropped: 2,
+    });
+    expect(summarizeTriggers(emptyTriggerSamples())).toEqual({
+      avgFired: 0,
+      maxFired: 0,
+      maxDepth: 0,
+      maxDeferred: 0,
+      deferredTicks: 0,
+      dropped: 0,
+    });
+  });
+
   it('FPS médio pelo tempo total, e ticks por segundo', () => {
     const s = summarize(
       {
@@ -26,6 +60,7 @@ describe('métricas de desempenho', () => {
         tickMs: [1, 2, 3, 2],
         renderMs: [4, 6],
         viewsMs: [1, 1],
+        triggers: emptyTriggerSamples(),
       },
       0,
       0.01,
@@ -49,6 +84,14 @@ describe('métricas de desempenho', () => {
     render: { avg: 3, max: 6 },
     views: { avg: 2, max: 4 },
     droppedTicks: 0,
+    triggers: {
+      avgFired: 12.5,
+      maxFired: 40,
+      maxDepth: 6,
+      maxDeferred: 0,
+      deferredTicks: 0,
+      dropped: 0,
+    },
   };
   const gate = debugConfig.perf.gate;
 
@@ -76,6 +119,7 @@ describe('métricas de desempenho', () => {
         layout: 'clustered',
         stressCount: 1000,
         towers: 30,
+        towerTypes: 'Morteiro+Relé+Obelisco+Ceifador',
         seed: 'abc',
         date: '2026-09-29T00:00:00.000Z',
         userAgent: 'teste',
@@ -90,10 +134,15 @@ describe('métricas de desempenho', () => {
       avgProjectiles: 42,
     };
     const text = formatReport(report);
-    expect(text).toContain('3x · agrupado · 1000 inimigos · 30 torres — PASSOU');
+    expect(text).toContain(
+      '3x · agrupado · 1000 inimigos · 30 torres (Morteiro+Relé+Obelisco+Ceifador) — PASSOU',
+    );
     expect(text).toContain('FPS médio 60.0 | piores 1% 50.0');
     expect(text).toContain('90.0 ticks/s (esperado 90) | descartados 0');
     expect(text).toContain('Semente abc');
+    expect(text).toContain(
+      'Gatilhos: 12.5/tick (pior 40) | prof. máx 6 | adiados: 0 ticks (fila máx 0) | descartados 0',
+    );
   });
 });
 

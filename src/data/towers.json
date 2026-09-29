@@ -1,5 +1,12 @@
 {
   "projectileRetargetRadius": 2,
+  "triggers": {
+    "neighborhood": 4,
+    "activationCooldownSeconds": 1,
+    "maxChainDepthPerTick": 8,
+    "maxActivationsPerTick": 2000,
+    "maxQueueSize": 10000
+  },
   "types": {
     "basic": {
       "name": "Básica",
@@ -22,6 +29,66 @@
       "shot": { "kind": "area", "radius": 1 },
       "targetMode": "first",
       "trigger": null
+    },
+    "mortar": {
+      "name": "Morteiro",
+      "classes": ["artillery", "mechanical"],
+      "damage": 8,
+      "shotsPerSecond": 0.8,
+      "range": 3,
+      "projectileSpeed": 5,
+      "shot": { "kind": "area", "radius": 1 },
+      "targetMode": "first",
+      "trigger": {
+        "when": "everyNShots",
+        "do": "multiShot",
+        "stars": [{ "shots": 5, "extraShots": 2 }]
+      }
+    },
+    "reaper": {
+      "name": "Ceifador",
+      "classes": ["shadow", "artillery"],
+      "damage": 6,
+      "shotsPerSecond": 1,
+      "range": 2.5,
+      "projectileSpeed": 8,
+      "shot": { "kind": "single" },
+      "targetMode": "first",
+      "trigger": {
+        "when": "enemyDiesInRange",
+        "do": "explosion",
+        "stars": [{ "radius": 1, "damagePercent": 100 }]
+      }
+    },
+    "relay": {
+      "name": "Relé",
+      "classes": ["arcane", "mechanical"],
+      "damage": 5,
+      "shotsPerSecond": 1.5,
+      "range": 3,
+      "projectileSpeed": 8,
+      "shot": { "kind": "single" },
+      "targetMode": "first",
+      "trigger": {
+        "when": "onFire",
+        "do": "activateNeighbors",
+        "stars": [{ "maxTargets": 4 }]
+      }
+    },
+    "obelisk": {
+      "name": "Obelisco",
+      "classes": ["arcane", "shadow"],
+      "damage": 10,
+      "shotsPerSecond": 0.5,
+      "range": 3.5,
+      "projectileSpeed": 8,
+      "shot": { "kind": "single" },
+      "targetMode": "first",
+      "trigger": {
+        "when": "neighborKills",
+        "do": "chargeLightning",
+        "stars": [{ "charges": 3, "targets": 4, "jumpRadius": 2, "damagePercent": 100 }]
+      }
     }
   }
 }

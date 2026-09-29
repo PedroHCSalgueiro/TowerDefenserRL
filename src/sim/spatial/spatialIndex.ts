@@ -4,10 +4,11 @@
  *
  * A reconstrução é preguiçosa: a primeira consulta de cada tick monta o
  * índice com as posições daquele momento. Por isso toda consulta precisa
- * acontecer depois do movimento. Inimigos que morrem depois da montagem
- * continuam nas listas, mas são ignorados (`active === false`); nenhum
- * inimigo nasce depois do movimento, então não há slot reaproveitado no
- * meio do tick.
+ * acontecer depois do movimento. Inimigos que morrem depois da montagem são
+ * ignorados (`active === false`) e saem da célula na próxima consulta que
+ * passar por ela (compactação que mantém a ordem): numa avalanche, as
+ * consultas seguintes não varrem de novo os mortos. Nenhum inimigo nasce
+ * depois do movimento, então não há slot reaproveitado no meio do tick.
  *
  * O índice é derivado do estado e não entra no save: um estado restaurado
  * monta o mesmo índice. As células cobrem só a área ocupada pelos inimigos
@@ -30,8 +31,10 @@ export class SpatialIndex {
   private minY = 0;
   private cols = 0;
   private rows = 0;
-  /** Início de cada célula em `items`; a célula `c` vai de `cellStart[c]` a `cellStart[c + 1]`. */
+  /** Início de cada célula em `items`; a célula `c` começa em `cellStart[c]`. */
   private cellStart = new Int32Array(1);
+  /** Fim (exclusivo) dos itens ainda não compactados da célula `c`. */
+  private cellEnd = new Int32Array(0);
   private cursor = new Int32Array(0);
   /** Slots dos inimigos, agrupados por célula. */
   private items = new Int32Array(0);
@@ -48,8 +51,15 @@ export class SpatialIndex {
   /**
    * Inimigo ativo mais próximo de (x, y) com distância ≤ `range` (a borda
    * conta). Empate na distância: vence o menor id. `null` se não houver.
+   * `skip` descarta candidatos (ex.: inimigos que o raio em cadeia já atingiu).
    */
-  findNearest(state: IndexedState, x: number, y: number, range: number): Enemy | null {
+  findNearest(
+    state: IndexedState,
+    x: number,
+    y: number,
+    range: number,
+    skip?: (enemy: Enemy) => boolean,
+  ): Enemy | null {
     this.ensure(state);
     if (this.cols === 0) return null;
 
@@ -66,14 +76,14 @@ export class SpatialIndex {
       const rowBase = cy * this.cols;
       for (let cx = x0; cx <= x1; cx++) {
         const cell = rowBase + cx;
-        const end = this.cellStart[cell + 1]!;
+        const end = this.compact(cell, slots);
         for (let i = this.cellStart[cell]!; i < end; i++) {
           const enemy = slots[this.items[i]!]!;
-          if (!enemy.active) continue;
           const dx = enemy.x - x;
           const dy = enemy.y - y;
           const distSq = dx * dx + dy * dy;
           if (distSq > rangeSq) continue;
+          if (skip?.(enemy)) continue;
           if (distSq < bestSq || (distSq === bestSq && best !== null && enemy.id < best.id)) {
             best = enemy;
             bestSq = distSq;
@@ -138,16 +148,33 @@ export class SpatialIndex {
       const rowBase = cy * this.cols;
       for (let cx = x0; cx <= x1; cx++) {
         const cell = rowBase + cx;
-        const end = this.cellStart[cell + 1]!;
+        const end = this.compact(cell, slots);
         for (let i = this.cellStart[cell]!; i < end; i++) {
           const enemy = slots[this.items[i]!]!;
-          if (!enemy.active) continue;
           const dx = enemy.x - x;
           const dy = enemy.y - y;
           if (dx * dx + dy * dy <= rangeSq) visit(enemy);
         }
       }
     }
+  }
+
+  /**
+   * Tira da célula os inimigos que morreram desde a montagem, mantendo a
+   * ordem dos vivos, e devolve o novo fim. Quem chama só vê inimigos ativos.
+   */
+  private compact(cell: number, slots: readonly Enemy[]): number {
+    const items = this.items;
+    const end = this.cellEnd[cell]!;
+    let write = this.cellStart[cell]!;
+    for (let read = write; read < end; read++) {
+      const slot = items[read]!;
+      if (!slots[slot]!.active) continue;
+      if (write !== read) items[write] = slot;
+      write++;
+    }
+    this.cellEnd[cell] = write;
+    return write;
   }
 
   /** Força a montagem do índice com as posições atuais do pool. */
@@ -177,6 +204,7 @@ export class SpatialIndex {
     const cells = this.cols * this.rows;
     if (this.cellStart.length < cells + 1) {
       this.cellStart = new Int32Array((cells + 1) * 2);
+      this.cellEnd = new Int32Array((cells + 1) * 2);
       this.cursor = new Int32Array((cells + 1) * 2);
     }
     if (this.slotCell.length < slots.length) {
@@ -196,6 +224,7 @@ export class SpatialIndex {
     for (let c = 0; c < cells; c++) {
       cellStart[c + 1] = cellStart[c + 1]! + cellStart[c]!;
     }
+    this.cellEnd.set(cellStart.subarray(1, cells + 1));
     const cursor = this.cursor;
     cursor.set(cellStart.subarray(0, cells));
     for (const enemy of slots) {

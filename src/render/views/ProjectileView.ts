@@ -1,6 +1,7 @@
 /**
  * Greybox dos projéteis: um ponto por projétil, na posição interpolada, e um
- * clarão curto (elipse que some) em cada explosão de tiro em área.
+ * clarão curto (elipse que some) em cada dano em área (tiro em área ou
+ * explosão de gatilho).
  * Um único Graphics redesenhado por quadro, como os inimigos.
  */
 
@@ -33,18 +34,28 @@ export class ProjectileView {
     this.projection = projection;
   }
 
-  /** Guarda as explosões do quadro (acima do teto, as mais antigas saem). */
+  /**
+   * Guarda as explosões do quadro (acima do teto, as mais antigas saem). Numa
+   * avalanche de gatilhos chegam milhares por quadro: só as últimas
+   * `maxActive` viram clarão.
+   */
   handleEvents(events: readonly SimEvent[]): void {
-    for (const event of events) {
-      if (event.type !== 'projectileExploded') continue;
+    const max = explosionStyle.maxActive;
+    let first = events.length;
+    for (let found = 0; first > 0 && found < max;) {
+      if (events[--first]!.type === 'areaExploded') found++;
+    }
+    for (let i = first; i < events.length; i++) {
+      const event = events[i]!;
+      if (event.type !== 'areaExploded') continue;
       this.flashes.push({
         center: this.projection.toScreen(event),
         size: this.projection.circleSize(event.radius),
         msLeft: explosionStyle.durationMs,
       });
     }
-    if (this.flashes.length > explosionStyle.maxActive) {
-      this.flashes = this.flashes.slice(-explosionStyle.maxActive);
+    if (this.flashes.length > max) {
+      this.flashes = this.flashes.slice(-max);
     }
   }
 

@@ -48,6 +48,29 @@ describe('SpatialIndex', () => {
     expect(index.findNearest(state, 0, 0, 5)).toBe(b);
   });
 
+  it('numa avalanche: mortos saem das células e as consultas seguintes batem com a busca completa', () => {
+    const rng = new Rng({ rngState: 99 });
+    const state = makeState();
+    const between = (lo: number, hi: number) => lo + rng.nextFloat() * (hi - lo);
+    for (let i = 0; i < 400; i++) place(state, 'walker', between(0, 3), between(0, 3));
+    const index = new SpatialIndex(1);
+    for (let round = 0; round < 40; round++) {
+      // Mata alguns no meio do tick, entre consultas (como uma explosão de gatilho).
+      for (const e of index.collectInRange(state, between(0, 3), between(0, 3), 0.8, [])) {
+        if (rng.chance(0.5)) releaseEnemy(state.enemies, e);
+      }
+      const x = between(-1, 4);
+      const y = between(-1, 4);
+      const range = between(0, 3);
+      expect(index.findNearest(state, x, y, range)).toBe(bruteNearest(state, x, y, range));
+      const collected = index.collectInRange(state, x, y, range, []).map((e) => e.id);
+      const expected = state.enemies.slots
+        .filter((e) => e.active && (e.x - x) ** 2 + (e.y - y) ** 2 <= range * range)
+        .map((e) => e.id);
+      expect(collected.sort((a, b) => a - b)).toEqual(expected.sort((a, b) => a - b));
+    }
+  });
+
   it('remonta a cada tick com as posições novas', () => {
     const state = makeState();
     const a = place(state, 'walker', 1, 0);

@@ -18,6 +18,7 @@
 
 import { damageEnemy } from '../enemies/damage';
 import type { EnemyData } from '../enemies/enemyData';
+import { sortEnemiesById } from '../enemies/order';
 import type { Enemy } from '../enemies/pool';
 import type { System, TickContext } from '../engine/simulation';
 import type { SpatialIndex } from '../spatial/spatialIndex';
@@ -79,7 +80,7 @@ export function createProjectileSystem(
   const explode = (ctx: TickContext, projectile: Projectile, x: number, y: number): void => {
     const radius = projectile.areaRadius;
     ctx.emit({
-      type: 'projectileExploded',
+      type: 'areaExploded',
       tick: ctx.state.tick,
       towerId: projectile.sourceId,
       x,
@@ -88,8 +89,7 @@ export function createProjectileSystem(
     });
     hits.length = 0;
     index.collectInRange(ctx.state, x, y, radius, hits);
-    hits.sort((a, b) => a.id - b.id);
-    for (const enemy of hits) {
+    for (const enemy of sortEnemiesById(hits)) {
       damageEnemy(ctx, enemies, enemy, projectile.damage, projectile.sourceId);
     }
   };

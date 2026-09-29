@@ -34,9 +34,16 @@ describe('dados das classes', () => {
 });
 
 describe('dados das torres', () => {
-  it('o towers.json real traz as torres provisórias da T06', () => {
+  it('o towers.json real traz as torres provisórias da T06 (sem gatilho)', () => {
     expect(towerData.projectileRetargetRadius).toBe(2);
-    expect(Object.keys(towerData.types)).toEqual(['basic', 'cannon']);
+    expect(Object.keys(towerData.types)).toEqual([
+      'basic',
+      'cannon',
+      'mortar',
+      'reaper',
+      'relay',
+      'obelisk',
+    ]);
     expect(towerData.types.basic).toEqual({
       name: 'Básica',
       classes: ['mechanical', 'arcane'],
@@ -77,7 +84,7 @@ describe('dados das torres', () => {
     ['alcance NaN', (r) => (r.types.basic!.range = NaN)],
     ['velocidade do projétil em texto', (r) => (r.types.basic!.projectileSpeed = '8')],
     ['sem nome', (r) => (r.types.basic!.name = '')],
-    ['gatilho antes do motor de gatilhos', (r) => (r.types.basic!.trigger = { when: 'fired' })],
+    ['gatilho com "quando" desconhecido', (r) => (r.types.basic!.trigger = { when: 'fired' })],
     ['sem gatilho (precisa ser null)', (r) => delete r.types.basic!.trigger],
     ['raio de troca de alvo zero', (r) => (r.projectileRetargetRadius = 0)],
     ['nenhum tipo', (r) => (r.types = {})],

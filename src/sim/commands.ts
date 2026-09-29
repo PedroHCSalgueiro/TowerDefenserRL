@@ -5,7 +5,7 @@
 
 import type { SimDebugData } from './debug/debugData';
 import { spawnDebugEnemy } from './debug/stress';
-import { pickTowerCells } from './debug/towerCells';
+import { patternTowerType, pickTowerCells } from './debug/towerCells';
 import type { EnemyData } from './enemies/enemyData';
 import { releaseAllEnemies } from './enemies/pool';
 import type { Routes } from './enemies/route';
@@ -48,7 +48,8 @@ export function createCommandSystem(
           const occupied = new Set(state.towers.map((t) => map.indexOf(t)));
           const cells = pickTowerCells(map, occupied, clampCount(command.count), command.layout);
           for (const cell of cells) {
-            placeTower(ctx, map, towers, command.towerType, cell);
+            const towerType = patternTowerType(command.towerTypes, cell);
+            if (towerType !== null) placeTower(ctx, map, towers, towerType, cell);
           }
           break;
         }
@@ -56,6 +57,7 @@ export function createCommandSystem(
           releaseAllEnemies(state.enemies);
           releaseAllProjectiles(state.projectiles);
           state.towers = [];
+          state.triggers.queue = [];
           state.debug.stress = null;
           break;
         case 'debugSetStress':

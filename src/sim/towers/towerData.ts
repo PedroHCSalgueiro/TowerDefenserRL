@@ -3,11 +3,19 @@
  *
  * Alcance e raio são em casas, medidos do centro da casa da torre (ou do
  * ponto de impacto) até a posição do inimigo. `projectileSpeed` é em casas
- * por segundo. `trigger` fica `null` até o motor de gatilhos (T07).
+ * por segundo. `trigger` é o gatilho da torre (`null` = sem gatilho), no
+ * formato de `src/sim/triggers/triggerData.ts`; o bloco `triggers` traz as
+ * regras de segurança do motor.
  */
 
 import towersJson from '../../data/towers.json';
 import { classData, type ClassData } from '../classes/classData';
+import {
+  parseTrigger,
+  parseTriggerRules,
+  type TriggerDef,
+  type TriggerRules,
+} from '../triggers/triggerData';
 import { isTargetMode, type TargetMode } from './targeting';
 
 /** Tiro único (só o alvo) ou em área (todos no raio do ponto de impacto). */
@@ -24,12 +32,13 @@ export interface TowerType {
   readonly projectileSpeed: number;
   readonly shot: ShotData;
   readonly targetMode: TargetMode;
-  readonly trigger: null;
+  readonly trigger: TriggerDef | null;
 }
 
 export interface TowerData {
   /** Raio, em casas, em que o projétil procura um alvo novo quando o dele some. */
   readonly projectileRetargetRadius: number;
+  readonly triggers: TriggerRules;
   readonly types: Readonly<Record<string, TowerType>>;
 }
 
@@ -70,7 +79,7 @@ function parseType(id: string, raw: unknown, classes: ClassData): TowerType {
   if (!isRecord(raw)) {
     throw new Error(`Torre inválida: "${id}" não é um objeto`);
   }
-  const { name, damage, shotsPerSecond, range, projectileSpeed, targetMode, trigger } = raw;
+  const { name, damage, shotsPerSecond, range, projectileSpeed, targetMode } = raw;
   if (
     typeof name !== 'string' ||
     name === '' ||
@@ -86,10 +95,8 @@ function parseType(id: string, raw: unknown, classes: ClassData): TowerType {
       `Torre inválida: "${id}" tem modo de mira desconhecido (${String(targetMode)})`,
     );
   }
-  if (trigger !== null) {
-    throw new Error(
-      `Torre inválida: "${id}" tem gatilho, mas o motor de gatilhos ainda não existe`,
-    );
+  if (!Object.hasOwn(raw, 'trigger')) {
+    throw new Error(`Torre inválida: "${id}" não tem "trigger" (use null para torre sem gatilho)`);
   }
   return {
     name,
@@ -100,7 +107,7 @@ function parseType(id: string, raw: unknown, classes: ClassData): TowerType {
     projectileSpeed,
     shot: parseShot(id, raw.shot),
     targetMode,
-    trigger: null,
+    trigger: parseTrigger(id, raw.trigger),
   };
 }
 
@@ -120,7 +127,11 @@ export function loadTowerData(raw: unknown, classes: ClassData = classData): Tow
   for (const [id, type] of entries) {
     types[id] = parseType(id, type, classes);
   }
-  return { projectileRetargetRadius: raw.projectileRetargetRadius, types };
+  return {
+    projectileRetargetRadius: raw.projectileRetargetRadius,
+    triggers: parseTriggerRules(raw.triggers),
+    types,
+  };
 }
 
 export const towerData: TowerData = loadTowerData(towersJson);

@@ -2,26 +2,31 @@
  * Painel de debug em HTML sobre o canvas. Substitui o texto do canto e as
  * teclas 1 a 4 da T04.
  *
- * Mostra FPS, tempo de tick e de render, inimigos, projéteis e torres e a
- * semente; tem o posicionamento de torre na casa selecionada, os comandos de
- * spawn, o modo estresse, o núcleo invulnerável, a velocidade e a gravação
- * de desempenho. Toda ação que muda o jogo passa pela fila de comandos da
- * simulação.
+ * Mostra FPS, tempo de tick e de render, os contadores do motor de gatilhos,
+ * inimigos, projéteis e torres e a semente; tem o posicionamento de torre na
+ * casa selecionada, os comandos de spawn, o modo estresse (inclusive o
+ * cenário "Cadeia", com os 4 tipos misturados), o núcleo invulnerável, a
+ * velocidade e a gravação de desempenho. Toda ação que muda o jogo passa pela
+ * fila de comandos da simulação.
  */
 
 import Phaser from 'phaser';
 import debugConfig from '../data/debug.json';
 import engineConfig from '../data/engine.json';
 import type { SimulationRunner } from '../sim/engine/simulation';
+import { patternTowerType } from '../sim/debug/towerCells';
 import type { GridCoord } from '../sim/grid/map';
-import type { DebugLayout, SimCommand } from '../sim/state';
+import type { DebugLayout, RunState, SimCommand } from '../sim/state';
 import { evaluateGate, type PerfSummary } from './metrics';
 import type { PerfMonitor, RecordingResult } from './PerfMonitor';
 import { addReport, allReports, clearReports, formatReport, reportTitle } from './perfReport';
 import { linkWithSeed } from './seed';
 import './debugPanel.css';
 
-const { defaults, perf, panel: panelConfig } = debugConfig;
+const { defaults, chainScenario, perf, panel: panelConfig } = debugConfig;
+
+/** Valor da opção "Cadeia" na seleção de torre (não é um id de torre). */
+const CHAIN_OPTION = '__chain__';
 
 /** O painel continua aberto ou fechado depois de reiniciar a cena. */
 let panelVisible = true;
@@ -76,13 +81,22 @@ function formatCell(cell: GridCoord | null): string {
 
 function formatLive(s: PerfSummary | null): string {
   if (!s) return 'FPS —';
+  const t = s.triggers;
   return [
     `FPS ${s.avgFps.toFixed(1)}  piores 1% ${s.lowFps.toFixed(1)}`,
     `Tick ${s.tick.avg.toFixed(2)} / máx ${s.tick.max.toFixed(2)} ms  (${s.ticksPerSecond.toFixed(0)}/s)`,
     `Render ${s.render.avg.toFixed(2)} / máx ${s.render.max.toFixed(2)} ms`,
     `Views ${s.views.avg.toFixed(2)} / máx ${s.views.max.toFixed(2)} ms`,
-    `Descartados ${s.droppedTicks}`,
+    `Ticks descartados ${s.droppedTicks}`,
+    `Gatilhos ${t.avgFired.toFixed(1)}/tick (máx ${t.maxFired})  prof. máx ${t.maxDepth}`,
+    `Adiados máx ${t.maxDeferred}  descartados ${t.dropped}`,
   ].join('\n');
+}
+
+/** Tipos das torres no mapa, pelo nome, na ordem em que aparecem. */
+function towerTypeNames(state: Readonly<RunState>, names: ReadonlyMap<string, string>): string {
+  const seen = new Set(state.towers.map((t) => t.type));
+  return [...seen].map((id) => names.get(id) ?? id).join('+') || '—';
 }
 
 export class DebugPanel {
@@ -94,6 +108,7 @@ export class DebugPanel {
   private readonly speedButtons: HTMLButtonElement[] = [];
   private readonly invulnerable: HTMLInputElement;
   private readonly placeNote: HTMLElement;
+  private readonly towerNames: ReadonlyMap<string, string>;
   private nextRefresh = 0;
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== panelConfig.toggleKey) return;
@@ -104,6 +119,7 @@ export class DebugPanel {
 
   constructor(parent: HTMLElement, deps: DebugPanelDeps) {
     this.deps = deps;
+    this.towerNames = new Map(deps.towerTypes.map((t) => [t.id, t.name]));
     this.stats = el('pre', { className: 'debug-stats' });
     this.recordStatus = el('div', { className: 'debug-note' });
     this.results = el('div', { className: 'debug-results' });
@@ -126,13 +142,16 @@ export class DebugPanel {
     );
 
     // Torre: tipo usado para posicionar, no spawn em massa e no estresse.
-    const towerType = el(
-      'select',
-      {},
-      deps.towerTypes.map((t) =>
+    // "Cadeia" mistura os tipos do cenário de cadeia pelo padrão das casas.
+    const towerType = el('select', {}, [
+      ...deps.towerTypes.map((t) =>
         el('option', { value: t.id, textContent: t.name, selected: t.id === defaults.towerType }),
       ),
-    );
+      el('option', { value: CHAIN_OPTION, textContent: chainScenario.name }),
+    ]);
+    const isChain = (): boolean => towerType.value === CHAIN_OPTION;
+    const selectedTypes = (): string[] =>
+      isChain() ? [...chainScenario.towerTypes] : [towerType.value];
     this.placeNote = el('div', { className: 'debug-note' });
     const placeTower = button('Posicionar na casa selecionada', () => {
       const cell = deps.selectedCell();
@@ -141,7 +160,8 @@ export class DebugPanel {
         return;
       }
       this.placeNote.textContent = '';
-      this.send({ type: 'placeTower', towerType: towerType.value, x: cell.x, y: cell.y });
+      const type = patternTowerType(selectedTypes(), cell);
+      if (type) this.send({ type: 'placeTower', towerType: type, x: cell.x, y: cell.y });
     });
 
     // Spawn de inimigos
@@ -167,7 +187,7 @@ export class DebugPanel {
       this.send({
         type: 'debugSpawnTowers',
         count: towerCount.valueAsNumber,
-        towerType: towerType.value,
+        towerTypes: selectedTypes(),
         layout: towerLayout.value as DebugLayout,
       }),
     );
@@ -176,6 +196,8 @@ export class DebugPanel {
     const stressCount = numberInput(defaults.enemyCount);
     const stressTowers = numberInput(defaults.towerCount);
     const stressLayout = layoutSelect();
+    // Na cadeia, as torres ficam sempre no bloco compacto (precisam se tocar);
+    // a disposição escolhida vale só para os inimigos.
     const startScenario = button('Iniciar cenário', () => {
       const layout = stressLayout.value as DebugLayout;
       this.invulnerable.checked = true;
@@ -184,8 +206,8 @@ export class DebugPanel {
       this.send({
         type: 'debugSpawnTowers',
         count: stressTowers.valueAsNumber,
-        towerType: towerType.value,
-        layout,
+        towerTypes: selectedTypes(),
+        layout: isChain() ? (chainScenario.towerLayout as DebugLayout) : layout,
       });
       this.send({
         type: 'debugSetStress',
@@ -264,6 +286,7 @@ export class DebugPanel {
     this.stats.textContent = [
       formatLive(this.deps.monitor.liveSummary),
       `Inimigos ${state.enemies.activeCount}  Projéteis ${state.projectiles.activeCount}  Torres ${state.towers.length}`,
+      `Fila de gatilhos ${state.triggers.queue.length}  descartados (run) ${state.triggers.droppedTotal}`,
       `Estresse ${stress ? `${stress.count} (${stress.layout})` : 'desligado'}`,
       `Núcleo ${Math.ceil(state.nexus.hp)}/${state.nexus.maxHp}`,
       `Semente ${state.seed}`,
@@ -302,6 +325,7 @@ export class DebugPanel {
           layout: stress?.layout ?? null,
           stressCount: stress?.count ?? null,
           towers: state.towers.length,
+          towerTypes: towerTypeNames(state, this.towerNames),
           seed: state.seed,
           date: new Date().toISOString(),
           userAgent: navigator.userAgent,

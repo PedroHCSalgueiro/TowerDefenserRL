@@ -6,20 +6,48 @@
  * passageiros e não fazem parte do estado salvo.
  */
 
+import type { EffectKind, WhenKind } from '../triggers/triggerData';
+
+/** Tiro normal (recarga), de ativação (tiro extra ao ser ativada) ou extra de gatilho (disparo múltiplo). */
+export type ShotKind = 'normal' | 'activated' | 'extra';
+
 export interface SimEventPayloads {
   enemySpawned: { enemyId: number; enemyType: string };
-  /** `towerId` é `null` quando quem matou foi o núcleo. */
-  enemyKilled: { enemyId: number; enemyType: string; towerId: number | null };
+  /**
+   * `towerId` é `null` quando quem matou foi o núcleo. `x`/`y`: onde morreu.
+   * `weight`: quanto vale nos contadores de abate (2 = abate duplo da execução).
+   */
+  enemyKilled: {
+    enemyId: number;
+    enemyType: string;
+    towerId: number | null;
+    x: number;
+    y: number;
+    weight: number;
+  };
   enemyReachedNexus: { enemyId: number; damage: number };
   /** `x`/`y`: posição do alvo na grade no momento do ataque. */
   nexusFired: { targetId: number; x: number; y: number };
   runLost: Record<never, never>;
   /** `x`/`y`: casa da torre. */
   towerPlaced: { towerId: number; towerType: string; x: number; y: number };
-  towerFired: { towerId: number; targetId: number };
-  /** Impacto de um tiro em área: ponto na grade e raio, em casas. */
-  projectileExploded: { towerId: number; x: number; y: number; radius: number };
-  triggerFired: { towerId: number; triggerId: string; depth: number };
+  towerFired: { towerId: number; targetId: number; shot: ShotKind };
+  /** Dano em área (tiro em área ou explosão de gatilho): ponto na grade e raio, em casas. */
+  areaExploded: { towerId: number; x: number; y: number; radius: number };
+  /**
+   * Um gatilho executou o "o quê". Destino = `towerId` (a torre do gatilho);
+   * origem = `sourceTowerId` (quem causou; `null` = núcleo). `effect` é o que
+   * foi executado (no "copiar", o efeito copiado). `depth` 1 = início da cadeia.
+   */
+  triggerFired: {
+    towerId: number;
+    sourceTowerId: number | null;
+    when: WhenKind;
+    effect: EffectKind;
+    depth: number;
+  };
+  /** Uma torre foi ativada por gatilho de uma vizinha (origem → destino). */
+  towerActivated: { towerId: number; sourceTowerId: number; depth: number };
   towersMerged: { towerId: number; stars: number };
   waveStarted: { wave: number };
 }

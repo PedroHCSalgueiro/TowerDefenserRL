@@ -5,7 +5,16 @@
 
 import type { TickContext } from '../engine/simulation';
 import type { GridCoord, GridMap } from '../grid/map';
+import type { CopyableEffect } from '../triggers/triggerData';
 import { hasTowerType, type TowerData } from './towerData';
+
+/** O último "o quê" que a torre disparou, para uma vizinha copiar. */
+export interface LastEffect {
+  /** O efeito com os números da torre que o disparou. */
+  effect: CopyableEffect;
+  /** Ordem global de disparo (`RunState.triggers.nextSeq`): maior = mais recente. */
+  seq: number;
+}
 
 export interface Tower {
   id: number;
@@ -15,6 +24,29 @@ export interface Tower {
   y: number;
   /** Ticks até o próximo disparo; 0 = pronta. */
   cooldownTicks: number;
+  /** Progresso do gatilho "a cada N" (tiros ou abates). */
+  triggerCounter: number;
+  /** Cargas do raio em cadeia. */
+  charges: number;
+  /** Primeiro tick em que a torre pode ser ativada de novo por gatilho. */
+  activationReadyTick: number;
+  /** `null` = ainda não disparou nenhum "o quê" copiável. */
+  lastEffect: LastEffect | null;
+}
+
+/** Torre nova, pronta para atirar e ser ativada. */
+export function createTower(id: number, type: string, cell: GridCoord): Tower {
+  return {
+    id,
+    type,
+    x: cell.x,
+    y: cell.y,
+    cooldownTicks: 0,
+    triggerCounter: 0,
+    charges: 0,
+    activationReadyTick: 0,
+    lastEffect: null,
+  };
 }
 
 /**
@@ -33,13 +65,7 @@ export function placeTower(
   if (!hasTowerType(data, towerType) || !map.canPlaceTower(cell)) return null;
   if (state.towers.some((t) => t.x === cell.x && t.y === cell.y)) return null;
 
-  const tower: Tower = {
-    id: ctx.allocateId(),
-    type: towerType,
-    x: cell.x,
-    y: cell.y,
-    cooldownTicks: 0,
-  };
+  const tower = createTower(ctx.allocateId(), towerType, cell);
   state.towers.push(tower);
   ctx.emit({
     type: 'towerPlaced',

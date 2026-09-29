@@ -19,14 +19,22 @@ describe('EventBus', () => {
     const received: SimEventOf<'enemyKilled'>[] = [];
     bus.on('enemyKilled', (event) => received.push(event));
 
-    bus.emit({ type: 'towerFired', tick: 2, towerId: 1, targetId: 3 });
-    bus.emit({ type: 'enemyKilled', tick: 2, enemyId: 3, enemyType: 'common', towerId: 1 });
+    bus.emit({ type: 'towerFired', tick: 2, towerId: 1, targetId: 3, shot: 'normal' });
+    const killed = {
+      type: 'enemyKilled',
+      tick: 2,
+      enemyId: 3,
+      enemyType: 'common',
+      towerId: 1,
+      x: 0,
+      y: 0,
+      weight: 1,
+    } as const;
+    bus.emit(killed);
     expect(received).toEqual([]);
 
     bus.drain();
-    expect(received).toEqual([
-      { type: 'enemyKilled', tick: 2, enemyId: 3, enemyType: 'common', towerId: 1 },
-    ]);
+    expect(received).toEqual([killed]);
   });
 
   it('cancelar a assinatura para de entregar eventos', () => {

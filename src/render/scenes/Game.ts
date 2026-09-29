@@ -47,7 +47,11 @@ export class Game extends Phaser.Scene {
     this.enemyView = new EnemyView(this, grid.projection, enemyData, units);
     this.projectileView = new ProjectileView(this, grid.projection);
 
-    this.monitor = new PerfMonitor(this.game, () => this.runner.clock.droppedTicks);
+    this.monitor = new PerfMonitor(
+      this.game,
+      () => this.runner.clock.droppedTicks,
+      () => this.runner.sim.state.triggers.lastTick,
+    );
     this.runner.profiler = this.monitor;
     this.panel = new DebugPanel(this.game.canvas.parentElement ?? document.body, {
       game: this.game,

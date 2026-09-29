@@ -9,8 +9,9 @@ import { hashSeed } from './engine/rng';
 import { nexusData } from './nexus/nexusData';
 import { createProjectilePool, type ProjectilePool } from './projectiles/pool';
 import type { Tower } from './towers/placement';
+import { createTriggerState, type TriggerState } from './triggers/triggerState';
 
-export const RUN_STATE_VERSION = 4;
+export const RUN_STATE_VERSION = 5;
 
 /**
  * Disposição usada pelo debug:
@@ -41,11 +42,15 @@ export interface DebugSpawnEnemiesCommand {
   layout: DebugLayout;
 }
 
-/** Debug: N torres do tipo pedido, em casas livres escolhidas pela disposição. */
+/**
+ * Debug: N torres em casas livres escolhidas pela disposição. Com um tipo só,
+ * todas iguais; com vários, o tipo de cada casa sai do padrão de
+ * `patternTowerType` (cada torre encosta nos outros tipos).
+ */
 export interface DebugSpawnTowersCommand {
   type: 'debugSpawnTowers';
   count: number;
-  towerType: string;
+  towerTypes: string[];
   layout: DebugLayout;
 }
 
@@ -108,6 +113,8 @@ export interface RunState {
   projectiles: ProjectilePool;
   /** Torres no mapa, na ordem em que foram posicionadas (é a ordem de disparo). */
   towers: Tower[];
+  /** Motor de gatilhos: fila pendente, ordem de disparo e contadores. */
+  triggers: TriggerState;
   debug: DebugState;
   /** Ações enfileiradas que ainda não foram aplicadas. */
   commandQueue: SimCommand[];
@@ -125,6 +132,7 @@ export function createRunState(seed: string): RunState {
     enemies: createEnemyPool(engineConfig.enemyPoolInitialCapacity),
     projectiles: createProjectilePool(engineConfig.projectilePoolInitialCapacity),
     towers: [],
+    triggers: createTriggerState(),
     debug: { nexusInvulnerable: false, stress: null },
     commandQueue: [],
   };
@@ -132,6 +140,21 @@ export function createRunState(seed: string): RunState {
 
 export function serializeRunState(state: RunState): string {
   return JSON.stringify(state);
+}
+
+function isTowerState(value: unknown): boolean {
+  const t = value as Partial<Tower> | null;
+  return (
+    typeof t === 'object' &&
+    t !== null &&
+    Number.isInteger(t.id) &&
+    typeof t.type === 'string' &&
+    Number.isInteger(t.cooldownTicks) &&
+    Number.isInteger(t.triggerCounter) &&
+    typeof t.charges === 'number' &&
+    Number.isInteger(t.activationReadyTick) &&
+    (t.lastEffect === null || typeof t.lastEffect === 'object')
+  );
 }
 
 export function deserializeRunState(json: string): RunState {
@@ -143,7 +166,7 @@ export function deserializeRunState(json: string): RunState {
   if (state.version !== RUN_STATE_VERSION) {
     throw new Error(`Versão de save não suportada: ${String(state.version)}`);
   }
-  const { nexus, enemies, projectiles, towers, debug } = state;
+  const { nexus, enemies, projectiles, towers, triggers, debug } = state;
   if (
     typeof state.seed !== 'string' ||
     !Number.isInteger(state.tick) ||
@@ -160,6 +183,12 @@ export function deserializeRunState(json: string): RunState {
     !Array.isArray(projectiles.free) ||
     !Number.isInteger(projectiles.activeCount) ||
     !Array.isArray(towers) ||
+    !towers.every(isTowerState) ||
+    !Array.isArray(triggers?.queue) ||
+    !Number.isInteger(triggers.nextSeq) ||
+    typeof triggers.lastTick !== 'object' ||
+    triggers.lastTick === null ||
+    !Number.isInteger(triggers.droppedTotal) ||
     typeof debug?.nexusInvulnerable !== 'boolean' ||
     (debug.stress !== null && typeof debug.stress !== 'object') ||
     !Array.isArray(state.commandQueue)

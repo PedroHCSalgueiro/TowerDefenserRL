@@ -2,6 +2,47 @@
  * Cálculos das medições de desempenho (funções puras, testadas no Vitest).
  */
 
+/** Contadores do motor de gatilhos, um valor por tick (`RunState.triggers.lastTick`). */
+export interface TriggerSamples {
+  fired: number[];
+  maxDepth: number[];
+  deferred: number[];
+  dropped: number[];
+}
+
+export interface TriggerSummary {
+  /** Gatilhos executados por tick, em média. */
+  avgFired: number;
+  /** Pior tick em gatilhos executados. */
+  maxFired: number;
+  /** Maior profundidade de cadeia atingida. */
+  maxDepth: number;
+  /** Maior fila que sobrou para o tick seguinte. */
+  maxDeferred: number;
+  /** Ticks que terminaram com a fila adiada (sobra > 0). */
+  deferredTicks: number;
+  /** Gatilhos descartados pelo teto da fila (deve ser 0). */
+  dropped: number;
+}
+
+export function emptyTriggerSamples(): TriggerSamples {
+  return { fired: [], maxDepth: [], deferred: [], dropped: [] };
+}
+
+export function summarizeTriggers(samples: TriggerSamples): TriggerSummary {
+  const fired = stat(samples.fired);
+  let deferredTicks = 0;
+  for (const d of samples.deferred) if (d > 0) deferredTicks++;
+  return {
+    avgFired: fired.avg,
+    maxFired: samples.fired.length > 0 ? fired.max : 0,
+    maxDepth: samples.maxDepth.length > 0 ? stat(samples.maxDepth).max : 0,
+    maxDeferred: samples.deferred.length > 0 ? stat(samples.deferred).max : 0,
+    deferredTicks,
+    dropped: samples.dropped.reduce((sum, d) => sum + d, 0),
+  };
+}
+
 export interface PerfSamples {
   /** Intervalo entre quadros, em ms. */
   frameMs: readonly number[];
@@ -11,6 +52,7 @@ export interface PerfSamples {
   renderMs: readonly number[];
   /** Atualização da cena sem os ticks (views, painel), em ms por quadro. */
   viewsMs: readonly number[];
+  triggers: TriggerSamples;
 }
 
 export interface Stat {
@@ -30,6 +72,7 @@ export interface PerfSummary {
   render: Stat;
   views: Stat;
   droppedTicks: number;
+  triggers: TriggerSummary;
 }
 
 export interface PerfGate {
@@ -88,6 +131,7 @@ export function summarize(
     render: stat(samples.renderMs),
     views: stat(samples.viewsMs),
     droppedTicks,
+    triggers: summarizeTriggers(samples.triggers),
   };
 }
 

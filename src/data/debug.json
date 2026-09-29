@@ -1,6 +1,11 @@
 {
   "maxSpawnPerCommand": 5000,
   "defaults": { "enemyCount": 1000, "towerCount": 30, "towerType": "basic", "spawnCount": 50 },
+  "chainScenario": {
+    "name": "Cadeia (4 tipos)",
+    "towerTypes": ["mortar", "relay", "obelisk", "reaper"],
+    "towerLayout": "clustered"
+  },
   "perf": {
     "recordSeconds": 20,
     "warmupSeconds": 3,

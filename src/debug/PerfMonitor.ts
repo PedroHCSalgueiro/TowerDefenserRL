@@ -12,7 +12,14 @@
 import Phaser from 'phaser';
 import debugConfig from '../data/debug.json';
 import type { TickProfiler } from '../sim/engine/simulation';
-import { summarize, type PerfSamples, type PerfSummary } from './metrics';
+import type { TriggerTickStats } from '../sim/triggers/triggerState';
+import {
+  emptyTriggerSamples,
+  summarize,
+  type PerfSamples,
+  type PerfSummary,
+  type TriggerSamples,
+} from './metrics';
 
 const { perf } = debugConfig;
 const MS_PER_SECOND = 1000;
@@ -22,6 +29,7 @@ class SampleSet implements PerfSamples {
   tickMs: number[] = [];
   renderMs: number[] = [];
   viewsMs: number[] = [];
+  triggers: TriggerSamples = emptyTriggerSamples();
   enemies = 0;
   projectiles = 0;
   countFrames = 0;
@@ -45,6 +53,7 @@ interface Recording {
 export class PerfMonitor implements TickProfiler {
   private readonly events: Phaser.Events.EventEmitter;
   private readonly droppedTicks: () => number;
+  private readonly triggerStats: () => Readonly<TriggerTickStats>;
   private live = new SampleSet();
   private liveUntil = 0;
   private liveDroppedAtStart = 0;
@@ -56,9 +65,18 @@ export class PerfMonitor implements TickProfiler {
   private stepEnd = 0;
   private ticksThisFrame = 0;
 
-  constructor(game: Phaser.Game, droppedTicks: () => number) {
+  /**
+   * `triggerStats` devolve os contadores do motor de gatilhos do último tick;
+   * é lido logo depois de cada tick.
+   */
+  constructor(
+    game: Phaser.Game,
+    droppedTicks: () => number,
+    triggerStats: () => Readonly<TriggerTickStats>,
+  ) {
     this.events = game.events;
     this.droppedTicks = droppedTicks;
+    this.triggerStats = triggerStats;
     this.events.on(Phaser.Core.Events.PRE_STEP, this.onPreStep, this);
     this.events.on(Phaser.Core.Events.POST_STEP, this.onPostStep, this);
     this.events.on(Phaser.Core.Events.POST_RENDER, this.onPostRender, this);
@@ -77,8 +95,19 @@ export class PerfMonitor implements TickProfiler {
 
   recordTick(durationMs: number): void {
     this.ticksThisFrame += durationMs;
-    this.live.tickMs.push(durationMs);
-    if (this.recording?.phase === 'recording') this.recording.samples.tickMs.push(durationMs);
+    const stats = this.triggerStats();
+    this.pushTick(this.live, durationMs, stats);
+    if (this.recording?.phase === 'recording') {
+      this.pushTick(this.recording.samples, durationMs, stats);
+    }
+  }
+
+  private pushTick(set: SampleSet, durationMs: number, stats: Readonly<TriggerTickStats>): void {
+    set.tickMs.push(durationMs);
+    set.triggers.fired.push(stats.fired);
+    set.triggers.maxDepth.push(stats.maxDepth);
+    set.triggers.deferred.push(stats.deferred);
+    set.triggers.dropped.push(stats.dropped);
   }
 
   /** Contagem de entidades do quadro (para as médias do relatório). */

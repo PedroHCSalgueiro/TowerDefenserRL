@@ -141,7 +141,16 @@ describe('ataque do núcleo', () => {
     const events = run(attackOnly(state), 1);
     expect(events).toEqual([
       { type: 'nexusFired', tick: 1, targetId: weak.id, x: 1, y: 2 },
-      { type: 'enemyKilled', tick: 1, enemyId: weak.id, enemyType: 'walker', towerId: null },
+      {
+        type: 'enemyKilled',
+        tick: 1,
+        enemyId: weak.id,
+        enemyType: 'walker',
+        towerId: null,
+        x: 1,
+        y: 2,
+        weight: 1,
+      },
     ]);
     expect(weak.active).toBe(false);
     expect(state.enemies.activeCount).toBe(0);

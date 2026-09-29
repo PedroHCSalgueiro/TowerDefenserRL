@@ -20,6 +20,11 @@ export interface TickContext {
   readonly rng: Rng;
   /** Ações aplicadas neste tick, na ordem em que foram enfileiradas. */
   readonly commands: readonly SimCommand[];
+  /**
+   * Eventos emitidos neste tick até agora, em ordem. É por aqui que o motor
+   * de gatilhos enxerga tiros e abates do próprio tick. Não vai para o save.
+   */
+  readonly tickEvents: readonly SimEvent[];
   emit(event: SimEvent): void;
   allocateId(): number;
 }
@@ -32,6 +37,7 @@ export class Simulation {
   private readonly events = new EventBus();
   private readonly runState: RunState;
   private readonly systems: readonly System[];
+  private readonly tickEvents: SimEvent[] = [];
 
   constructor(runState: RunState, systems: readonly System[] = []) {
     this.runState = runState;
@@ -61,11 +67,17 @@ export class Simulation {
     if (state.status === 'lost') return;
     const commands = state.commandQueue.splice(0);
     state.tick++;
+    const tickEvents = this.tickEvents;
+    tickEvents.length = 0;
     const ctx: TickContext = {
       state,
       rng: this.rng,
       commands,
-      emit: (event) => this.events.emit(event),
+      tickEvents,
+      emit: (event) => {
+        tickEvents.push(event);
+        this.events.emit(event);
+      },
       allocateId: () => state.nextEntityId++,
     };
     for (const system of this.systems) {

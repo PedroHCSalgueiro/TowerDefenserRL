@@ -67,8 +67,8 @@ describe('spawn de torres pelo debug', () => {
 
   it('pela fila de ações, torres reais do tipo pedido, sem repetir casa entre ações', () => {
     const sim = smallSim();
-    sim.enqueue({ type: 'debugSpawnTowers', count: 3, towerType: 'arrow', layout: 'clustered' });
-    sim.enqueue({ type: 'debugSpawnTowers', count: 3, towerType: 'bomb', layout: 'clustered' });
+    sim.enqueue({ type: 'debugSpawnTowers', count: 3, towerTypes: ['arrow'], layout: 'clustered' });
+    sim.enqueue({ type: 'debugSpawnTowers', count: 3, towerTypes: ['bomb'], layout: 'clustered' });
     expect(sim.state.towers).toHaveLength(0);
     const events = run(sim, 1);
     const towers = sim.state.towers;
@@ -81,7 +81,7 @@ describe('spawn de torres pelo debug', () => {
   it('tipo desconhecido não cria nada nem gasta id', () => {
     const sim = smallSim();
     const idBefore = sim.state.nextEntityId;
-    sim.enqueue({ type: 'debugSpawnTowers', count: 3, towerType: 'laser', layout: 'spread' });
+    sim.enqueue({ type: 'debugSpawnTowers', count: 3, towerTypes: ['laser'], layout: 'spread' });
     run(sim, 1);
     expect(sim.state.towers).toEqual([]);
     expect(sim.state.nextEntityId).toBe(idBefore);
@@ -163,8 +163,8 @@ describe('modo estresse', () => {
     const sim = Simulation.create('stress', realSystems());
     const setup: SimCommand[] = [
       { type: 'debugSetNexusInvulnerable', value: true },
-      { type: 'debugSpawnTowers', count: 6, towerType: 'basic', layout },
-      { type: 'debugSpawnTowers', count: 4, towerType: 'cannon', layout },
+      { type: 'debugSpawnTowers', count: 6, towerTypes: ['basic'], layout },
+      { type: 'debugSpawnTowers', count: 4, towerTypes: ['cannon'], layout },
       { type: 'debugSetStress', stress: { count: 200, layout } },
     ];
     setup.forEach((c) => sim.enqueue(c));

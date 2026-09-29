@@ -1,0 +1,327 @@
+/**
+ * Motor de gatilhos, o último sistema do tick.
+ *
+ * 1. **Fatos:** lê os eventos do tick (`ctx.tickEvents`), na ordem em que
+ *    foram emitidos: `towerFired` (tiro normal ou de ativação),
+ *    `towerActivated` e `enemyKilled`. Cada fato vira entradas na fila para
+ *    as torres cujo "quando" ele cumpre; se servir para várias torres, elas
+ *    entram em ordem de id. Contadores "a cada N" andam aqui.
+ * 2. **Fila FIFO** (`RunState.triggers.queue`): a entrada da frente executa o
+ *    "o quê" da torre, e os fatos gerados por essa execução entram no fim,
+ *    com profundidade + 1.
+ * 3. **Limites:** o tick para quando a entrada da frente passa de
+ *    `maxChainDepthPerTick` ou quando `maxActivationsPerTick` entradas já
+ *    rodaram. O resto fica na fila, na mesma ordem, e vai primeiro no tick
+ *    seguinte (com a profundidade do tick zerada). Acima de `maxQueueSize`,
+ *    entradas novas são descartadas (as mais novas) e contadas.
+ *
+ * Não existe loop infinito: toda entrada vem de um tiro normal (limitado pela
+ * cadência), de uma ativação (no máximo 1 por `activationCooldownSeconds`
+ * por torre) ou de uma morte (cada inimigo morre uma vez). Os tiros extras do
+ * disparo múltiplo não contam como tiro. Não há sorteio: empates vão para o
+ * menor id.
+ */
+
+import type { EnemyData } from '../enemies/enemyData';
+import type { SimEventOf } from '../engine/events';
+import type { System, TickContext } from '../engine/simulation';
+import type { SpatialIndex } from '../spatial/spatialIndex';
+import type { Tower } from '../towers/placement';
+import type { TargetScores } from '../towers/targeting';
+import { findTowerTarget } from '../towers/systems';
+import { getTowerType, type TowerData, type TowerType } from '../towers/towerData';
+import { resolveCopy, runEffect, type EffectEnv } from './effects';
+import { triggerAt, type TriggerRules, type TriggerStar } from './triggerData';
+import type { PendingTrigger, TriggerState, TriggerTickStats } from './triggerState';
+
+export interface TriggerSystemDeps {
+  readonly index: SpatialIndex;
+  readonly enemies: EnemyData;
+  readonly towers: TowerData;
+  readonly scores: TargetScores;
+  readonly ticksPerSecond: number;
+}
+
+/** Torre com gatilho, já com o tipo e a estrela resolvidos para o tick. */
+interface Armed {
+  tower: Tower;
+  type: TowerType;
+  star: TriggerStar;
+}
+
+function isNeighbor(a: Tower, b: Tower, neighborhood: 4 | 8): boolean {
+  const dx = Math.abs(a.x - b.x);
+  const dy = Math.abs(a.y - b.y);
+  return neighborhood === 4 ? dx + dy === 1 : Math.max(dx, dy) === 1;
+}
+
+function inRange(armed: Armed, x: number, y: number): boolean {
+  const dx = x - armed.tower.x;
+  const dy = y - armed.tower.y;
+  return dx * dx + dy * dy <= armed.type.range * armed.type.range;
+}
+
+class TriggerEngine implements EffectEnv {
+  readonly index: SpatialIndex;
+  readonly enemies: EnemyData;
+  readonly towers: TowerData;
+  readonly scores: TargetScores;
+  readonly activationCooldownTicks: number;
+  private readonly rules: TriggerRules;
+  /** Estrela ★1 de cada tipo de torre (`null` = sem gatilho). */
+  private readonly starByType = new Map<string, TriggerStar | null>();
+
+  // Montados a cada tick a partir do estado (nada disso vai para o save).
+  private tick: TickContext | null = null;
+  private sorted: Tower[] = [];
+  private readonly armedById = new Map<number, Armed>();
+  private readonly towerById = new Map<number, Tower>();
+  private armed: Armed[] = [];
+  /** Torres com gatilho que escutam abates ("morre no alcance", "a cada N abates", "vizinha abate"). */
+  private killListeners: Armed[] = [];
+  private readonly neighborCache = new Map<number, Tower[]>();
+
+  private queue: PendingTrigger[] = [];
+  private head = 0;
+  private stats!: TriggerTickStats;
+  private state!: TriggerState;
+
+  constructor(deps: TriggerSystemDeps) {
+    this.index = deps.index;
+    this.enemies = deps.enemies;
+    this.towers = deps.towers;
+    this.scores = deps.scores;
+    this.rules = deps.towers.triggers;
+    this.activationCooldownTicks = Math.max(
+      1,
+      Math.round(this.rules.activationCooldownSeconds * deps.ticksPerSecond),
+    );
+    for (const [id, type] of Object.entries(deps.towers.types)) {
+      this.starByType.set(id, type.trigger ? triggerAt(type.trigger) : null);
+    }
+  }
+
+  get ctx(): TickContext {
+    return this.tick!;
+  }
+
+  neighborsOf(tower: Tower): readonly Tower[] {
+    let list = this.neighborCache.get(tower.id);
+    if (!list) {
+      list = this.sorted.filter(
+        (t) => t !== tower && isNeighbor(tower, t, this.rules.neighborhood),
+      );
+      this.neighborCache.set(tower.id, list);
+    }
+    return list;
+  }
+
+  run(ctx: TickContext): void {
+    const triggers = ctx.state.triggers;
+    const stats = triggers.lastTick;
+    stats.fired = 0;
+    stats.maxDepth = 0;
+    stats.deferred = 0;
+    stats.dropped = 0;
+
+    this.prepare(ctx);
+    if (this.armed.length === 0 && triggers.queue.length === 0) return;
+
+    this.tick = ctx;
+    this.state = triggers;
+    this.stats = stats;
+    this.queue = triggers.queue;
+    this.head = 0;
+
+    // Sobras do tick anterior já estão na frente; os fatos deste tick entram atrás.
+    let cursor = this.convertFacts(0, 1, 1);
+    let processed = 0;
+    while (this.head < this.queue.length) {
+      const entry = this.queue[this.head]!;
+      if (entry.tickDepth > this.rules.maxChainDepthPerTick) break;
+      if (processed >= this.rules.maxActivationsPerTick) break;
+      this.head++;
+      processed++;
+      this.execute(entry);
+      cursor = this.convertFacts(cursor, entry.depth + 1, entry.tickDepth + 1);
+    }
+
+    if (this.head > 0) this.queue.splice(0, this.head);
+    this.head = 0;
+    for (const entry of this.queue) entry.tickDepth = 1;
+    stats.deferred = this.queue.length;
+    this.tick = null;
+  }
+
+  /** Índices do tick: torres por id, torres com gatilho e vizinhanças. */
+  private prepare(ctx: TickContext): void {
+    const towers = ctx.state.towers;
+    this.sorted = towers.length > 1 ? [...towers].sort((a, b) => a.id - b.id) : [...towers];
+    this.towerById.clear();
+    this.armedById.clear();
+    this.neighborCache.clear();
+    this.armed = [];
+    this.killListeners = [];
+    for (const tower of this.sorted) {
+      this.towerById.set(tower.id, tower);
+      const star = this.starByType.get(tower.type);
+      if (!star) continue;
+      const armed = { tower, type: getTowerType(this.towers, tower.type), star };
+      this.armed.push(armed);
+      this.armedById.set(tower.id, armed);
+      const when = star.when.kind;
+      if (
+        when === 'enemyDiesInRange' ||
+        when === 'everyNKillsInRange' ||
+        when === 'neighborKills'
+      ) {
+        this.killListeners.push(armed);
+      }
+    }
+  }
+
+  private enqueue(
+    armed: Armed,
+    sourceTowerId: number | null,
+    weight: number,
+    depth: number,
+    tickDepth: number,
+    point: { x: number; y: number } | null,
+  ): void {
+    if (this.queue.length - this.head >= this.rules.maxQueueSize) {
+      this.stats.dropped++;
+      this.state.droppedTotal++;
+      return;
+    }
+    this.queue.push({
+      towerId: armed.tower.id,
+      sourceTowerId,
+      weight,
+      depth,
+      tickDepth,
+      hasPoint: point !== null,
+      x: point?.x ?? 0,
+      y: point?.y ?? 0,
+    });
+  }
+
+  /** Transforma os eventos a partir de `from` em entradas; devolve o novo cursor. */
+  private convertFacts(from: number, depth: number, tickDepth: number): number {
+    const events = this.ctx.tickEvents;
+    for (let i = from; i < events.length; i++) {
+      const event = events[i]!;
+      switch (event.type) {
+        case 'towerFired':
+          if (event.shot !== 'extra') this.onShot(event.towerId, depth, tickDepth);
+          break;
+        case 'towerActivated': {
+          const armed = this.armedById.get(event.towerId);
+          if (armed?.star.when.kind === 'onActivated') {
+            this.enqueue(armed, event.sourceTowerId, 1, depth, tickDepth, null);
+          }
+          break;
+        }
+        case 'enemyKilled':
+          this.onKill(event, depth, tickDepth);
+          break;
+      }
+    }
+    return events.length;
+  }
+
+  /** Tiro normal ou de ativação da torre. */
+  private onShot(towerId: number, depth: number, tickDepth: number): void {
+    const armed = this.armedById.get(towerId);
+    if (!armed) return;
+    const { tower, star } = armed;
+    let enqueued = false;
+    if (star.when.kind === 'onFire') {
+      this.enqueue(armed, tower.id, 1, depth, tickDepth, null);
+      enqueued = true;
+    } else if (star.when.kind === 'everyNShots') {
+      tower.triggerCounter++;
+      while (tower.triggerCounter >= star.when.shots) {
+        tower.triggerCounter -= star.when.shots;
+        this.enqueue(armed, tower.id, 1, depth, tickDepth, null);
+        enqueued = true;
+      }
+    }
+    // Cargas cheias esperando alvo: o raio sai no próximo tiro da própria torre.
+    const effect = star.effect;
+    if (!enqueued && effect.kind === 'chargeLightning' && tower.charges >= effect.charges) {
+      this.enqueue(armed, tower.id, 0, depth, tickDepth, null);
+    }
+  }
+
+  /** Um inimigo morreu: "morre no alcance", "a cada N abates no alcance" e "vizinha abate". */
+  private onKill(event: SimEventOf<'enemyKilled'>, depth: number, tickDepth: number): void {
+    const killer = event.towerId === null ? undefined : this.towerById.get(event.towerId);
+    for (const armed of this.killListeners) {
+      const when = armed.star.when;
+      switch (when.kind) {
+        case 'enemyDiesInRange':
+          if (inRange(armed, event.x, event.y)) {
+            this.enqueue(armed, event.towerId, 1, depth, tickDepth, event);
+          }
+          break;
+        case 'everyNKillsInRange': {
+          if (!inRange(armed, event.x, event.y)) break;
+          const { tower } = armed;
+          tower.triggerCounter += event.weight;
+          while (tower.triggerCounter >= when.kills) {
+            tower.triggerCounter -= when.kills;
+            this.enqueue(armed, event.towerId, 1, depth, tickDepth, event);
+          }
+          break;
+        }
+        case 'neighborKills':
+          if (killer && isNeighbor(armed.tower, killer, this.rules.neighborhood)) {
+            this.enqueue(armed, killer.id, event.weight, depth, tickDepth, event);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  private execute(entry: PendingTrigger): void {
+    const armed = this.armedById.get(entry.towerId);
+    // A torre saiu do mapa (ou trocou de tipo) desde que a entrada foi criada.
+    if (!armed) return;
+    const { tower, type, star } = armed;
+    const own = star.effect;
+    const copied = own.kind === 'copyLast';
+    const effect = own.kind === 'copyLast' ? resolveCopy(this, tower) : own;
+
+    // Descarga de carga guardada: sem carga suficiente ou sem alvo, não faz nada.
+    if (entry.weight === 0 && effect?.kind === 'chargeLightning' && !copied) {
+      if (tower.charges < effect.charges) return;
+      if (!findTowerTarget(this.index, this.ctx.state, tower, type, this.scores)) return;
+    }
+
+    const { ctx } = this;
+    ctx.emit({
+      type: 'triggerFired',
+      tick: ctx.state.tick,
+      towerId: tower.id,
+      sourceTowerId: entry.sourceTowerId,
+      when: star.when.kind,
+      effect: effect?.kind ?? 'copyLast',
+      depth: entry.depth,
+    });
+    this.stats.fired++;
+    if (entry.depth > this.stats.maxDepth) this.stats.maxDepth = entry.depth;
+
+    // Nada para copiar: o gatilho disparou, mas não há efeito.
+    if (!effect) return;
+    if (runEffect(this, tower, type, effect, entry, copied)) {
+      tower.lastEffect = { effect, seq: this.state.nextSeq++ };
+    }
+  }
+}
+
+export function createTriggerSystem(deps: TriggerSystemDeps): System {
+  const engine = new TriggerEngine(deps);
+  return (ctx) => engine.run(ctx);
+}

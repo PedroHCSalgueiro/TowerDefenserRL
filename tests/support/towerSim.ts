@@ -12,14 +12,24 @@ import { createProjectileSystem } from '../../src/sim/projectiles/systems';
 import { SpatialIndex } from '../../src/sim/spatial/spatialIndex';
 import type { RunState } from '../../src/sim/state';
 import { createGameSystems } from '../../src/sim/systems';
-import type { Tower } from '../../src/sim/towers/placement';
+import { createTower, type Tower } from '../../src/sim/towers/placement';
 import { createTowerSystem } from '../../src/sim/towers/systems';
 import { createTargetScores } from '../../src/sim/towers/targeting';
 import type { TowerData } from '../../src/sim/towers/towerData';
 import { TPS, blindNexus, makeState, place, smallMap, testEnemies } from './enemySim';
 
+/** Regras do motor de gatilhos nos testes: a 8 ticks/s, a trava de 1 s = 8 ticks. */
+export const testTriggerRules: TowerData['triggers'] = {
+  neighborhood: 4,
+  activationCooldownSeconds: 1,
+  maxChainDepthPerTick: 8,
+  maxActivationsPerTick: 2000,
+  maxQueueSize: 10000,
+};
+
 export const testTowers: TowerData = {
   projectileRetargetRadius: 1,
+  triggers: testTriggerRules,
   types: {
     arrow: {
       name: 'Flecha',
@@ -69,7 +79,7 @@ export function onRoute(state: RunState, type: string, distance: number, hp = 10
 
 /** Coloca uma torre direto no estado, sem passar pela ação. */
 export function addTower(state: RunState, type: string, x: number, y: number): Tower {
-  const tower: Tower = { id: state.nextEntityId++, type, x, y, cooldownTicks: 0 };
+  const tower = createTower(state.nextEntityId++, type, { x, y });
   state.towers.push(tower);
   return tower;
 }
