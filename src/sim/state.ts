@@ -1,16 +1,16 @@
 /**
  * Estado completo da run. Tudo aqui precisa caber em JSON: é a base do save
- * no meio da run. As próximas tarefas acrescentam torres, ondas, ouro etc.
+ * no meio da run. As próximas tarefas acrescentam ondas, ouro etc.
  */
 
 import engineConfig from '../data/engine.json';
-import type { DummyTower } from './debug/dummyTowers';
 import { createEnemyPool, type EnemyPool } from './enemies/pool';
 import { hashSeed } from './engine/rng';
 import { nexusData } from './nexus/nexusData';
 import { createProjectilePool, type ProjectilePool } from './projectiles/pool';
+import type { Tower } from './towers/placement';
 
-export const RUN_STATE_VERSION = 3;
+export const RUN_STATE_VERSION = 4;
 
 /**
  * Disposição usada pelo debug:
@@ -25,6 +25,14 @@ export interface SpawnEnemyCommand {
   enemyType: string;
 }
 
+/** Ação do jogador: posiciona uma torre do tipo pedido na casa (x, y). */
+export interface PlaceTowerCommand {
+  type: 'placeTower';
+  towerType: string;
+  x: number;
+  y: number;
+}
+
 /** Debug: N inimigos de um tipo (ou de tipos sorteados, se `enemyType` for `null`). */
 export interface DebugSpawnEnemiesCommand {
   type: 'debugSpawnEnemies';
@@ -33,14 +41,15 @@ export interface DebugSpawnEnemiesCommand {
   layout: DebugLayout;
 }
 
-/** Debug: N torres de teste (provisórias; a T06 as substitui). */
+/** Debug: N torres do tipo pedido, em casas livres escolhidas pela disposição. */
 export interface DebugSpawnTowersCommand {
   type: 'debugSpawnTowers';
   count: number;
+  towerType: string;
   layout: DebugLayout;
 }
 
-/** Debug: remove inimigos, projéteis e torres de teste, e desliga o estresse. */
+/** Debug: remove inimigos, projéteis e torres, e desliga o estresse. */
 export interface DebugClearCommand {
   type: 'debugClear';
 }
@@ -59,6 +68,7 @@ export interface DebugSetNexusInvulnerableCommand {
 /** Ação do jogador, aplicada no início do próximo tick. */
 export type SimCommand =
   | SpawnEnemyCommand
+  | PlaceTowerCommand
   | DebugSpawnEnemiesCommand
   | DebugSpawnTowersCommand
   | DebugClearCommand
@@ -75,7 +85,6 @@ export interface DebugState {
   /** O núcleo não perde vida (e a run não termina). */
   nexusInvulnerable: boolean;
   stress: StressConfig | null;
-  towers: DummyTower[];
 }
 
 export type RunStatus = 'playing' | 'lost';
@@ -97,6 +106,8 @@ export interface RunState {
   nexus: NexusState;
   enemies: EnemyPool;
   projectiles: ProjectilePool;
+  /** Torres no mapa, na ordem em que foram posicionadas (é a ordem de disparo). */
+  towers: Tower[];
   debug: DebugState;
   /** Ações enfileiradas que ainda não foram aplicadas. */
   commandQueue: SimCommand[];
@@ -113,7 +124,8 @@ export function createRunState(seed: string): RunState {
     nexus: { hp: nexusData.maxHp, maxHp: nexusData.maxHp, attackCooldownTicks: 0 },
     enemies: createEnemyPool(engineConfig.enemyPoolInitialCapacity),
     projectiles: createProjectilePool(engineConfig.projectilePoolInitialCapacity),
-    debug: { nexusInvulnerable: false, stress: null, towers: [] },
+    towers: [],
+    debug: { nexusInvulnerable: false, stress: null },
     commandQueue: [],
   };
 }
@@ -131,7 +143,7 @@ export function deserializeRunState(json: string): RunState {
   if (state.version !== RUN_STATE_VERSION) {
     throw new Error(`Versão de save não suportada: ${String(state.version)}`);
   }
-  const { nexus, enemies, projectiles, debug } = state;
+  const { nexus, enemies, projectiles, towers, debug } = state;
   if (
     typeof state.seed !== 'string' ||
     !Number.isInteger(state.tick) ||
@@ -147,9 +159,9 @@ export function deserializeRunState(json: string): RunState {
     !Array.isArray(projectiles?.slots) ||
     !Array.isArray(projectiles.free) ||
     !Number.isInteger(projectiles.activeCount) ||
+    !Array.isArray(towers) ||
     typeof debug?.nexusInvulnerable !== 'boolean' ||
     (debug.stress !== null && typeof debug.stress !== 'object') ||
-    !Array.isArray(debug.towers) ||
     !Array.isArray(state.commandQueue)
   ) {
     throw new Error('Save inválido: campos ausentes ou com tipo errado');

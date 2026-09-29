@@ -8,9 +8,9 @@
  * Isso troca o Graphics redesenhado a cada quadro (caro com 1.000 inimigos:
  * a geometria era refeita toda vez) por imagens em lote.
  *
- * Tudo fica numa Layer própria, ordenada pela profundidade isométrica (quem
- * está mais abaixo na tela é desenhado por cima), na posição interpolada
- * entre o tick anterior e o atual.
+ * Tudo fica na Layer compartilhada com as torres, ordenado pela profundidade
+ * isométrica `isoDepth` (x + y: quem está mais abaixo na tela é desenhado
+ * por cima), na posição interpolada entre o tick anterior e o atual.
  */
 
 import Phaser from 'phaser';
@@ -18,7 +18,7 @@ import renderConfig from '../../data/render.json';
 import { getEnemyType, type EnemyData } from '../../sim/enemies/enemyData';
 import { lerp } from '../../sim/engine/clock';
 import type { RunState } from '../../sim/state';
-import type { IsoProjection } from '../iso';
+import { isoDepth, type IsoProjection } from '../iso';
 import { hexColor } from './color';
 
 const style = renderConfig.enemies;
@@ -28,7 +28,7 @@ const TEXTURE_BODY = 'enemy-body';
 const TEXTURE_SHADOW = 'enemy-shadow';
 const TEXTURE_PIXEL = 'enemy-pixel';
 // Dentro da mesma profundidade: sombra, corpo e barra, nessa ordem.
-const DEPTH_STEP = 1e-3;
+const DEPTH_STEP = 1e-4;
 
 interface SlotImages {
   body: Phaser.GameObjects.Image;
@@ -75,9 +75,14 @@ export class EnemyView {
   private readonly barBackColor = hexColor(style.healthBar.backColor);
   private readonly barFillColor = hexColor(style.healthBar.fillColor);
 
-  constructor(scene: Phaser.Scene, projection: IsoProjection, data: EnemyData) {
+  constructor(
+    scene: Phaser.Scene,
+    projection: IsoProjection,
+    data: EnemyData,
+    layer: Phaser.GameObjects.Layer,
+  ) {
     this.scene = scene;
-    this.layer = scene.add.layer();
+    this.layer = layer;
     this.projection = projection;
     this.data = data;
     createTextures(scene);
@@ -98,12 +103,10 @@ export class EnemyView {
       }
       if (!images.visible) this.setVisible(images, true);
 
-      const p = this.projection.toScreen({
-        x: lerp(enemy.prevX, enemy.x, alpha),
-        y: lerp(enemy.prevY, enemy.y, alpha),
-      });
+      const at = { x: lerp(enemy.prevX, enemy.x, alpha), y: lerp(enemy.prevY, enemy.y, alpha) };
+      const p = this.projection.toScreen(at);
       const flying = getEnemyType(this.data, enemy.type).movement === 'air';
-      const depth = p.y;
+      const depth = isoDepth(at);
       const y = flying ? p.y - style.flyingHeight : p.y;
 
       if (images.type !== enemy.type) {

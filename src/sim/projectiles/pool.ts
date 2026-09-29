@@ -13,7 +13,17 @@ export interface Projectile {
   /** Alvo: id do inimigo e o slot onde ele mora (o id confirma que é o mesmo). */
   targetId: number;
   targetSlot: number;
+  /**
+   * Última posição conhecida do alvo. Se ele morrer (ou chegar ao núcleo)
+   * antes do impacto, é o ponto de onde sai a busca por um alvo novo.
+   */
+  targetX: number;
+  targetY: number;
+  /** Já trocou de alvo uma vez (não troca de novo). */
+  retargeted: boolean;
   damage: number;
+  /** Raio do tiro em área, em casas; 0 = tiro único. */
+  areaRadius: number;
   /** Velocidade em casas por segundo. */
   speed: number;
   /** Posição na grade no tick atual e no anterior. */
@@ -38,7 +48,11 @@ function blankProjectile(slot: number): Projectile {
     sourceId: 0,
     targetId: 0,
     targetSlot: 0,
+    targetX: 0,
+    targetY: 0,
+    retargeted: false,
     damage: 0,
+    areaRadius: 0,
     speed: 0,
     x: 0,
     y: 0,

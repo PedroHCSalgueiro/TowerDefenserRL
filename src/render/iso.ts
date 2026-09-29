@@ -21,6 +21,14 @@ export interface Size {
 /** Vértices do losango: topo, direita, baixo, esquerda. */
 export type Diamond = readonly [Point, Point, Point, Point];
 
+/**
+ * Profundidade de desenho isométrica: quem tem `x + y` maior fica mais abaixo
+ * na tela e é desenhado por cima. Vale para torres e inimigos (mesma Layer).
+ */
+export function isoDepth(cell: GridCoord): number {
+  return cell.x + cell.y;
+}
+
 export class IsoProjection {
   readonly tile: Size;
   readonly origin: Point;
@@ -57,6 +65,18 @@ export class IsoProjection {
     const v = (point.y - this.origin.y) / (this.tile.height / 2);
     const cell = { x: Math.floor((u + v) / 2 + 0.5), y: Math.floor((v - u) / 2 + 0.5) };
     return map.isInside(cell) ? cell : null;
+  }
+
+  /**
+   * Largura e altura, na tela, de um círculo de raio `radius` casas na grade.
+   * A projeção transforma o círculo numa elipse alinhada aos eixos, com
+   * semieixos `radius · tile / √2`.
+   */
+  circleSize(radius: number): Size {
+    return {
+      width: radius * this.tile.width * Math.SQRT2,
+      height: radius * this.tile.height * Math.SQRT2,
+    };
   }
 
   diamond(cell: GridCoord): Diamond {

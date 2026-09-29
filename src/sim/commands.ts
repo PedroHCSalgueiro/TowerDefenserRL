@@ -3,9 +3,9 @@
  * tick. É o único lugar em que ações do jogador e do debug mudam o estado.
  */
 
-import { pickTowerCells } from './debug/dummyTowers';
 import type { SimDebugData } from './debug/debugData';
 import { spawnDebugEnemy } from './debug/stress';
+import { pickTowerCells } from './debug/towerCells';
 import type { EnemyData } from './enemies/enemyData';
 import { releaseAllEnemies } from './enemies/pool';
 import type { Routes } from './enemies/route';
@@ -13,11 +13,14 @@ import { spawnEnemy } from './enemies/systems';
 import type { System } from './engine/simulation';
 import type { GridMap } from './grid/map';
 import { releaseAllProjectiles } from './projectiles/pool';
+import { placeTower } from './towers/placement';
+import type { TowerData } from './towers/towerData';
 
 export function createCommandSystem(
   map: GridMap,
   routes: Routes,
   enemies: EnemyData,
+  towers: TowerData,
   debug: SimDebugData,
 ): System {
   /** Quantidade pedida, presa em [0, maxSpawnPerCommand]. */
@@ -31,6 +34,9 @@ export function createCommandSystem(
         case 'spawnEnemy':
           spawnEnemy(ctx, routes, enemies, command.enemyType);
           break;
+        case 'placeTower':
+          placeTower(ctx, map, towers, command.towerType, command);
+          break;
         case 'debugSpawnEnemies': {
           const count = clampCount(command.count);
           for (let i = 0; i < count; i++) {
@@ -39,22 +45,17 @@ export function createCommandSystem(
           break;
         }
         case 'debugSpawnTowers': {
-          const occupied = new Set(state.debug.towers.map((t) => map.indexOf(t)));
+          const occupied = new Set(state.towers.map((t) => map.indexOf(t)));
           const cells = pickTowerCells(map, occupied, clampCount(command.count), command.layout);
           for (const cell of cells) {
-            state.debug.towers.push({
-              id: ctx.allocateId(),
-              x: cell.x,
-              y: cell.y,
-              cooldownTicks: 0,
-            });
+            placeTower(ctx, map, towers, command.towerType, cell);
           }
           break;
         }
         case 'debugClear':
           releaseAllEnemies(state.enemies);
           releaseAllProjectiles(state.projectiles);
-          state.debug.towers = [];
+          state.towers = [];
           state.debug.stress = null;
           break;
         case 'debugSetStress':

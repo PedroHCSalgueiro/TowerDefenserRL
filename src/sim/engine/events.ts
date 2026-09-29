@@ -14,7 +14,11 @@ export interface SimEventPayloads {
   /** `x`/`y`: posição do alvo na grade no momento do ataque. */
   nexusFired: { targetId: number; x: number; y: number };
   runLost: Record<never, never>;
+  /** `x`/`y`: casa da torre. */
+  towerPlaced: { towerId: number; towerType: string; x: number; y: number };
   towerFired: { towerId: number; targetId: number };
+  /** Impacto de um tiro em área: ponto na grade e raio, em casas. */
+  projectileExploded: { towerId: number; x: number; y: number; radius: number };
   triggerFired: { towerId: number; triggerId: string; depth: number };
   towersMerged: { towerId: number; stars: number };
   waveStarted: { wave: number };

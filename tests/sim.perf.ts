@@ -1,6 +1,6 @@
 /**
- * Mede só a simulação (sem renderização): 1.000 inimigos + 30 torres de teste,
- * nos dois cenários da T05. Rode com `npm run bench`. Não faz parte do
+ * Mede só a simulação (sem renderização): 1.000 inimigos + 30 torres reais
+ * (tipo padrão do debug), nos dois cenários da T05. Rode com `npm run bench`. Não faz parte do
  * `npm test`: o resultado depende da máquina.
  */
 
@@ -13,14 +13,14 @@ import { loadMap } from '../src/sim/grid/map';
 import type { DebugLayout } from '../src/sim/state';
 import { createGameSystems } from '../src/sim/systems';
 
-const { enemyCount, towerCount } = debugConfig.defaults;
+const { enemyCount, towerCount, towerType } = debugConfig.defaults;
 const WARMUP_TICKS = 600;
 const MEASURED_TICKS = 3000;
 
 function measure(layout: DebugLayout): string {
   const sim = Simulation.create(`bench-${layout}`, createGameSystems(loadMap(mapData)));
   sim.enqueue({ type: 'debugSetNexusInvulnerable', value: true });
-  sim.enqueue({ type: 'debugSpawnTowers', count: towerCount, layout });
+  sim.enqueue({ type: 'debugSpawnTowers', count: towerCount, towerType, layout });
   sim.enqueue({ type: 'debugSetStress', stress: { count: enemyCount, layout } });
   for (let i = 0; i < WARMUP_TICKS; i++) {
     sim.step();
@@ -47,7 +47,7 @@ function measure(layout: DebugLayout): string {
   );
 }
 
-it(`tick com ${enemyCount} inimigos e ${towerCount} torres`, () => {
+it(`tick com ${enemyCount} inimigos e ${towerCount} torres (${towerType})`, () => {
   const lines = (['spread', 'clustered'] as const).map(measure);
   process.stdout.write(`\n${lines.join('\n')}\n`);
 });

@@ -1,55 +1,10 @@
 /**
- * Torres de teste da T05 (provisórias; a T06 as substitui).
- *
- * Cada torre ocupa uma casa livre e dispara um projétil no inimigo mais
- * próximo dentro do alcance, com desempate pelo menor id (mira provisória,
- * pergunta de design para a T06). A busca usa o índice espacial.
+ * Escolha de casas para o spawn de torres em massa do debug (modo estresse e
+ * painel). As torres em si são as reais (`src/sim/towers/`).
  */
 
-import type { System } from '../engine/simulation';
 import type { GridCoord, GridMap } from '../grid/map';
-import { fireProjectile } from '../projectiles/systems';
-import type { SpatialIndex } from '../spatial/spatialIndex';
 import type { DebugLayout } from '../state';
-import type { DummyTowerData } from './debugData';
-
-export interface DummyTower {
-  id: number;
-  x: number;
-  y: number;
-  /** Ticks até o próximo disparo; 0 = pronta. */
-  cooldownTicks: number;
-}
-
-export function createDummyTowerSystem(
-  index: SpatialIndex,
-  data: DummyTowerData,
-  ticksPerSecond: number,
-): System {
-  const cooldownTicks = Math.max(1, Math.round(ticksPerSecond / data.shotsPerSecond));
-  return (ctx) => {
-    const { state } = ctx;
-    for (const tower of state.debug.towers) {
-      if (tower.cooldownTicks > 0) tower.cooldownTicks--;
-      if (tower.cooldownTicks > 0) continue;
-      const target = index.findNearest(state, tower.x, tower.y, data.range);
-      if (!target) continue;
-      tower.cooldownTicks = cooldownTicks;
-      ctx.emit({ type: 'towerFired', tick: state.tick, towerId: tower.id, targetId: target.id });
-      fireProjectile(
-        ctx,
-        {
-          sourceId: tower.id,
-          x: tower.x,
-          y: tower.y,
-          damage: data.damage,
-          speed: data.projectileSpeed,
-        },
-        target,
-      );
-    }
-  };
-}
 
 function byRowThenColumn(a: GridCoord, b: GridCoord): number {
   return a.y - b.y || a.x - b.x;

@@ -1,7 +1,6 @@
 {
-  "dummyTower": { "damage": 10, "shotsPerSecond": 2, "range": 3, "projectileSpeed": 8 },
   "maxSpawnPerCommand": 5000,
-  "defaults": { "enemyCount": 1000, "towerCount": 30, "spawnCount": 50 },
+  "defaults": { "enemyCount": 1000, "towerCount": 30, "towerType": "basic", "spawnCount": 50 },
   "perf": {
     "recordSeconds": 20,
     "warmupSeconds": 3,

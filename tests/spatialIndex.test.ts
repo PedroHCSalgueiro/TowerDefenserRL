@@ -82,4 +82,41 @@ describe('SpatialIndex', () => {
       expect(index.findNearest(state, x, y, range)).toBe(bruteNearest(state, x, y, range));
     }
   });
+
+  it('findBest com qualquer nota e collectInRange dão o mesmo que a busca completa', () => {
+    const rng = new Rng({ rngState: 777 });
+    const state = makeState();
+    const between = (lo: number, hi: number) => lo + rng.nextFloat() * (hi - lo);
+    for (let i = 0; i < 500; i++) {
+      // Vida em poucos valores, para forçar empates na nota.
+      const e = place(
+        state,
+        'walker',
+        between(0, 10),
+        between(0, 10),
+        1 + Math.floor(between(0, 5)),
+      );
+      if (rng.chance(0.2)) releaseEnemy(state.enemies, e);
+    }
+    const mostHp = (e: Enemy) => -e.hp;
+    const index = new SpatialIndex(1);
+    for (let q = 0; q < 300; q++) {
+      const x = between(-2, 12);
+      const y = between(-2, 12);
+      const range = between(0, 4);
+      const inRange = state.enemies.slots.filter(
+        (e) => e.active && (e.x - x) ** 2 + (e.y - y) ** 2 <= range * range,
+      );
+      const expected = inRange.reduce<Enemy | null>(
+        (best, e) =>
+          best === null || -e.hp < -best.hp || (e.hp === best.hp && e.id < best.id) ? e : best,
+        null,
+      );
+      expect(index.findBest(state, x, y, range, mostHp)).toBe(expected);
+      const collected = index.collectInRange(state, x, y, range, []);
+      expect(collected.map((e) => e.id).sort((a, b) => a - b)).toEqual(
+        inRange.map((e) => e.id).sort((a, b) => a - b),
+      );
+    }
+  });
 });

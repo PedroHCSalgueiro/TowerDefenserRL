@@ -1,0 +1,6 @@
+{
+  "artillery": { "name": "Artilharia" },
+  "mechanical": { "name": "Mecânica" },
+  "arcane": { "name": "Arcana" },
+  "shadow": { "name": "Sombria" }
+}

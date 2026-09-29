@@ -2,10 +2,11 @@
  * Painel de debug em HTML sobre o canvas. Substitui o texto do canto e as
  * teclas 1 a 4 da T04.
  *
- * Mostra FPS, tempo de tick e de render, inimigos e projéteis ativos e a
- * semente; tem os comandos de spawn, o modo estresse, o núcleo invulnerável,
- * a velocidade e a gravação de desempenho. Toda ação que muda o jogo passa
- * pela fila de comandos da simulação.
+ * Mostra FPS, tempo de tick e de render, inimigos, projéteis e torres e a
+ * semente; tem o posicionamento de torre na casa selecionada, os comandos de
+ * spawn, o modo estresse, o núcleo invulnerável, a velocidade e a gravação
+ * de desempenho. Toda ação que muda o jogo passa pela fila de comandos da
+ * simulação.
  */
 
 import Phaser from 'phaser';
@@ -30,6 +31,7 @@ export interface DebugPanelDeps {
   runner: SimulationRunner;
   monitor: PerfMonitor;
   enemyTypes: readonly string[];
+  towerTypes: readonly { id: string; name: string }[];
   hoveredCell: () => GridCoord | null;
   selectedCell: () => GridCoord | null;
 }
@@ -91,6 +93,7 @@ export class DebugPanel {
   private readonly results: HTMLElement;
   private readonly speedButtons: HTMLButtonElement[] = [];
   private readonly invulnerable: HTMLInputElement;
+  private readonly placeNote: HTMLElement;
   private nextRefresh = 0;
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== panelConfig.toggleKey) return;
@@ -122,6 +125,25 @@ export class DebugPanel {
       this.send({ type: 'debugSetNexusInvulnerable', value: this.invulnerable.checked }),
     );
 
+    // Torre: tipo usado para posicionar, no spawn em massa e no estresse.
+    const towerType = el(
+      'select',
+      {},
+      deps.towerTypes.map((t) =>
+        el('option', { value: t.id, textContent: t.name, selected: t.id === defaults.towerType }),
+      ),
+    );
+    this.placeNote = el('div', { className: 'debug-note' });
+    const placeTower = button('Posicionar na casa selecionada', () => {
+      const cell = deps.selectedCell();
+      if (!cell) {
+        this.placeNote.textContent = 'Clique numa casa do mapa antes.';
+        return;
+      }
+      this.placeNote.textContent = '';
+      this.send({ type: 'placeTower', towerType: towerType.value, x: cell.x, y: cell.y });
+    });
+
     // Spawn de inimigos
     const enemyType = el('select', {}, [
       el('option', { value: '', textContent: 'misturados' }),
@@ -145,6 +167,7 @@ export class DebugPanel {
       this.send({
         type: 'debugSpawnTowers',
         count: towerCount.valueAsNumber,
+        towerType: towerType.value,
         layout: towerLayout.value as DebugLayout,
       }),
     );
@@ -158,7 +181,12 @@ export class DebugPanel {
       this.invulnerable.checked = true;
       this.send({ type: 'debugClear' });
       this.send({ type: 'debugSetNexusInvulnerable', value: true });
-      this.send({ type: 'debugSpawnTowers', count: stressTowers.valueAsNumber, layout });
+      this.send({
+        type: 'debugSpawnTowers',
+        count: stressTowers.valueAsNumber,
+        towerType: towerType.value,
+        layout,
+      });
       this.send({
         type: 'debugSetStress',
         stress: { count: stressCount.valueAsNumber, layout },
@@ -191,6 +219,9 @@ export class DebugPanel {
       this.stats,
       speedRow,
       row('Núcleo', el('label', {}, [this.invulnerable, ' invulnerável'])),
+      el('div', { className: 'debug-section', textContent: 'Torre' }),
+      row('Tipo', towerType, placeTower),
+      this.placeNote,
       el('div', { className: 'debug-section', textContent: 'Estresse' }),
       row('Inimigos', stressCount, stressLayout),
       row('Torres', stressTowers),
@@ -232,7 +263,7 @@ export class DebugPanel {
     this.invulnerable.checked = state.debug.nexusInvulnerable;
     this.stats.textContent = [
       formatLive(this.deps.monitor.liveSummary),
-      `Inimigos ${state.enemies.activeCount}  Projéteis ${state.projectiles.activeCount}  Torres ${state.debug.towers.length}`,
+      `Inimigos ${state.enemies.activeCount}  Projéteis ${state.projectiles.activeCount}  Torres ${state.towers.length}`,
       `Estresse ${stress ? `${stress.count} (${stress.layout})` : 'desligado'}`,
       `Núcleo ${Math.ceil(state.nexus.hp)}/${state.nexus.maxHp}`,
       `Semente ${state.seed}`,
@@ -270,7 +301,7 @@ export class DebugPanel {
           speed,
           layout: stress?.layout ?? null,
           stressCount: stress?.count ?? null,
-          towers: state.debug.towers.length,
+          towers: state.towers.length,
           seed: state.seed,
           date: new Date().toISOString(),
           userAgent: navigator.userAgent,

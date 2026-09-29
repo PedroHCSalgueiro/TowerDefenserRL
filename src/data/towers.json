@@ -1,0 +1,27 @@
+{
+  "projectileRetargetRadius": 2,
+  "types": {
+    "basic": {
+      "name": "Básica",
+      "classes": ["mechanical", "arcane"],
+      "damage": 10,
+      "shotsPerSecond": 2,
+      "range": 3,
+      "projectileSpeed": 8,
+      "shot": { "kind": "single" },
+      "targetMode": "first",
+      "trigger": null
+    },
+    "cannon": {
+      "name": "Canhão",
+      "classes": ["artillery", "shadow"],
+      "damage": 8,
+      "shotsPerSecond": 0.8,
+      "range": 2.5,
+      "projectileSpeed": 5,
+      "shot": { "kind": "area", "radius": 1 },
+      "targetMode": "first",
+      "trigger": null
+    }
+  }
+}

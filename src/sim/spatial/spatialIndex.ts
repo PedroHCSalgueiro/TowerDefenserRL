@@ -84,6 +84,72 @@ export class SpatialIndex {
     return best;
   }
 
+  /**
+   * Inimigo ativo com distância ≤ `range` de (x, y) que tem a menor nota
+   * (`score`). Empate na nota: vence o menor id. `null` se não houver.
+   */
+  findBest(
+    state: IndexedState,
+    x: number,
+    y: number,
+    range: number,
+    score: (enemy: Enemy, x: number, y: number) => number,
+  ): Enemy | null {
+    let best: Enemy | null = null;
+    let bestScore = Infinity;
+    this.forEachInRange(state, x, y, range, (enemy) => {
+      const s = score(enemy, x, y);
+      if (best === null || s < bestScore || (s === bestScore && enemy.id < best.id)) {
+        best = enemy;
+        bestScore = s;
+      }
+    });
+    return best;
+  }
+
+  /**
+   * Acrescenta em `out` os inimigos ativos com distância ≤ `range` de (x, y),
+   * em ordem de célula (quem precisa de uma ordem fixa ordena depois).
+   */
+  collectInRange(state: IndexedState, x: number, y: number, range: number, out: Enemy[]): Enemy[] {
+    this.forEachInRange(state, x, y, range, (enemy) => {
+      out.push(enemy);
+    });
+    return out;
+  }
+
+  private forEachInRange(
+    state: IndexedState,
+    x: number,
+    y: number,
+    range: number,
+    visit: (enemy: Enemy) => void,
+  ): void {
+    this.ensure(state);
+    if (this.cols === 0) return;
+
+    const slots = state.enemies.slots;
+    const rangeSq = range * range;
+    const x0 = this.col(x - range);
+    const x1 = this.col(x + range);
+    const y0 = this.row(y - range);
+    const y1 = this.row(y + range);
+    for (let cy = y0; cy <= y1; cy++) {
+      const rowBase = cy * this.cols;
+      for (let cx = x0; cx <= x1; cx++) {
+        const cell = rowBase + cx;
+        const end = this.cellStart[cell + 1]!;
+        for (let i = this.cellStart[cell]!; i < end; i++) {
+          const enemy = slots[this.items[i]!]!;
+          if (!enemy.active) continue;
+          const dx = enemy.x - x;
+          const dy = enemy.y - y;
+          if (dx * dx + dy * dy <= rangeSq) visit(enemy);
+        }
+      }
+    }
+  }
+
   /** Força a montagem do índice com as posições atuais do pool. */
   rebuild(pool: EnemyPool): void {
     const slots = pool.slots;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import mapData from '../src/data/map.json';
 import renderConfig from '../src/data/render.json';
-import { IsoProjection, type Point } from '../src/render/iso';
+import { IsoProjection, isoDepth, type Point } from '../src/render/iso';
 import { loadMap, type GridCoord } from '../src/sim/grid/map';
 
 const map = loadMap(mapData);
@@ -148,5 +148,34 @@ describe('IsoProjection', () => {
     const wideLeft = wide.diamond({ x: 0, y: 3 })[3];
     const wideRight = wide.diamond({ x: 9, y: 0 })[1];
     expect((wideLeft.x + wideRight.x) / 2).toBeCloseTo(viewport.width / 2);
+  });
+
+  it('circleSize: um círculo de raio r casas vira a elipse que passa pelos pontos projetados', () => {
+    for (const radius of [0.5, 1, 2.5, 3]) {
+      const { width, height } = iso.circleSize(radius);
+      const center = iso.toScreen({ x: 4, y: 7 });
+      for (let k = 0; k < 64; k++) {
+        const angle = (k / 64) * 2 * Math.PI;
+        const p = iso.toScreen({
+          x: 4 + radius * Math.cos(angle),
+          y: 7 + radius * Math.sin(angle),
+        });
+        const e = ((p.x - center.x) / (width / 2)) ** 2 + ((p.y - center.y) / (height / 2)) ** 2;
+        expect(e).toBeCloseTo(1, 9);
+      }
+    }
+  });
+});
+
+describe('isoDepth', () => {
+  it('é x + y: quem está mais abaixo na tela fica na frente', () => {
+    expect(isoDepth({ x: 3, y: 4 })).toBe(7);
+    expect(isoDepth({ x: 2.5, y: 0.25 })).toBe(2.75);
+    // Mesma ordem que a altura na tela, para torres (inteiras) e inimigos (fracionários).
+    const a = { x: 2, y: 3 };
+    const b = { x: 4.1, y: 1 };
+    expect(Math.sign(isoDepth(b) - isoDepth(a))).toBe(
+      Math.sign(iso.toScreen(b).y - iso.toScreen(a).y),
+    );
   });
 });

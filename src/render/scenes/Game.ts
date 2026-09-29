@@ -8,6 +8,7 @@ import { enemyData } from '../../sim/enemies/enemyData';
 import { Simulation, SimulationRunner } from '../../sim/engine/simulation';
 import { loadMap } from '../../sim/grid/map';
 import { createGameSystems } from '../../sim/systems';
+import { towerData } from '../../sim/towers/towerData';
 import { showDefeatScreen } from '../../ui/defeatScreen';
 import { EnemyView } from '../views/EnemyView';
 import { GridView } from '../views/GridView';
@@ -17,6 +18,7 @@ import { TowerView } from '../views/TowerView';
 
 export class Game extends Phaser.Scene {
   private runner!: SimulationRunner;
+  private grid!: GridView;
   private enemyView!: EnemyView;
   private nexusView!: NexusView;
   private towerView!: TowerView;
@@ -37,9 +39,12 @@ export class Game extends Phaser.Scene {
     this.runner = new SimulationRunner(sim);
 
     const grid = new GridView(this, map);
-    this.towerView = new TowerView(this, grid.projection);
+    this.grid = grid;
+    // Torres e inimigos na mesma Layer, para a profundidade isométrica (x + y) valer entre eles.
+    const units = this.add.layer();
+    this.towerView = new TowerView(this, grid.projection, units, towerData);
     this.nexusView = new NexusView(this, grid.projection, map);
-    this.enemyView = new EnemyView(this, grid.projection, enemyData);
+    this.enemyView = new EnemyView(this, grid.projection, enemyData, units);
     this.projectileView = new ProjectileView(this, grid.projection);
 
     this.monitor = new PerfMonitor(this.game, () => this.runner.clock.droppedTicks);
@@ -49,6 +54,7 @@ export class Game extends Phaser.Scene {
       runner: this.runner,
       monitor: this.monitor,
       enemyTypes: Object.keys(enemyData.types),
+      towerTypes: Object.entries(towerData.types).map(([id, type]) => ({ id, name: type.name })),
       hoveredCell: () => grid.hoveredCell,
       selectedCell: () => grid.selectedCell,
     });
@@ -66,10 +72,11 @@ export class Game extends Phaser.Scene {
     const state = this.runner.sim.state;
 
     this.nexusView.handleEvents(events);
-    this.towerView.draw(state);
+    this.projectileView.handleEvents(events);
+    this.towerView.draw(state, this.grid.selectedCell);
     this.nexusView.draw(state, delta);
     this.enemyView.draw(state, this.interpolationAlpha);
-    this.projectileView.draw(state, this.interpolationAlpha);
+    this.projectileView.draw(state, this.interpolationAlpha, delta);
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
 

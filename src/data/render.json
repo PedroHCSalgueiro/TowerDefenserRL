@@ -46,11 +46,34 @@
     "attackLine": { "color": "#ffe08a", "width": 2, "durationMs": 120 }
   },
   "towers": {
-    "color": "#7aa6c2",
     "outlineColor": "#1d1f21",
     "outlineWidth": 1,
     "width": 14,
-    "height": 18
+    "height": 18,
+    "fallbackColor": "#ff00ff",
+    "classColors": {
+      "artillery": "#e0703c",
+      "mechanical": "#4fb3a9",
+      "arcane": "#3d7be0",
+      "shadow": "#8c4a8f"
+    },
+    "range": {
+      "fillColor": "#ffffff",
+      "fillAlpha": 0.08,
+      "lineColor": "#ffffff",
+      "lineAlpha": 0.6,
+      "lineWidth": 1
+    }
   },
-  "projectiles": { "color": "#ffe08a", "radius": 2.5 }
+  "projectiles": {
+    "color": "#ffe08a",
+    "radius": 2.5,
+    "explosion": {
+      "color": "#ff9a3c",
+      "alpha": 0.7,
+      "lineWidth": 2,
+      "durationMs": 180,
+      "maxActive": 64
+    }
+  }
 }
