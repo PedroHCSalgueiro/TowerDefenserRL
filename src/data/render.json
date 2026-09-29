@@ -1,0 +1,18 @@
+{
+  "tile": { "width": 64, "height": 32 },
+  "grid": {
+    "lineWidth": 1,
+    "lineColor": "#1d1f21",
+    "freeColor": "#3e5245",
+    "pathColor": "#8c7a5b",
+    "entranceColor": "#4f7cac",
+    "nexusColor": "#b54848"
+  },
+  "hover": {
+    "buildableColor": "#9be39b",
+    "blockedColor": "#e39b9b",
+    "alpha": 0.55
+  },
+  "selection": { "color": "#ffd24a", "lineWidth": 3 },
+  "debugLabel": { "x": 8, "y": 8, "fontSize": "14px", "color": "#e0e0e0" }
+}
