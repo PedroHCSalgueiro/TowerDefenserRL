@@ -62,6 +62,27 @@ function layoutSelect(): HTMLSelectElement {
   ]);
 }
 
+/**
+ * Lista de tipo de torre: os tipos dos dados e, no fim, "Cadeia", que mistura
+ * os tipos do cenário de cadeia pelo padrão das casas. `types()` devolve os
+ * tipos escolhidos.
+ */
+function towerTypeSelect(towerTypes: DebugPanelDeps['towerTypes']): {
+  select: HTMLSelectElement;
+  isChain: () => boolean;
+  types: () => string[];
+} {
+  const select = el('select', {}, [
+    ...towerTypes.map((t) =>
+      el('option', { value: t.id, textContent: t.name, selected: t.id === defaults.towerType }),
+    ),
+    el('option', { value: CHAIN_OPTION, textContent: chainScenario.name }),
+  ]);
+  const isChain = (): boolean => select.value === CHAIN_OPTION;
+  const types = (): string[] => (isChain() ? [...chainScenario.towerTypes] : [select.value]);
+  return { select, isChain, types };
+}
+
 function button(text: string, onClick: () => void): HTMLButtonElement {
   const b = el('button', { type: 'button', textContent: text });
   b.addEventListener('click', onClick);
@@ -141,17 +162,9 @@ export class DebugPanel {
       this.send({ type: 'debugSetNexusInvulnerable', value: this.invulnerable.checked }),
     );
 
-    // Torre: tipo usado para posicionar, no spawn em massa e no estresse.
-    // "Cadeia" mistura os tipos do cenário de cadeia pelo padrão das casas.
-    const towerType = el('select', {}, [
-      ...deps.towerTypes.map((t) =>
-        el('option', { value: t.id, textContent: t.name, selected: t.id === defaults.towerType }),
-      ),
-      el('option', { value: CHAIN_OPTION, textContent: chainScenario.name }),
-    ]);
-    const isChain = (): boolean => towerType.value === CHAIN_OPTION;
-    const selectedTypes = (): string[] =>
-      isChain() ? [...chainScenario.towerTypes] : [towerType.value];
+    // Torre: tipo usado para posicionar e no spawn em massa (o estresse tem o seu).
+    const towerType = towerTypeSelect(deps.towerTypes);
+    const selectedTypes = towerType.types;
     this.placeNote = el('div', { className: 'debug-note' });
     const placeTower = button('Posicionar na casa selecionada', () => {
       const cell = deps.selectedCell();
@@ -192,9 +205,10 @@ export class DebugPanel {
       }),
     );
 
-    // Cenário de estresse
+    // Cenário de estresse: quantidade e tipo das torres na mesma linha.
     const stressCount = numberInput(defaults.enemyCount);
     const stressTowers = numberInput(defaults.towerCount);
+    const stressTowerType = towerTypeSelect(deps.towerTypes);
     const stressLayout = layoutSelect();
     // Na cadeia, as torres ficam sempre no bloco compacto (precisam se tocar);
     // a disposição escolhida vale só para os inimigos.
@@ -206,8 +220,8 @@ export class DebugPanel {
       this.send({
         type: 'debugSpawnTowers',
         count: stressTowers.valueAsNumber,
-        towerTypes: selectedTypes(),
-        layout: isChain() ? (chainScenario.towerLayout as DebugLayout) : layout,
+        towerTypes: stressTowerType.types(),
+        layout: stressTowerType.isChain() ? (chainScenario.towerLayout as DebugLayout) : layout,
       });
       this.send({
         type: 'debugSetStress',
@@ -242,11 +256,11 @@ export class DebugPanel {
       speedRow,
       row('Núcleo', el('label', {}, [this.invulnerable, ' invulnerável'])),
       el('div', { className: 'debug-section', textContent: 'Torre' }),
-      row('Tipo', towerType, placeTower),
+      row('Tipo', towerType.select, placeTower),
       this.placeNote,
       el('div', { className: 'debug-section', textContent: 'Estresse' }),
       row('Inimigos', stressCount, stressLayout),
-      row('Torres', stressTowers),
+      row('Torres', stressTowers, stressTowerType.select),
       row('', startScenario, stopStress),
       el('div', { className: 'debug-section', textContent: 'Spawn' }),
       row('Inimigos', enemyCount, enemyType, enemyLayout, spawnEnemies),
