@@ -20,6 +20,14 @@ export default tseslint.config(
           ],
         },
       ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Math',
+          property: 'random',
+          message: 'Simulação determinística: use o Rng com semente (src/sim/engine/rng.ts).',
+        },
+      ],
     },
   },
   prettier,

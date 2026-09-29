@@ -1,0 +1,5 @@
+{
+  "ticksPerSecond": 30,
+  "speeds": [1, 2, 3],
+  "maxTicksPerFrame": 12
+}
