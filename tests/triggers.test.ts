@@ -329,6 +329,37 @@ describe('"o quê" (efeitos)', () => {
     expect(obelisk.charges).toBe(0);
   });
 
+  it('raio em cadeia: sem alvo, as cargas param no valor da descarga e não acumulam acima', () => {
+    const types = {
+      ...triggerTypes,
+      // Como uma estrela que descarrega com 2 cargas (o teto vem dos dados da estrela).
+      obelisk2: armedType('neighborKills', 'chargeLightning', {
+        charges: 2,
+        targets: 1,
+        jumpRadius: 1,
+        damagePercent: 100,
+      }),
+    };
+    const state = makeState();
+    const obelisk = addTower(state, 'obelisk', 2, 0); // descarga com 3
+    const other = idle(addTower(state, 'obelisk2', 3, 1));
+    const killer = idle(addTower(state, 'arrow', 3, 0)); // vizinha das duas
+    const kill = killFact(0, 0, killer.id);
+    const double = killFact(0, 0, killer.id, 2);
+    const sim = triggerSim(state, { ...triggerData(), types }, [
+      factsAt(1, [kill, kill, double, kill, double]), // 7 cargas sem teto
+    ]);
+    run(sim, 2);
+    expect([obelisk.charges, other.charges]).toEqual([3, 2]);
+
+    // Com alvo, sai um raio só, e não sobra nada do que chegou enquanto esperava.
+    const target = place(state, 'brick', 2, 1, 100);
+    const events = run(sim, 1);
+    expect(ofType(events, 'triggerFired').filter((e) => e.towerId === obelisk.id)).toHaveLength(1);
+    expect(target.hp).toBe(94);
+    expect(obelisk.charges).toBe(0);
+  });
+
   it('tiro perfurante: todos na linha torre → alvo, até o alcance, e ninguém fora dela', () => {
     const state = makeState();
     addTower(state, 'piercer', 0, 0); // alcance 2, meia-largura 0,25

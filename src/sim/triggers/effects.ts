@@ -149,8 +149,9 @@ function releaseLightning(
 
 /**
  * Ganha `entry.weight` cargas; com `charges` ou mais, solta o raio no alvo
- * normal e gasta `charges` (o excedente fica). Sem alvo, as cargas esperam.
- * Devolve se o raio saiu.
+ * normal e gasta `charges` (o excedente de um abate duplo fica). Sem alvo,
+ * as cargas esperam presas em `charges`: não acumulam acima do valor da
+ * descarga. Devolve se o raio saiu.
  */
 function chargeLightning(
   env: EffectEnv,
@@ -162,7 +163,10 @@ function chargeLightning(
   tower.charges += entry.weight;
   if (tower.charges < e.charges) return false;
   const target = findTowerTarget(env.index, env.ctx.state, tower, type, env.scores);
-  if (!target) return false;
+  if (!target) {
+    tower.charges = e.charges;
+    return false;
+  }
   tower.charges -= e.charges;
   releaseLightning(env, tower, type, e, target);
   return true;
