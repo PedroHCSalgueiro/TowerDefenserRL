@@ -53,8 +53,18 @@ export interface SimEventPayloads {
    * partir do tick seguinte. `count`: torres diferentes com a classe agora.
    */
   classLevelChanged: { classId: string; level: number; previousLevel: number; count: number };
-  /** O jogador comprou o slot: a torre já está no mapa (`towerPlaced` vem antes). */
-  towerBought: { towerId: number; towerType: string; slot: number; price: number };
+  /**
+   * O jogador comprou o slot. Sem `fused`, a torre já está no mapa
+   * (`towerPlaced` vem antes). Com `fused`, a compra fundiu com uma torre do
+   * mapa (`towersMerged` vem antes) e `towerId` é a sobrevivente.
+   */
+  towerBought: {
+    towerId: number;
+    towerType: string;
+    slot: number;
+    price: number;
+    fused: boolean;
+  };
   /** `refund`: ouro devolvido. */
   towerSold: { towerId: number; towerType: string; x: number; y: number; refund: number };
   /** Os slots da loja mudaram. */
@@ -63,7 +73,18 @@ export interface SimEventPayloads {
   goldChanged: { gold: number; delta: number };
   /** Onda fechada: `interest` e `bonus` já somados a `gold` (juros primeiro). */
   waveEnded: { wave: number; interest: number; bonus: number; gold: number };
-  towersMerged: { towerId: number; stars: number };
+  /**
+   * Uma fusão: `towerId` (que fica, com `stars`) na casa `x`/`y`; `absorbedIds`
+   * saíram do mapa. A cascata emite um por fusão, na ordem em que acontecem.
+   */
+  towersMerged: {
+    towerId: number;
+    towerType: string;
+    stars: number;
+    x: number;
+    y: number;
+    absorbedIds: number[];
+  };
   waveStarted: { wave: number };
 }
 

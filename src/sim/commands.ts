@@ -42,7 +42,16 @@ export function createCommandSystem(
           placeTower(ctx, map, towers, command.towerType, command, command.star);
           break;
         case 'buyTower':
-          buyTower(ctx, map, towers, economy, command.slot, command);
+          buyTower(
+            ctx,
+            map,
+            towers,
+            economy,
+            command.slot,
+            command.x === undefined || command.y === undefined
+              ? undefined
+              : { x: command.x, y: command.y },
+          );
           break;
         case 'rerollShop':
           rerollShop(ctx, towers, economy);

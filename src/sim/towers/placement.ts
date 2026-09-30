@@ -20,7 +20,7 @@ export interface LastEffect {
 export interface Tower {
   id: number;
   type: string;
-  /** Estrela (1 a 3 no protótipo). Vem do spawn do debug até a fusão (T11). */
+  /** Estrela (1 a 3 no protótipo). Sobe pela fusão na compra (T11); o debug pode posicionar já com estrela. */
   star: number;
   /** Casa da torre (inteiros). */
   x: number;

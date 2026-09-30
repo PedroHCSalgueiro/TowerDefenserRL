@@ -209,6 +209,19 @@ body {
   box-shadow: 0 0 0 2px #ffd75e;
 }
 
+.shop-slot-fuse {
+  box-shadow: 0 0 0 1px #ffd75e;
+}
+
+.shop-fuse {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffd75e;
+}
+
 .shop-key {
   position: absolute;
   top: 4px;

@@ -224,7 +224,7 @@ describe('comprar', () => {
     expect(sim.state.gold).toBe(economyData.startingGold);
   });
 
-  it('comprar a cópia de uma torre já no mapa cria uma torre separada (fusão é da T11)', () => {
+  it('comprar a cópia de uma torre já no mapa funde com ela, sem posicionar (T11)', () => {
     const sim = shopSim('copia');
     sim.state.gold = 100;
     sim.state.reportedGold = 100;
@@ -233,7 +233,7 @@ describe('comprar', () => {
     sim.enqueue({ type: 'buyTower', slot: 0, x: a!.x, y: a!.y });
     sim.enqueue({ type: 'buyTower', slot: 1, x: b!.x, y: b!.y });
     stepOnce(sim);
-    expect(sim.state.towers.map((t) => t.type)).toEqual(['mortar', 'mortar']);
+    expect(sim.state.towers.map((t) => [t.type, t.star])).toEqual([['mortar', 2]]);
   });
 
   it('as compras de um mesmo tick saem na ordem da fila', () => {

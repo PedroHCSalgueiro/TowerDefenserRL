@@ -80,14 +80,16 @@ export interface DebugSetNexusInvulnerableCommand {
 }
 
 /**
- * Ação do jogador: compra o slot da loja e posiciona a torre na casa (x, y).
- * O ouro só é cobrado se a torre for posicionada.
+ * Ação do jogador: compra o slot da loja. Se a cópia funde com uma torre do
+ * mapa (T11), funde na hora e a casa não é usada; senão posiciona a torre na
+ * casa (x, y), que passa a ser obrigatória. O ouro só é cobrado se a compra
+ * der certo.
  */
 export interface BuyTowerCommand {
   type: 'buyTower';
   slot: number;
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
 }
 
 /** Ação do jogador: troca os slots da loja pagando o reroll. */

@@ -8,6 +8,7 @@ import { interestFor } from '../sim/economy/economy';
 import type { EconomyData } from '../sim/economy/economyData';
 import type { GridCoord, GridMap } from '../sim/grid/map';
 import { priceOf, refundFor } from '../sim/shop/shop';
+import { fusionStar } from '../sim/towers/fusion';
 import type { RunState } from '../sim/state';
 import { getTowerType, type Rarity, type TowerData } from '../sim/towers/towerData';
 
@@ -28,6 +29,8 @@ export interface ShopSlotModel {
   price: number;
   /** Tem ouro para comprar (slot vazio nunca tem). */
   affordable: boolean;
+  /** Estrela que a compra daria ao fundir com uma torre do mapa (`null` = não funde). */
+  fuseStar: number | null;
 }
 
 export interface SellTargetModel {
@@ -67,6 +70,7 @@ export function buildShopModel(
         rarityLabel: '',
         price: 0,
         affordable: false,
+        fuseStar: null,
       };
     }
     const type = getTowerType(towers, towerType);
@@ -80,6 +84,7 @@ export function buildShopModel(
       rarityLabel: type.rarity ? RARITY_LABELS[type.rarity] : '',
       price,
       affordable: state.gold >= price,
+      fuseStar: fusionStar(state.towers, towers, towerType),
     };
   });
   const tower = selected
@@ -104,7 +109,9 @@ export function buildShopModel(
 
 /** Assinatura do modelo: a interface só mexe no DOM quando ela muda. */
 export function shopModelKey(model: ShopModel, carrySlot: number | null): string {
-  const slots = model.slots.map((s) => `${s.towerType ?? '-'}:${s.affordable ? 1 : 0}`).join(',');
+  const slots = model.slots
+    .map((s) => `${s.towerType ?? '-'}:${s.affordable ? 1 : 0}:${s.fuseStar ?? 0}`)
+    .join(',');
   const sell = model.sell ? `${model.sell.towerId}:${model.sell.refund}` : '-';
   return [
     model.gold,

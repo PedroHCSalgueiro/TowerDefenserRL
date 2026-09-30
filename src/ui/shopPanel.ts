@@ -98,6 +98,11 @@ export class ShopPanel {
       node.append(el('div', 'shop-name', 'Comprada'));
       return node;
     }
+    if (slot.fuseStar !== null) {
+      classes.push('shop-slot-fuse');
+      node.className = classes.join(' ');
+      node.append(el('div', 'shop-fuse', `★${slot.fuseStar}↑`));
+    }
     node.append(
       el('div', 'shop-name', slot.name),
       el('div', 'shop-classes', slot.classes.join(' · ')),

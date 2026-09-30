@@ -6,6 +6,8 @@
  *
  * Arrastar: soltar numa casa inválida (ou fora do mapa) cancela sem cobrar.
  * Um clique curto no slot também "pega" a torre, como as teclas.
+ * Slot cuja compra funde com uma torre do mapa (T11): o clique, o arrasto
+ * ou a tecla compram na hora, sem pegar a torre.
  */
 
 import { classData } from '../sim/classes/classData';
@@ -114,6 +116,12 @@ export class ShopController {
     const model = this.model();
     const entry = model.slots[slot];
     if (!entry || entry.towerType === null || !entry.affordable) {
+      this.carry = null;
+      return;
+    }
+    if (entry.fuseStar !== null) {
+      // A compra funde com uma torre do mapa: acontece na hora, sem posicionar.
+      this.deps.enqueue({ type: 'buyTower', slot });
       this.carry = null;
       return;
     }

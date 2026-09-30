@@ -7,6 +7,10 @@
  * `isoDepth` (x + y), para torres e inimigos se sobreporem na ordem certa.
  * As imagens só mudam quando a lista de torres muda; o alcance só é
  * redesenhado quando muda a torre selecionada.
+ *
+ * Cada torre mostra as estrelas (★1 a ★3) acima do bloco. Uma fusão
+ * (`towersMerged`) tira na hora as imagens das torres absorvidas e faz um
+ * flash curto na sobrevivente, um por fusão (a cascata tem dois).
  */
 
 import Phaser from 'phaser';
@@ -23,6 +27,11 @@ const style = renderConfig.towers;
 const classColors: Readonly<Record<string, string>> = style.classColors;
 
 const TEXTURE_BLOCK = 'tower-block';
+
+/** Estrelas da torre, como texto: ★1 = "★", ★3 = "★★★". */
+export function starsLabel(star: number): string {
+  return '★'.repeat(Math.max(1, Math.floor(star)));
+}
 
 function createTexture(scene: Phaser.Scene): void {
   if (scene.textures.exists(TEXTURE_BLOCK)) return;
@@ -45,6 +54,7 @@ export class TowerView {
   private readonly data: TowerData;
   private readonly range: Phaser.GameObjects.Graphics;
   private readonly images = new Map<number, Phaser.GameObjects.Image>();
+  private readonly labels = new Map<number, { text: Phaser.GameObjects.Text; star: number }>();
   private drawnList: readonly Tower[] | null = null;
   private drawnCount = -1;
   /** Uma torre entrou ou saiu neste quadro (cobre vender e comprar no mesmo quadro). */
@@ -69,7 +79,38 @@ export class TowerView {
   handleEvents(events: readonly SimEvent[]): void {
     for (const event of events) {
       if (event.type === 'towerPlaced' || event.type === 'towerSold') this.dirty = true;
+      else if (event.type === 'towersMerged') {
+        this.dirty = true;
+        for (const id of event.absorbedIds) this.removeTower(id);
+        this.flash(event.towerId, event.x, event.y);
+      }
     }
+  }
+
+  private removeTower(id: number): void {
+    this.images.get(id)?.destroy();
+    this.images.delete(id);
+    this.labels.get(id)?.text.destroy();
+    this.labels.delete(id);
+  }
+
+  /** Flash curto sobre a torre que recebeu a fusão. */
+  private flash(towerId: number, x: number, y: number): void {
+    const { fusion } = style;
+    const p = this.projection.toScreen({ x, y });
+    const image = new Phaser.GameObjects.Image(this.scene, p.x, p.y, TEXTURE_BLOCK)
+      .setOrigin(0.5, 1)
+      .setTint(hexColor(fusion.flashColor))
+      .setScale(fusion.flashScale)
+      .setDepth(isoDepth({ x, y }) + 0.5);
+    this.layer.add(image);
+    this.scene.tweens.add({
+      targets: image,
+      alpha: { from: 1, to: 0 },
+      duration: fusion.flashMs,
+      onComplete: () => image.destroy(),
+    });
+    void towerId;
   }
 
   draw(state: Readonly<RunState>, selected: GridCoord | null): void {
@@ -89,6 +130,7 @@ export class TowerView {
     const present = new Set<number>();
     for (const tower of towers) {
       present.add(tower.id);
+      this.syncLabel(tower);
       if (this.images.has(tower.id)) continue;
       const p = this.projection.toScreen(tower);
       const image = new Phaser.GameObjects.Image(this.scene, p.x, p.y, TEXTURE_BLOCK)
@@ -98,11 +140,33 @@ export class TowerView {
       this.layer.add(image);
       this.images.set(tower.id, image);
     }
-    for (const [id, image] of this.images) {
-      if (present.has(id)) continue;
-      image.destroy();
-      this.images.delete(id);
+    for (const id of [...this.images.keys()]) {
+      if (!present.has(id)) this.removeTower(id);
     }
+  }
+
+  /** Cria ou atualiza o texto de estrelas da torre (só refaz quando a estrela muda). */
+  private syncLabel(tower: Tower): void {
+    const p = this.projection.toScreen(tower);
+    const current = this.labels.get(tower.id);
+    if (current) {
+      if (current.star === tower.star) return;
+      current.text.setText(starsLabel(tower.star));
+      current.star = tower.star;
+      return;
+    }
+    const { stars } = style;
+    const text = new Phaser.GameObjects.Text(
+      this.scene,
+      p.x,
+      p.y - style.height - style.outlineWidth * 2 - stars.offsetY,
+      starsLabel(tower.star),
+      { fontSize: `${stars.fontSize}px`, color: stars.color },
+    )
+      .setOrigin(0.5, 1)
+      .setDepth(isoDepth(tower) + 0.1);
+    this.layer.add(text);
+    this.labels.set(tower.id, { text, star: tower.star });
   }
 
   private drawRange(tower: Tower | null): void {

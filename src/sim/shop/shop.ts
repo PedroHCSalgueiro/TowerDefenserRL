@@ -8,6 +8,7 @@ import type { EconomyData } from '../economy/economyData';
 import type { TickContext } from '../engine/simulation';
 import type { Rng } from '../engine/rng';
 import type { GridMap } from '../grid/map';
+import { applyFusion, planFusion } from '../towers/fusion';
 import { placeTower } from '../towers/placement';
 import {
   RARITIES,
@@ -89,8 +90,10 @@ export function newShop(
 }
 
 /**
- * Compra o slot e posiciona a torre na casa. Nada muda (nem ouro, nem slot)
- * se o slot estiver vazio, faltar ouro ou a casa for inválida ou ocupada.
+ * Compra o slot. Se a cópia funde com uma torre do mapa, funde na hora e a
+ * casa é ignorada; senão posiciona a torre na casa. Nada muda (nem ouro, nem
+ * slot) se o slot estiver vazio, faltar ouro, ou, sem fusão, a casa faltar
+ * ou for inválida ou ocupada.
  */
 export function buyTower(
   ctx: TickContext,
@@ -98,16 +101,22 @@ export function buyTower(
   towers: TowerData,
   economy: EconomyData,
   slot: number,
-  cell: { x: number; y: number },
+  cell?: { x: number; y: number },
 ): boolean {
   const { state } = ctx;
   const towerType = Number.isInteger(slot) ? state.shop.slots[slot] : undefined;
   if (typeof towerType !== 'string') return false;
   const price = priceOf(economy, towers, towerType);
   if (price === null || state.gold < price) return false;
-  const tower = placeTower(ctx, map, towers, towerType, cell);
-  if (!tower) return false;
-  tower.invested = price;
+  const plan = planFusion(state.towers, towers, towerType);
+  let tower;
+  if (plan) {
+    tower = applyFusion(ctx, towers, plan, price);
+  } else {
+    tower = cell ? placeTower(ctx, map, towers, towerType, cell) : null;
+    if (!tower) return false;
+    tower.invested = price;
+  }
   state.gold -= price;
   state.shop.slots[slot] = null;
   ctx.emit({
@@ -117,6 +126,7 @@ export function buyTower(
     towerType,
     slot,
     price,
+    fused: plan !== null,
   });
   ctx.emit({ type: 'shopChanged', tick: state.tick, reason: 'bought' });
   return true;
