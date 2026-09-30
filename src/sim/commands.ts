@@ -14,6 +14,8 @@ import type { Routes } from './enemies/route';
 import { spawnEnemy } from './enemies/systems';
 import type { System } from './engine/simulation';
 import type { GridMap } from './grid/map';
+import { evolveNexus } from './nexus/evolve';
+import { nexusData, type NexusData } from './nexus/nexusData';
 import { releaseAllProjectiles } from './projectiles/pool';
 import { buyTower, rerollShop, sellTower } from './shop/shop';
 import { placeTower } from './towers/placement';
@@ -26,6 +28,7 @@ export function createCommandSystem(
   towers: TowerData,
   debug: SimDebugData,
   economy: EconomyData = economyData,
+  nexus: NexusData = nexusData,
 ): System {
   /** Quantidade pedida, presa em [0, maxSpawnPerCommand]. */
   const clampCount = (count: number): number =>
@@ -47,6 +50,7 @@ export function createCommandSystem(
             map,
             towers,
             economy,
+            nexus,
             command.slot,
             command.x === undefined || command.y === undefined
               ? undefined
@@ -58,6 +62,9 @@ export function createCommandSystem(
           break;
         case 'sellTower':
           sellTower(ctx, economy, command.towerId);
+          break;
+        case 'evolveNexus':
+          evolveNexus(ctx, nexus);
           break;
         case 'endWave':
           endWave(ctx, economy, towers);

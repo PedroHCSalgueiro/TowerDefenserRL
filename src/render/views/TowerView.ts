@@ -10,7 +10,8 @@
  *
  * Cada torre mostra as estrelas (★1 a ★3) acima do bloco. Uma fusão
  * (`towersMerged`) tira na hora as imagens das torres absorvidas e faz um
- * flash curto na sobrevivente, um por fusão (a cascata tem dois).
+ * flash curto na sobrevivente final: a cascata emite dois eventos, mas o
+ * flash sai só no último (o primeiro cairia numa torre que some).
  */
 
 import Phaser from 'phaser';
@@ -22,6 +23,7 @@ import type { Tower } from '../../sim/towers/placement';
 import { getTowerType, type TowerData } from '../../sim/towers/towerData';
 import { isoDepth, type IsoProjection } from '../iso';
 import { hexColor } from './color';
+import { fusionFlashes } from './fusionFlash';
 
 const style = renderConfig.towers;
 const classColors: Readonly<Record<string, string>> = style.classColors;
@@ -77,14 +79,15 @@ export class TowerView {
   }
 
   handleEvents(events: readonly SimEvent[]): void {
+    const flashes = fusionFlashes(events);
     for (const event of events) {
       if (event.type === 'towerPlaced' || event.type === 'towerSold') this.dirty = true;
       else if (event.type === 'towersMerged') {
         this.dirty = true;
         for (const id of event.absorbedIds) this.removeTower(id);
-        this.flash(event.towerId, event.x, event.y);
       }
     }
+    for (const f of flashes) this.flash(f.towerId, f.x, f.y);
   }
 
   private removeTower(id: number): void {
@@ -94,7 +97,7 @@ export class TowerView {
     this.labels.delete(id);
   }
 
-  /** Flash curto sobre a torre que recebeu a fusão. */
+  /** Flash curto sobre a sobrevivente final da fusão. */
   private flash(towerId: number, x: number, y: number): void {
     const { fusion } = style;
     const p = this.projection.toScreen({ x, y });

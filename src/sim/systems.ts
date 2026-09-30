@@ -59,7 +59,7 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
   const index = new SpatialIndex(engineConfig.spatialCellSize);
   const scores = createTargetScores(routes, enemies);
   return [
-    createCommandSystem(map, routes, enemies, towers, debug, economy),
+    createCommandSystem(map, routes, enemies, towers, debug, economy, nexus),
     createStressSystem(routes, enemies),
     createMovementSystem(routes, enemies, ticksPerSecond),
     createNexusContactSystem(routes, enemies),

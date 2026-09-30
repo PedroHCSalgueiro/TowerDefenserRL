@@ -3,6 +3,7 @@
  * (nome, classes, raridade e preço; esmaecido sem ouro), rerolar e vender.
  */
 
+import uiData from '../data/ui.json';
 import type { ShopModel, ShopSlotModel } from './shopModel';
 
 export interface ShopPanelHandlers {
@@ -88,7 +89,7 @@ export class ShopPanel {
     if (empty) classes.push('shop-slot-empty');
     else {
       classes.push(`shop-rarity-${slot.rarity}`);
-      if (!slot.affordable) classes.push('shop-slot-dim');
+      if (!slot.affordable || slot.blockedByLimit) classes.push('shop-slot-dim');
     }
     if (carried) classes.push('shop-slot-carried');
     const node = el('div', classes.join(' '));
@@ -102,6 +103,9 @@ export class ShopPanel {
       classes.push('shop-slot-fuse');
       node.className = classes.join(' ');
       node.append(el('div', 'shop-fuse', `★${slot.fuseStar}↑`));
+    }
+    if (slot.blockedByLimit) {
+      node.append(el('div', 'shop-limit', uiData.texts.limitWarning));
     }
     node.append(
       el('div', 'shop-name', slot.name),

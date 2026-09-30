@@ -1,4 +1,10 @@
 {
-  "maxHp": 20,
+  "levels": [
+    { "cost": 0, "towerLimit": 3, "maxHp": 20 },
+    { "cost": 20, "towerLimit": 4, "maxHp": 25 },
+    { "cost": 30, "towerLimit": 5, "maxHp": 30 },
+    { "cost": 45, "towerLimit": 6, "maxHp": 35 },
+    { "cost": 60, "towerLimit": 8, "maxHp": 40 }
+  ],
   "attack": { "damage": 2, "cooldownSeconds": 1, "range": 3 }
 }

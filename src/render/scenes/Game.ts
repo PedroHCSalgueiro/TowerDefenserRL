@@ -14,6 +14,7 @@ import { classData } from '../../sim/classes/classData';
 import type { Tower } from '../../sim/towers/placement';
 import { getTowerType, towerData } from '../../sim/towers/towerData';
 import { ClassPanel } from '../../ui/classPanel';
+import { NexusPanel } from '../../ui/nexusPanel';
 import { canPlaceAt } from '../../ui/shopModel';
 import { ShopController } from '../../ui/shopController';
 import { describeTower } from '../../ui/towerInfo';
@@ -36,6 +37,7 @@ export class Game extends Phaser.Scene {
   private monitor!: PerfMonitor;
   private panel!: DebugPanel;
   private classPanel!: ClassPanel;
+  private nexusPanel!: NexusPanel;
   private shop!: ShopController;
   private tooltip!: TowerTooltip;
   private carryView!: CarryView;
@@ -81,6 +83,8 @@ export class Game extends Phaser.Scene {
 
     const overlayParent = this.game.canvas.parentElement ?? document.body;
     this.classPanel = new ClassPanel(overlayParent);
+    const evolveNexus = () => this.runner.sim.enqueue({ type: 'evolveNexus' });
+    this.nexusPanel = new NexusPanel(overlayParent, evolveNexus);
     this.tooltip = new TowerTooltip(overlayParent);
     this.carryView = new CarryView(this, grid.projection, towerData);
     this.shop = new ShopController({
@@ -88,6 +92,7 @@ export class Game extends Phaser.Scene {
       map,
       state: () => this.runner.sim.state,
       enqueue: (command) => this.runner.sim.enqueue(command),
+      evolveNexus,
       selectedCell: () => grid.selectedCell,
       cellAtClient: (x, y) => grid.cellAtClient(x, y),
     });
@@ -101,6 +106,7 @@ export class Game extends Phaser.Scene {
       this.removeDefeatScreen = null;
       this.panel.destroy();
       this.classPanel.destroy();
+      this.nexusPanel.destroy();
       this.shop.destroy();
       this.tooltip.destroy();
       this.carryView.destroy();
@@ -122,6 +128,7 @@ export class Game extends Phaser.Scene {
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
     this.classPanel.update(state.classes);
+    this.nexusPanel.update(state);
     this.shop.update();
     const carrying = this.shop.carrying;
     const hovered = this.grid.hoveredCell;

@@ -7,7 +7,9 @@ import type { ClassData } from '../sim/classes/classData';
 import { interestFor } from '../sim/economy/economy';
 import type { EconomyData } from '../sim/economy/economyData';
 import type { GridCoord, GridMap } from '../sim/grid/map';
+import { nexusData, type NexusData } from '../sim/nexus/nexusData';
 import { priceOf, refundFor } from '../sim/shop/shop';
+import { hasRoomForTower } from '../sim/towers/limit';
 import { fusionStar } from '../sim/towers/fusion';
 import type { RunState } from '../sim/state';
 import { getTowerType, type Rarity, type TowerData } from '../sim/towers/towerData';
@@ -31,6 +33,8 @@ export interface ShopSlotModel {
   affordable: boolean;
   /** Estrela que a compra daria ao fundir com uma torre do mapa (`null` = não funde). */
   fuseStar: number | null;
+  /** A compra precisaria de casa nova e o mapa está no limite do núcleo (aviso "limite"). */
+  blockedByLimit: boolean;
 }
 
 export interface SellTargetModel {
@@ -58,7 +62,9 @@ export function buildShopModel(
   economy: EconomyData,
   towers: TowerData,
   classes: ClassData,
+  nexus: NexusData = nexusData,
 ): ShopModel {
+  const roomForTower = hasRoomForTower(state, nexus);
   const slots = state.shop.slots.map((towerType, index): ShopSlotModel => {
     if (towerType === null) {
       return {
@@ -71,10 +77,12 @@ export function buildShopModel(
         price: 0,
         affordable: false,
         fuseStar: null,
+        blockedByLimit: false,
       };
     }
     const type = getTowerType(towers, towerType);
     const price = priceOf(economy, towers, towerType) ?? 0;
+    const fuseStar = fusionStar(state.towers, towers, towerType);
     return {
       index,
       towerType,
@@ -84,7 +92,8 @@ export function buildShopModel(
       rarityLabel: type.rarity ? RARITY_LABELS[type.rarity] : '',
       price,
       affordable: state.gold >= price,
-      fuseStar: fusionStar(state.towers, towers, towerType),
+      fuseStar,
+      blockedByLimit: fuseStar === null && !roomForTower,
     };
   });
   const tower = selected
@@ -110,7 +119,10 @@ export function buildShopModel(
 /** Assinatura do modelo: a interface só mexe no DOM quando ela muda. */
 export function shopModelKey(model: ShopModel, carrySlot: number | null): string {
   const slots = model.slots
-    .map((s) => `${s.towerType ?? '-'}:${s.affordable ? 1 : 0}:${s.fuseStar ?? 0}`)
+    .map(
+      (s) =>
+        `${s.towerType ?? '-'}:${s.affordable ? 1 : 0}:${s.fuseStar ?? 0}:${s.blockedByLimit ? 1 : 0}`,
+    )
     .join(',');
   const sell = model.sell ? `${model.sell.towerId}:${model.sell.refund}` : '-';
   return [

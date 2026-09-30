@@ -57,12 +57,16 @@ describe('dados de inimigos', () => {
 describe('dados do núcleo', () => {
   it('nexus.json carrega com alcance de 3 casas', () => {
     expect(nexusData.attack.range).toBe(3);
-    expect(nexusData.maxHp).toBe(nexusJson.maxHp);
+    expect(nexusData.levels.map((l) => l.maxHp)).toEqual([20, 25, 30, 35, 40]);
+    expect(nexusData.levels.map((l) => l.towerLimit)).toEqual([3, 4, 5, 6, 8]);
+    expect(nexusData.levels.map((l) => l.cost)).toEqual([0, 20, 30, 45, 60]);
   });
 
   it('rejeita dados inválidos', () => {
-    expect(() => loadNexusData({ ...nexusJson, maxHp: 0 })).toThrow(/núcleo/);
-    expect(() => loadNexusData({ maxHp: 10 })).toThrow(/núcleo/);
+    expect(() =>
+      loadNexusData({ ...nexusJson, levels: [{ cost: 0, towerLimit: 3, maxHp: 0 }] }),
+    ).toThrow(/núcleo/);
+    expect(() => loadNexusData({ levels: [] })).toThrow(/núcleo/);
     expect(() =>
       loadNexusData({ ...nexusJson, attack: { ...nexusJson.attack, range: -1 } }),
     ).toThrow(/núcleo/);

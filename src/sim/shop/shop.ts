@@ -8,7 +8,9 @@ import type { EconomyData } from '../economy/economyData';
 import type { TickContext } from '../engine/simulation';
 import type { Rng } from '../engine/rng';
 import type { GridMap } from '../grid/map';
+import type { NexusData } from '../nexus/nexusData';
 import { applyFusion, planFusion } from '../towers/fusion';
+import { hasRoomForTower } from '../towers/limit';
 import { placeTower } from '../towers/placement';
 import {
   RARITIES,
@@ -92,14 +94,16 @@ export function newShop(
 /**
  * Compra o slot. Se a cópia funde com uma torre do mapa, funde na hora e a
  * casa é ignorada; senão posiciona a torre na casa. Nada muda (nem ouro, nem
- * slot) se o slot estiver vazio, faltar ouro, ou, sem fusão, a casa faltar
- * ou for inválida ou ocupada.
+ * slot) se o slot estiver vazio, faltar ouro, ou, sem fusão, o mapa estiver
+ * no limite de torres do núcleo (emite `buyRefused`), a casa faltar ou for
+ * inválida ou ocupada. A fusão não ocupa casa nova e passa com o limite cheio.
  */
 export function buyTower(
   ctx: TickContext,
   map: GridMap,
   towers: TowerData,
   economy: EconomyData,
+  nexus: NexusData,
   slot: number,
   cell?: { x: number; y: number },
 ): boolean {
@@ -109,6 +113,10 @@ export function buyTower(
   const price = priceOf(economy, towers, towerType);
   if (price === null || state.gold < price) return false;
   const plan = planFusion(state.towers, towers, towerType);
+  if (!plan && !hasRoomForTower(state, nexus)) {
+    ctx.emit({ type: 'buyRefused', tick: state.tick, slot, reason: 'limit' });
+    return false;
+  }
   let tower;
   if (plan) {
     tower = applyFusion(ctx, towers, plan, price);

@@ -9,7 +9,7 @@ import { economyData } from './economy/economyData';
 import { createClassState, type ClassState } from './classes/classState';
 import { createEnemyPool, type EnemyPool } from './enemies/pool';
 import { Rng, hashSeed } from './engine/rng';
-import { nexusData } from './nexus/nexusData';
+import { maxNexusLevel, nexusData, nexusLevel } from './nexus/nexusData';
 import { createProjectilePool, type ProjectilePool } from './projectiles/pool';
 import { newShop, type ShopState } from './shop/shop';
 import type { Tower } from './towers/placement';
@@ -111,6 +111,11 @@ export interface EndWaveCommand {
   type: 'endWave';
 }
 
+/** Ação do jogador: evolui o núcleo pagando o custo do próximo nível. */
+export interface EvolveNexusCommand {
+  type: 'evolveNexus';
+}
+
 /** Ação do jogador, aplicada no início do próximo tick. */
 export type SimCommand =
   | SpawnEnemyCommand
@@ -119,6 +124,7 @@ export type SimCommand =
   | RerollShopCommand
   | SellTowerCommand
   | EndWaveCommand
+  | EvolveNexusCommand
   | DebugSpawnEnemiesCommand
   | DebugSpawnTowersCommand
   | DebugClearCommand
@@ -144,7 +150,7 @@ export interface NexusState {
   maxHp: number;
   /** Ticks até o próximo ataque; 0 = pronto. */
   attackCooldownTicks: number;
-  /** Nível do núcleo (define as chances de raridade da loja). Sobe na tarefa do núcleo. */
+  /** Nível do núcleo (limite de torres, vida máxima e chances de raridade da loja). Sobe ao evoluir. */
   level: number;
 }
 
@@ -185,8 +191,8 @@ export function createRunState(seed: string): RunState {
     nextEntityId: 1,
     status: 'playing',
     nexus: {
-      hp: nexusData.maxHp,
-      maxHp: nexusData.maxHp,
+      hp: nexusLevel(nexusData, economyData.nexusStartLevel).maxHp,
+      maxHp: nexusLevel(nexusData, economyData.nexusStartLevel).maxHp,
       attackCooldownTicks: 0,
       level: economyData.nexusStartLevel,
     },
@@ -261,6 +267,10 @@ export function deserializeRunState(json: string): RunState {
     typeof nexus.maxHp !== 'number' ||
     !Number.isInteger(nexus.attackCooldownTicks) ||
     !Number.isInteger(nexus.level) ||
+    nexus.level < 1 ||
+    nexus.level > maxNexusLevel(nexusData) ||
+    nexus.maxHp !== nexusLevel(nexusData, nexus.level).maxHp ||
+    nexus.hp > nexus.maxHp ||
     !Number.isInteger(state.gold) ||
     !Number.isInteger(state.reportedGold) ||
     !Number.isInteger(state.wave) ||

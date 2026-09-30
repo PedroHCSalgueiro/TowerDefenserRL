@@ -8,6 +8,8 @@
  * Um clique curto no slot também "pega" a torre, como as teclas.
  * Slot cuja compra funde com uma torre do mapa (T11): o clique, o arrasto
  * ou a tecla compram na hora, sem pegar a torre.
+ * Slot que precisaria de casa nova com o mapa no limite de torres (T12): não
+ * pega a torre, e a torre já presa é cancelada se o limite encher.
  */
 
 import { classData } from '../sim/classes/classData';
@@ -26,6 +28,8 @@ export interface ShopControllerDeps {
   map: GridMap;
   state: () => Readonly<RunState>;
   enqueue: (command: SimCommand) => void;
+  /** Tecla E: pede a evolução do núcleo (o painel do núcleo faz o mesmo pelo botão). */
+  evolveNexus: () => void;
   selectedCell: () => GridCoord | null;
   /** Casa sob um ponto da tela (coordenadas do navegador); `null` fora do mapa. */
   cellAtClient: (clientX: number, clientY: number) => GridCoord | null;
@@ -52,6 +56,7 @@ export class ShopController {
     if (slotKey >= 0) this.pickUp(slotKey, false);
     else if (event.key === 'r' || event.key === 'R') this.reroll();
     else if (event.key === 's' || event.key === 'S') this.sell();
+    else if (event.key === 'e' || event.key === 'E') this.deps.evolveNexus();
     else if (event.key === 'Escape') this.cancel();
   };
 
@@ -115,7 +120,7 @@ export class ShopController {
   private pickUp(slot: number, dragging: boolean, event?: PointerEvent): void {
     const model = this.model();
     const entry = model.slots[slot];
-    if (!entry || entry.towerType === null || !entry.affordable) {
+    if (!entry || entry.towerType === null || !entry.affordable || entry.blockedByLimit) {
       this.carry = null;
       return;
     }
@@ -167,7 +172,13 @@ export class ShopController {
     // A torre presa some se o slot foi trocado ou o ouro acabou.
     if (this.carry && !this.carrying) this.carry = null;
     const carryingEntry = this.carry ? this.model().slots[this.carry.slot] : null;
-    if (this.carry && carryingEntry && !carryingEntry.affordable) this.carry = null;
+    if (
+      this.carry &&
+      carryingEntry &&
+      (!carryingEntry.affordable || carryingEntry.blockedByLimit)
+    ) {
+      this.carry = null;
+    }
     const model = this.model();
     const carrySlot = this.carry?.slot ?? null;
     const key = shopModelKey(model, carrySlot);

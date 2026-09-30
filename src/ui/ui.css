@@ -72,6 +72,46 @@ body {
   color: #dddddd;
 }
 
+.nexus-panel {
+  position: absolute;
+  top: 156px;
+  right: 8px;
+  width: 170px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #3a3d40;
+  border-radius: 8px;
+  background: rgba(20, 21, 23, 0.92);
+  font:
+    13px system-ui,
+    sans-serif;
+  color: #dddddd;
+}
+
+.nexus-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.nexus-towers-full {
+  color: #ff7a6b;
+  font-weight: 600;
+}
+
+.nexus-chances {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.nexus-chances-next {
+  color: #a8c8ff;
+}
+
+.nexus-evolve {
+  margin-top: 8px;
+  width: 100%;
+}
+
 .class-row {
   position: relative;
   margin-bottom: 4px;
@@ -211,6 +251,15 @@ body {
 
 .shop-slot-fuse {
   box-shadow: 0 0 0 1px #ffd75e;
+}
+
+.shop-limit {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff7a6b;
 }
 
 .shop-fuse {

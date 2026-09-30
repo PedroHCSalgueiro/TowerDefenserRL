@@ -85,6 +85,16 @@ export interface SimEventPayloads {
     y: number;
     absorbedIds: number[];
   };
+  /**
+   * O jogador evoluiu o núcleo (`level` = nível novo). `hp`/`maxHp` já são os
+   * valores depois da cura; `cost` é o ouro cobrado.
+   */
+  nexusEvolved: { level: number; hp: number; maxHp: number; cost: number };
+  /**
+   * Uma compra foi recusada sem cobrar. `limit`: a torre precisaria de casa
+   * nova e o mapa já está no limite do núcleo.
+   */
+  buyRefused: { slot: number; reason: 'limit' };
   waveStarted: { wave: number };
 }
 

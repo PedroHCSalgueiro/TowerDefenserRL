@@ -8,7 +8,7 @@ import type { EnemyData } from '../../src/sim/enemies/enemyData';
 import { acquireEnemy, type Enemy } from '../../src/sim/enemies/pool';
 import { Simulation } from '../../src/sim/engine/simulation';
 import { loadMap } from '../../src/sim/grid/map';
-import type { NexusData } from '../../src/sim/nexus/nexusData';
+import { nexusData, nexusLevel, type NexusData } from '../../src/sim/nexus/nexusData';
 import { createRunState, type RunState } from '../../src/sim/state';
 import { createGameSystems } from '../../src/sim/systems';
 
@@ -66,20 +66,21 @@ export const testEnemies: EnemyData = {
 };
 
 export const testNexus: NexusData = {
-  maxHp: 20,
+  levels: nexusData.levels,
   attack: { damage: 4, cooldownSeconds: 1, range: 1.5 },
 };
 
 /** Núcleo que praticamente não alcança ninguém, para isolar o movimento. */
 export const blindNexus: NexusData = {
-  maxHp: 20,
+  levels: nexusData.levels,
   attack: { damage: 4, cooldownSeconds: 1, range: 1e-6 },
 };
 
 export function makeState(seed = 'test', nexus: NexusData = testNexus): RunState {
   const state = createRunState(seed);
-  state.nexus.hp = nexus.maxHp;
-  state.nexus.maxHp = nexus.maxHp;
+  const { maxHp } = nexusLevel(nexus, state.nexus.level);
+  state.nexus.hp = maxHp;
+  state.nexus.maxHp = maxHp;
   return state;
 }
 
