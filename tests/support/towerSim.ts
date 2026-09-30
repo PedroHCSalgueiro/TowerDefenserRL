@@ -22,6 +22,7 @@ import { TPS, blindNexus, makeState, place, smallMap, testEnemies } from './enem
 export const testTriggerRules: TowerData['triggers'] = {
   neighborhood: 4,
   activationCooldownSeconds: 1,
+  unlimitedLineLength: 64,
   maxChainDepthPerTick: 8,
   maxActivationsPerTick: 2000,
   maxQueueSize: 10000,
@@ -33,6 +34,8 @@ export const testTowers: TowerData = {
   types: {
     arrow: {
       name: 'Flecha',
+      rarity: null,
+      attacks: true,
       classes: ['mechanical', 'arcane'],
       damage: 6,
       shotsPerSecond: 2,
@@ -44,6 +47,8 @@ export const testTowers: TowerData = {
     },
     bomb: {
       name: 'Bomba',
+      rarity: null,
+      attacks: true,
       classes: ['artillery', 'shadow'],
       damage: 4,
       shotsPerSecond: 1,

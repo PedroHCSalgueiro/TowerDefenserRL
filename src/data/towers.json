@@ -3,6 +3,7 @@
   "triggers": {
     "neighborhood": 4,
     "activationCooldownSeconds": 1,
+    "unlimitedLineLength": 64,
     "maxChainDepthPerTick": 8,
     "maxActivationsPerTick": 2000,
     "maxQueueSize": 10000
@@ -10,84 +11,289 @@
   "types": {
     "basic": {
       "name": "Básica",
-      "classes": ["mechanical", "arcane"],
+      "rarity": null,
+      "classes": [],
       "damage": 10,
       "shotsPerSecond": 2,
       "range": 3,
       "projectileSpeed": 8,
-      "shot": { "kind": "single" },
+      "shot": {
+        "kind": "single"
+      },
       "targetMode": "first",
       "trigger": null
     },
     "cannon": {
       "name": "Canhão",
-      "classes": ["artillery", "shadow"],
+      "rarity": null,
+      "classes": [],
       "damage": 8,
       "shotsPerSecond": 0.8,
       "range": 2.5,
       "projectileSpeed": 5,
-      "shot": { "kind": "area", "radius": 1 },
+      "shot": {
+        "kind": "area",
+        "radius": 1
+      },
       "targetMode": "first",
       "trigger": null
     },
     "mortar": {
       "name": "Morteiro",
+      "rarity": "common",
       "classes": ["artillery", "mechanical"],
       "damage": 8,
       "shotsPerSecond": 0.8,
       "range": 3,
       "projectileSpeed": 5,
-      "shot": { "kind": "area", "radius": 1 },
+      "shot": {
+        "kind": "area",
+        "radius": 1
+      },
       "targetMode": "first",
       "trigger": {
         "when": "everyNShots",
         "do": "multiShot",
-        "stars": [{ "shots": 5, "extraShots": 2 }]
+        "stars": [
+          {
+            "shots": 5,
+            "extraShots": 2
+          },
+          {
+            "shots": 4,
+            "extraShots": 2,
+            "attackDamagePercent": 125
+          },
+          {
+            "shots": 4,
+            "extraShots": 3,
+            "attackDamagePercent": 125,
+            "spread": true
+          }
+        ]
       }
     },
     "reaper": {
       "name": "Ceifador",
+      "rarity": "common",
       "classes": ["shadow", "artillery"],
       "damage": 6,
       "shotsPerSecond": 1,
       "range": 2.5,
       "projectileSpeed": 8,
-      "shot": { "kind": "single" },
+      "shot": {
+        "kind": "single"
+      },
       "targetMode": "first",
       "trigger": {
         "when": "enemyDiesInRange",
         "do": "explosion",
-        "stars": [{ "radius": 1, "damagePercent": 100 }]
+        "stars": [
+          {
+            "radius": 1,
+            "damagePercent": 100
+          },
+          {
+            "radius": 1.3,
+            "damagePercent": 130
+          },
+          {
+            "radius": 1.3,
+            "damagePercent": 130,
+            "killWeight": 2
+          }
+        ]
       }
     },
     "relay": {
       "name": "Relé",
+      "rarity": "common",
       "classes": ["arcane", "mechanical"],
       "damage": 5,
       "shotsPerSecond": 1.5,
       "range": 3,
       "projectileSpeed": 8,
-      "shot": { "kind": "single" },
+      "shot": {
+        "kind": "single"
+      },
       "targetMode": "first",
       "trigger": {
         "when": "onFire",
         "do": "activateNeighbors",
-        "stars": [{ "maxTargets": 4 }]
+        "stars": [
+          {},
+          {
+            "activatedDamagePercent": 150
+          },
+          {
+            "activatedDamagePercent": 200,
+            "reach": 2
+          }
+        ]
       }
     },
     "obelisk": {
       "name": "Obelisco",
+      "rarity": "uncommon",
       "classes": ["arcane", "shadow"],
       "damage": 10,
       "shotsPerSecond": 0.5,
       "range": 3.5,
       "projectileSpeed": 8,
-      "shot": { "kind": "single" },
+      "shot": {
+        "kind": "single"
+      },
       "targetMode": "first",
       "trigger": {
         "when": "neighborKills",
         "do": "chargeLightning",
-        "stars": [{ "charges": 3, "targets": 4, "jumpRadius": 2, "damagePercent": 100 }]
+        "stars": [
+          {
+            "charges": 3,
+            "targets": 4,
+            "jumpRadius": 2,
+            "damagePercent": 100
+          },
+          {
+            "charges": 3,
+            "targets": 6,
+            "jumpRadius": 2,
+            "damagePercent": 130
+          },
+          {
+            "charges": 2,
+            "targets": 6,
+            "jumpRadius": 2,
+            "damagePercent": 130,
+            "activateOnDischarge": true
+          }
+        ]
+      }
+    },
+    "ballista": {
+      "name": "Balista",
+      "rarity": "uncommon",
+      "classes": ["artillery", "arcane"],
+      "damage": 6,
+      "shotsPerSecond": 0.6,
+      "range": 4,
+      "projectileSpeed": 8,
+      "shot": {
+        "kind": "single"
+      },
+      "targetMode": "first",
+      "trigger": {
+        "when": "onActivated",
+        "do": "pierceLine",
+        "stars": [
+          {
+            "halfWidth": 0.5,
+            "damagePercent": 400
+          },
+          {
+            "halfWidth": 0.6,
+            "damagePercent": 600
+          },
+          {
+            "halfWidth": 0.6,
+            "damagePercent": 800,
+            "unlimited": true
+          }
+        ]
+      }
+    },
+    "clock": {
+      "name": "Relógio",
+      "rarity": "uncommon",
+      "classes": ["mechanical", "shadow"],
+      "damage": 6,
+      "shotsPerSecond": 1,
+      "range": 3,
+      "projectileSpeed": 8,
+      "shot": {
+        "kind": "single"
+      },
+      "targetMode": "first",
+      "trigger": {
+        "when": "everyNKillsInRange",
+        "do": "activateNeighbors",
+        "stars": [
+          {
+            "kills": 10
+          },
+          {
+            "kills": 8,
+            "activatedDamagePercent": 150
+          },
+          {
+            "kills": 5,
+            "activatedDamagePercent": 200,
+            "selfToo": true
+          }
+        ]
+      }
+    },
+    "executioner": {
+      "name": "Carrasco",
+      "rarity": "rare",
+      "classes": ["shadow", "artillery"],
+      "damage": 8,
+      "shotsPerSecond": 0.7,
+      "range": 3,
+      "projectileSpeed": 8,
+      "shot": {
+        "kind": "single"
+      },
+      "targetMode": "first",
+      "trigger": {
+        "when": "onFire",
+        "do": "execute",
+        "stars": [
+          {
+            "hpPercent": 15,
+            "killWeight": 2,
+            "bossMaxHpPercent": 3
+          },
+          {
+            "hpPercent": 25,
+            "killWeight": 2,
+            "bossMaxHpPercent": 5
+          },
+          {
+            "hpPercent": 30,
+            "killWeight": 2,
+            "bossMaxHpPercent": 8,
+            "explodeRadius": 1,
+            "explodeDamagePercent": 100
+          }
+        ]
+      }
+    },
+    "mirror": {
+      "name": "Espelho",
+      "rarity": "rare",
+      "classes": ["arcane", "mechanical"],
+      "attacks": false,
+      "damage": 8,
+      "range": 3,
+      "projectileSpeed": 8,
+      "shot": {
+        "kind": "single"
+      },
+      "targetMode": "first",
+      "trigger": {
+        "when": "onActivated",
+        "do": "copyLast",
+        "stars": [
+          {},
+          {
+            "powerPercent": 150
+          },
+          {
+            "powerPercent": 150,
+            "copies": 2
+          }
+        ]
       }
     }
   }

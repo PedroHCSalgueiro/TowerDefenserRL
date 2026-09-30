@@ -22,6 +22,7 @@ describe('posicionar torre (ação placeTower)', () => {
     expect(tower).toEqual({
       id: tower!.id,
       type: 'arrow',
+      star: 1,
       x: 0,
       y: 0,
       cooldownTicks: 0,

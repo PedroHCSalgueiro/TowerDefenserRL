@@ -6,7 +6,8 @@
 import type { TickContext } from '../engine/simulation';
 import type { GridCoord, GridMap } from '../grid/map';
 import type { CopyableEffect } from '../triggers/triggerData';
-import { hasTowerType, type TowerData } from './towerData';
+import { clampStar } from './stars';
+import { getTowerType, hasTowerType, type TowerData } from './towerData';
 
 /** O último "o quê" que a torre disparou, para uma vizinha copiar. */
 export interface LastEffect {
@@ -19,6 +20,8 @@ export interface LastEffect {
 export interface Tower {
   id: number;
   type: string;
+  /** Estrela (1 a 3 no protótipo). Vem do spawn do debug até a fusão (T11). */
+  star: number;
   /** Casa da torre (inteiros). */
   x: number;
   y: number;
@@ -35,10 +38,11 @@ export interface Tower {
 }
 
 /** Torre nova, pronta para atirar e ser ativada. */
-export function createTower(id: number, type: string, cell: GridCoord): Tower {
+export function createTower(id: number, type: string, cell: GridCoord, star = 1): Tower {
   return {
     id,
     type,
+    star,
     x: cell.x,
     y: cell.y,
     cooldownTicks: 0,
@@ -53,6 +57,7 @@ export function createTower(id: number, type: string, cell: GridCoord): Tower {
  * Posiciona uma torre do tipo pedido. A casa precisa estar dentro do mapa,
  * fora do caminho e sem torre, e o tipo precisa existir. Se não der, nada
  * muda (nem um id é gasto) e devolve `null`; se der, emite `towerPlaced`.
+ * `star` só é diferente de 1 no spawn do debug; é preso ao máximo do tipo.
  */
 export function placeTower(
   ctx: TickContext,
@@ -60,12 +65,18 @@ export function placeTower(
   data: TowerData,
   towerType: string,
   cell: GridCoord,
+  star = 1,
 ): Tower | null {
   const { state } = ctx;
   if (!hasTowerType(data, towerType) || !map.canPlaceTower(cell)) return null;
   if (state.towers.some((t) => t.x === cell.x && t.y === cell.y)) return null;
 
-  const tower = createTower(ctx.allocateId(), towerType, cell);
+  const tower = createTower(
+    ctx.allocateId(),
+    towerType,
+    cell,
+    clampStar(getTowerType(data, towerType), star),
+  );
   state.towers.push(tower);
   ctx.emit({
     type: 'towerPlaced',

@@ -83,7 +83,7 @@ describe('dados das classes', () => {
 });
 
 describe('dados das torres', () => {
-  it('o towers.json real traz as torres provisórias da T06 (sem gatilho)', () => {
+  it('o towers.json real traz as 2 torres de teste da T06 (sem classe, raridade nem gatilho)', () => {
     expect(towerData.projectileRetargetRadius).toBe(2);
     expect(Object.keys(towerData.types)).toEqual([
       'basic',
@@ -92,10 +92,16 @@ describe('dados das torres', () => {
       'reaper',
       'relay',
       'obelisk',
+      'ballista',
+      'clock',
+      'executioner',
+      'mirror',
     ]);
     expect(towerData.types.basic).toEqual({
       name: 'Básica',
-      classes: ['mechanical', 'arcane'],
+      rarity: null,
+      classes: [],
+      attacks: true,
       damage: 10,
       shotsPerSecond: 2,
       range: 3,
@@ -106,7 +112,9 @@ describe('dados das torres', () => {
     });
     expect(towerData.types.cannon).toEqual({
       name: 'Canhão',
-      classes: ['artillery', 'shadow'],
+      rarity: null,
+      classes: [],
+      attacks: true,
       damage: 8,
       shotsPerSecond: 0.8,
       range: 2.5,
@@ -119,6 +127,11 @@ describe('dados das torres', () => {
 
   it.each<[string, (raw: RawTowers) => void]>([
     ['classe desconhecida', (r) => (r.types.basic!.classes = ['mechanical', 'fire'])],
+    ['torre com classes e sem raridade', (r) => (r.types.mortar!.rarity = null)],
+    ['raridade desconhecida', (r) => (r.types.mortar!.rarity = 'legendary')],
+    ['torre de teste com raridade', (r) => (r.types.basic!.rarity = 'common')],
+    ['"attacks" em texto', (r) => (r.types.mirror!.attacks = 'no')],
+    ['torre que ataca sem cadência', (r) => delete r.types.mortar!.shotsPerSecond],
     ['uma classe só', (r) => (r.types.basic!.classes = ['mechanical'])],
     ['três classes', (r) => (r.types.basic!.classes = ['mechanical', 'arcane', 'shadow'])],
     ['classe repetida', (r) => (r.types.basic!.classes = ['arcane', 'arcane'])],

@@ -23,6 +23,13 @@ export interface PendingTrigger {
   hasPoint: boolean;
   x: number;
   y: number;
+  /**
+   * > 0: não é o "o quê" da torre, é a explosão de uma execução (Carrasco
+   * ★3) no ponto (`x`, `y`), com este raio e `blastPercent` do dano da torre.
+   * Cada explosão é uma entrada própria: conta no orçamento e na profundidade.
+   */
+  blastRadius: number;
+  blastPercent: number;
 }
 
 export interface TriggerTickStats {

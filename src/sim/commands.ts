@@ -35,7 +35,7 @@ export function createCommandSystem(
           spawnEnemy(ctx, routes, enemies, command.enemyType);
           break;
         case 'placeTower':
-          placeTower(ctx, map, towers, command.towerType, command);
+          placeTower(ctx, map, towers, command.towerType, command, command.star);
           break;
         case 'debugSpawnEnemies': {
           const count = clampCount(command.count);
@@ -49,7 +49,7 @@ export function createCommandSystem(
           const cells = pickTowerCells(map, occupied, clampCount(command.count), command.layout);
           for (const cell of cells) {
             const towerType = patternTowerType(command.towerTypes, cell);
-            if (towerType !== null) placeTower(ctx, map, towers, towerType, cell);
+            if (towerType !== null) placeTower(ctx, map, towers, towerType, cell, command.star);
           }
           break;
         }

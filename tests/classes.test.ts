@@ -753,6 +753,7 @@ describe('bônus na partida real', () => {
       types: Record<string, unknown>;
     };
     const plain = {
+      rarity: 'common',
       damage: 5,
       shotsPerSecond: 1,
       range: 3,

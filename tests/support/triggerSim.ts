@@ -25,7 +25,7 @@ import { smallRoutes, testTowers, testTriggerRules } from './towerSim';
 export function armedType(
   when: string,
   effect: string,
-  params: Record<string, number> = {},
+  params: Record<string, number | boolean> = {},
   base: Partial<TowerType> = {},
 ): TowerType {
   return {

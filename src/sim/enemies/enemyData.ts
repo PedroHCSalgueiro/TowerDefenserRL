@@ -17,6 +17,8 @@ export interface EnemyType {
   readonly nexusDamage: number;
   readonly gold: number;
   readonly movement: Movement;
+  /** Chefão: imune à execução do Carrasco (que lhe dá um golpe crítico). Padrão: `false`. */
+  readonly boss: boolean;
 }
 
 export interface EnemyData {
@@ -52,7 +54,11 @@ function parseType(id: string, raw: unknown): EnemyType {
   ) {
     throw new Error(`Inimigo inválido: "${id}" tem campos ausentes ou fora do intervalo`);
   }
-  return { hp, speed, armor, nexusDamage, gold, movement: movement as Movement };
+  const boss = Object.hasOwn(raw, 'boss') ? raw.boss : false;
+  if (typeof boss !== 'boolean') {
+    throw new Error(`Inimigo inválido: "${id}" tem "boss" que não é verdadeiro ou falso`);
+  }
+  return { hp, speed, armor, nexusDamage, gold, movement: movement as Movement, boss };
 }
 
 /** Valida os dados de inimigos. Erro claro em vez de NaN no meio da run. */

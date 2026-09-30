@@ -15,6 +15,10 @@
  *    seguinte (com a profundidade do tick zerada). Acima de `maxQueueSize`,
  *    entradas novas são descartadas (as mais novas) e contadas.
  *
+ * Cada torre usa o gatilho da estrela dela (`Tower.star`). A explosão de uma
+ * execução do Carrasco ★3 é uma entrada própria da fila (`blastRadius` > 0):
+ * conta no orçamento e na profundidade, como qualquer gatilho.
+ *
  * Bônus de classe (`RunState.classes`, lidos por torre a cada tick): a
  * Mecânica reduz o N dos "a cada N"; a Arcana amplia a vizinhança de quem a
  * tem; a Sombria multiplica o peso das mortes para as torres Sombria.
@@ -35,9 +39,10 @@ import type { SpatialIndex } from '../spatial/spatialIndex';
 import type { Tower } from '../towers/placement';
 import type { TargetScores } from '../towers/targeting';
 import { findTowerTarget } from '../towers/systems';
+import { clampStar } from '../towers/stars';
 import { getTowerType, type TowerData, type TowerType } from '../towers/towerData';
-import { resolveCopy, runEffect, type EffectEnv } from './effects';
-import { triggerAt, type TriggerRules, type TriggerStar } from './triggerData';
+import { resolveCopies, runBlast, runEffect, type EffectEnv } from './effects';
+import { triggerAt, type EffectKind, type TriggerRules, type TriggerStar } from './triggerData';
 import type { PendingTrigger, TriggerState, TriggerTickStats } from './triggerState';
 
 export interface TriggerSystemDeps {
@@ -85,9 +90,8 @@ class TriggerEngine implements EffectEnv {
   readonly classes: ClassData;
   readonly scores: TargetScores;
   readonly activationCooldownTicks: number;
+  readonly unlimitedLineLength: number;
   private readonly rules: TriggerRules;
-  /** Estrela ★1 de cada tipo de torre (`null` = sem gatilho). */
-  private readonly starByType = new Map<string, TriggerStar | null>();
 
   // Montados a cada tick a partir do estado (nada disso vai para o save).
   private tick: TickContext | null = null;
@@ -98,6 +102,7 @@ class TriggerEngine implements EffectEnv {
   /** Torres com gatilho que escutam abates ("morre no alcance", "a cada N abates", "vizinha abate"). */
   private killListeners: Armed[] = [];
   private readonly neighborCache = new Map<number, Tower[]>();
+  private readonly reachCache = new Map<number, Tower[]>();
 
   private queue: PendingTrigger[] = [];
   private head = 0;
@@ -115,9 +120,7 @@ class TriggerEngine implements EffectEnv {
       1,
       Math.round(this.rules.activationCooldownSeconds * deps.ticksPerSecond),
     );
-    for (const [id, type] of Object.entries(deps.towers.types)) {
-      this.starByType.set(id, type.trigger ? triggerAt(type.trigger) : null);
-    }
+    this.unlimitedLineLength = this.rules.unlimitedLineLength;
   }
 
   get ctx(): TickContext {
@@ -134,6 +137,45 @@ class TriggerEngine implements EffectEnv {
       this.neighborCache.set(tower.id, list);
     }
     return list;
+  }
+
+  reachNeighborsOf(tower: Tower, reach: number): readonly Tower[] {
+    const key = tower.id * 16 + reach;
+    let list = this.reachCache.get(key);
+    if (!list) {
+      const radius = this.armedById.get(tower.id)?.neighborRadius ?? this.radiusOf(tower);
+      list = this.sorted.filter((t) => {
+        if (t === tower) return false;
+        if (isNeighbor(tower, t, this.rules.neighborhood, radius)) return true;
+        const dx = Math.abs(tower.x - t.x);
+        const dy = Math.abs(tower.y - t.y);
+        return (dx === 0 || dy === 0) && dx + dy <= reach;
+      });
+      this.reachCache.set(key, list);
+    }
+    return list;
+  }
+
+  enqueueBlast(
+    tower: Tower,
+    x: number,
+    y: number,
+    radius: number,
+    percent: number,
+    entry: PendingTrigger,
+  ): void {
+    const armed = this.armedById.get(tower.id);
+    if (!armed) return;
+    this.enqueue(
+      armed,
+      tower.id,
+      1,
+      entry.depth + 1,
+      entry.tickDepth + 1,
+      { x, y },
+      radius,
+      percent,
+    );
   }
 
   private radiusOf(tower: Tower): number {
@@ -185,13 +227,14 @@ class TriggerEngine implements EffectEnv {
     this.towerById.clear();
     this.armedById.clear();
     this.neighborCache.clear();
+    this.reachCache.clear();
     this.armed = [];
     this.killListeners = [];
     for (const tower of this.sorted) {
       this.towerById.set(tower.id, tower);
-      const star = this.starByType.get(tower.type);
-      if (!star) continue;
       const type = getTowerType(this.towers, tower.type);
+      if (!type.trigger) continue;
+      const star = triggerAt(type.trigger, clampStar(type, tower.star));
       const when = star.when;
       const baseCount =
         when.kind === 'everyNShots'
@@ -225,6 +268,8 @@ class TriggerEngine implements EffectEnv {
     depth: number,
     tickDepth: number,
     point: { x: number; y: number } | null,
+    blastRadius = 0,
+    blastPercent = 0,
   ): void {
     if (this.queue.length - this.head >= this.rules.maxQueueSize) {
       this.stats.dropped++;
@@ -240,6 +285,8 @@ class TriggerEngine implements EffectEnv {
       hasPoint: point !== null,
       x: point?.x ?? 0,
       y: point?.y ?? 0,
+      blastRadius,
+      blastPercent,
     });
   }
 
@@ -340,33 +387,52 @@ class TriggerEngine implements EffectEnv {
     if (!armed) return;
     const { tower, type, star } = armed;
     const own = star.effect;
-    const copied = own.kind === 'copyLast';
-    const effect = own.kind === 'copyLast' ? resolveCopy(this, tower) : own;
+
+    if (entry.blastRadius > 0) {
+      this.fired(armed, entry, 'explosion');
+      runBlast(this, tower, type, entry);
+      return;
+    }
+
+    if (own.kind === 'copyLast') {
+      const effects = resolveCopies(this, tower, own);
+      // Nada para copiar: o gatilho disparou, mas não há efeito.
+      if (effects.length === 0) this.fired(armed, entry, 'copyLast');
+      for (const effect of effects) {
+        this.fired(armed, entry, effect.kind);
+        if (runEffect(this, tower, type, effect, entry, true)) {
+          tower.lastEffect = { effect, seq: this.state.nextSeq++ };
+        }
+      }
+      return;
+    }
 
     // Descarga de carga guardada: sem carga suficiente ou sem alvo, não faz nada.
-    if (entry.weight === 0 && effect?.kind === 'chargeLightning' && !copied) {
-      if (tower.charges < effect.charges) return;
+    if (entry.weight === 0 && own.kind === 'chargeLightning') {
+      if (tower.charges < own.charges) return;
       if (!findTowerTarget(this.index, this.ctx.state, tower, type, this.scores)) return;
     }
 
+    this.fired(armed, entry, own.kind);
+    if (runEffect(this, tower, type, own, entry, false)) {
+      tower.lastEffect = { effect: own, seq: this.state.nextSeq++ };
+    }
+  }
+
+  /** Registra um gatilho executado: evento e contadores. */
+  private fired(armed: Armed, entry: PendingTrigger, effect: EffectKind): void {
     const { ctx } = this;
     ctx.emit({
       type: 'triggerFired',
       tick: ctx.state.tick,
-      towerId: tower.id,
+      towerId: armed.tower.id,
       sourceTowerId: entry.sourceTowerId,
-      when: star.when.kind,
-      effect: effect?.kind ?? 'copyLast',
+      when: armed.star.when.kind,
+      effect,
       depth: entry.depth,
     });
     this.stats.fired++;
     if (entry.depth > this.stats.maxDepth) this.stats.maxDepth = entry.depth;
-
-    // Nada para copiar: o gatilho disparou, mas não há efeito.
-    if (!effect) return;
-    if (runEffect(this, tower, type, effect, entry, copied)) {
-      tower.lastEffect = { effect, seq: this.state.nextSeq++ };
-    }
   }
 }
 

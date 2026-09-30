@@ -22,11 +22,23 @@ import { isTargetMode, type TargetMode } from './targeting';
 export type ShotData =
   { readonly kind: 'single' } | { readonly kind: 'area'; readonly radius: number };
 
+/** Raridade para a loja (T10). Torres de teste não têm (`null`). */
+export const RARITIES = ['common', 'uncommon', 'rare'] as const;
+export type Rarity = (typeof RARITIES)[number];
+
 export interface TowerType {
   readonly name: string;
-  /** Duas classes diferentes; a primeira é a principal (cor no greybox). */
+  /** `null` = torre de teste: fora da loja e da contagem de classes. */
+  readonly rarity: Rarity | null;
+  /**
+   * Duas classes diferentes, a primeira é a principal (cor no greybox); ou
+   * nenhuma, nas torres de teste.
+   */
   readonly classes: readonly string[];
+  /** `false` = não atira (o Espelho): `damage` e `range` só servem aos efeitos copiados. */
+  readonly attacks: boolean;
   readonly damage: number;
+  /** 0 se a torre não atira. */
   readonly shotsPerSecond: number;
   readonly range: number;
   readonly projectileSpeed: number;
@@ -62,6 +74,8 @@ function parseShot(id: string, raw: unknown): ShotData {
 }
 
 function parseClasses(id: string, raw: unknown, classes: ClassData): string[] {
+  // Torre de teste (Básica, Canhão): sem classe.
+  if (Array.isArray(raw) && raw.length === 0) return [];
   if (
     !Array.isArray(raw) ||
     raw.length !== CLASSES_PER_TOWER ||
@@ -69,7 +83,7 @@ function parseClasses(id: string, raw: unknown, classes: ClassData): string[] {
     !raw.every((c) => typeof c === 'string' && Object.hasOwn(classes.classes, c))
   ) {
     throw new Error(
-      `Torre inválida: "${id}" precisa de ${CLASSES_PER_TOWER} classes diferentes e existentes`,
+      `Torre inválida: "${id}" precisa de ${CLASSES_PER_TOWER} classes diferentes e existentes (ou nenhuma, se for torre de teste)`,
     );
   }
   return raw as string[];
@@ -79,15 +93,25 @@ function parseType(id: string, raw: unknown, classes: ClassData): TowerType {
   if (!isRecord(raw)) {
     throw new Error(`Torre inválida: "${id}" não é um objeto`);
   }
-  const { name, damage, shotsPerSecond, range, projectileSpeed, targetMode } = raw;
+  const { name, damage, range, targetMode } = raw;
+  const attacks = Object.hasOwn(raw, 'attacks') ? raw.attacks : true;
+  if (typeof attacks !== 'boolean') {
+    throw new Error(`Torre inválida: "${id}" tem "attacks" que não é verdadeiro ou falso`);
+  }
+  // Sem ataque não há cadência; a velocidade do projétil continua valendo para os efeitos copiados.
+  const shotsPerSecond = attacks ? raw.shotsPerSecond : 0;
+  const { projectileSpeed } = raw;
   if (
     typeof name !== 'string' ||
     name === '' ||
     !isPositive(damage) ||
-    !isPositive(shotsPerSecond) ||
     !isPositive(range) ||
-    !isPositive(projectileSpeed)
+    !isPositive(projectileSpeed) ||
+    (attacks && !isPositive(shotsPerSecond))
   ) {
+    throw new Error(`Torre inválida: "${id}" tem campos ausentes ou não positivos`);
+  }
+  if (typeof shotsPerSecond !== 'number' || typeof projectileSpeed !== 'number') {
     throw new Error(`Torre inválida: "${id}" tem campos ausentes ou não positivos`);
   }
   if (!isTargetMode(targetMode)) {
@@ -98,9 +122,18 @@ function parseType(id: string, raw: unknown, classes: ClassData): TowerType {
   if (!Object.hasOwn(raw, 'trigger')) {
     throw new Error(`Torre inválida: "${id}" não tem "trigger" (use null para torre sem gatilho)`);
   }
+  const towerClasses = parseClasses(id, raw.classes, classes);
+  const rarity = raw.rarity;
+  if (towerClasses.length === 0 ? rarity !== null : !RARITIES.includes(rarity as Rarity)) {
+    throw new Error(
+      `Torre inválida: "${id}" precisa de raridade (${RARITIES.join(', ')}); torre de teste, sem classes, usa null`,
+    );
+  }
   return {
     name,
-    classes: parseClasses(id, raw.classes, classes),
+    rarity: rarity as Rarity | null,
+    classes: towerClasses,
+    attacks,
     damage,
     shotsPerSecond,
     range,

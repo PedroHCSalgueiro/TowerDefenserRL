@@ -40,6 +40,8 @@ export class SpatialIndex {
   private items = new Int32Array(0);
   /** Célula de cada slot na última montagem. */
   private slotCell = new Int32Array(0);
+  /** Notas dos melhores de `findBestN`, reaproveitado entre chamadas. */
+  private readonly bestScores: number[] = [];
 
   constructor(cellSize: number) {
     if (!(cellSize > 0)) {
@@ -115,6 +117,44 @@ export class SpatialIndex {
       }
     });
     return best;
+  }
+
+  /**
+   * Os `count` melhores inimigos dentro do alcance, do melhor para o pior
+   * (mesma nota e desempate de `findBest`). Uma passada só; `out` é
+   * esvaziado e preenchido (menos de `count` se não houver tantos).
+   */
+  findBestN(
+    state: IndexedState,
+    x: number,
+    y: number,
+    range: number,
+    score: (enemy: Enemy, x: number, y: number) => number,
+    count: number,
+    out: Enemy[],
+  ): Enemy[] {
+    out.length = 0;
+    if (count <= 0) return out;
+    const scores = this.bestScores;
+    scores.length = 0;
+    this.forEachInRange(state, x, y, range, (enemy) => {
+      const s = score(enemy, x, y);
+      let at = out.length;
+      while (at > 0) {
+        const prev = out[at - 1]!;
+        const prevScore = scores[at - 1]!;
+        if (prevScore < s || (prevScore === s && prev.id < enemy.id)) break;
+        at--;
+      }
+      if (at >= count) return;
+      out.splice(at, 0, enemy);
+      scores.splice(at, 0, s);
+      if (out.length > count) {
+        out.pop();
+        scores.pop();
+      }
+    });
+    return out;
   }
 
   /**

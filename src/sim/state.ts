@@ -13,7 +13,7 @@ import { createProjectilePool, type ProjectilePool } from './projectiles/pool';
 import type { Tower } from './towers/placement';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 
-export const RUN_STATE_VERSION = 6;
+export const RUN_STATE_VERSION = 7;
 
 /**
  * Disposição usada pelo debug:
@@ -34,6 +34,8 @@ export interface PlaceTowerCommand {
   towerType: string;
   x: number;
   y: number;
+  /** Só para o debug (padrão 1): a estrela real vem da fusão, na T11. */
+  star?: number;
 }
 
 /** Debug: N inimigos de um tipo (ou de tipos sorteados, se `enemyType` for `null`). */
@@ -54,6 +56,8 @@ export interface DebugSpawnTowersCommand {
   count: number;
   towerTypes: string[];
   layout: DebugLayout;
+  /** Estrela das torres (padrão 1), presa ao máximo de cada tipo. */
+  star?: number;
 }
 
 /** Debug: remove inimigos, projéteis e torres, e desliga o estresse. */
@@ -153,6 +157,7 @@ function isTowerState(value: unknown): boolean {
     typeof t === 'object' &&
     t !== null &&
     Number.isInteger(t.id) &&
+    Number.isInteger(t.star) &&
     typeof t.type === 'string' &&
     Number.isInteger(t.cooldownTicks) &&
     Number.isInteger(t.triggerCounter) &&

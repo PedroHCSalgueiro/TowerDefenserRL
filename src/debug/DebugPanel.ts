@@ -23,10 +23,11 @@ import { addReport, allReports, clearReports, formatReport, reportTitle } from '
 import { linkWithSeed } from './seed';
 import './debugPanel.css';
 
-const { defaults, chainScenario, perf, panel: panelConfig } = debugConfig;
+const { defaults, chainScenario, fullScenario, perf, panel: panelConfig } = debugConfig;
 
 /** Valor da opção "Cadeia" na seleção de torre (não é um id de torre). */
 const CHAIN_OPTION = '__chain__';
+const FULL_OPTION = '__full__';
 
 /** O painel continua aberto ou fechado depois de reiniciar a cena. */
 let panelVisible = true;
@@ -77,10 +78,25 @@ function towerTypeSelect(towerTypes: DebugPanelDeps['towerTypes']): {
       el('option', { value: t.id, textContent: t.name, selected: t.id === defaults.towerType }),
     ),
     el('option', { value: CHAIN_OPTION, textContent: chainScenario.name }),
+    el('option', { value: FULL_OPTION, textContent: fullScenario.name }),
   ]);
-  const isChain = (): boolean => select.value === CHAIN_OPTION;
-  const types = (): string[] => (isChain() ? [...chainScenario.towerTypes] : [select.value]);
+  const isChain = (): boolean => select.value === CHAIN_OPTION || select.value === FULL_OPTION;
+  const types = (): string[] =>
+    select.value === CHAIN_OPTION
+      ? [...chainScenario.towerTypes]
+      : select.value === FULL_OPTION
+        ? [...fullScenario.towerTypes]
+        : [select.value];
   return { select, isChain, types };
+}
+
+/** Estrela das torres posicionadas pelo debug (a estrela real e a fusão são da T11). */
+function starSelect(): HTMLSelectElement {
+  return el('select', {}, [
+    el('option', { value: '1', textContent: '★1' }),
+    el('option', { value: '2', textContent: '★2' }),
+    el('option', { value: '3', textContent: '★3' }),
+  ]);
 }
 
 function button(text: string, onClick: () => void): HTMLButtonElement {
@@ -165,6 +181,7 @@ export class DebugPanel {
     // Torre: tipo usado para posicionar e no spawn em massa (o estresse tem o seu).
     const towerType = towerTypeSelect(deps.towerTypes);
     const selectedTypes = towerType.types;
+    const towerStar = starSelect();
     this.placeNote = el('div', { className: 'debug-note' });
     const placeTower = button('Posicionar na casa selecionada', () => {
       const cell = deps.selectedCell();
@@ -174,7 +191,10 @@ export class DebugPanel {
       }
       this.placeNote.textContent = '';
       const type = patternTowerType(selectedTypes(), cell);
-      if (type) this.send({ type: 'placeTower', towerType: type, x: cell.x, y: cell.y });
+      if (type) {
+        const star = Number(towerStar.value);
+        this.send({ type: 'placeTower', towerType: type, x: cell.x, y: cell.y, star });
+      }
     });
 
     // Spawn de inimigos
@@ -196,12 +216,14 @@ export class DebugPanel {
     // Spawn de torres
     const towerCount = numberInput(defaults.towerCount);
     const towerLayout = layoutSelect();
+    const spawnStar = starSelect();
     const spawnTowers = button('Spawnar', () =>
       this.send({
         type: 'debugSpawnTowers',
         count: towerCount.valueAsNumber,
         towerTypes: selectedTypes(),
         layout: towerLayout.value as DebugLayout,
+        star: Number(spawnStar.value),
       }),
     );
 
@@ -209,6 +231,7 @@ export class DebugPanel {
     const stressCount = numberInput(defaults.enemyCount);
     const stressTowers = numberInput(defaults.towerCount);
     const stressTowerType = towerTypeSelect(deps.towerTypes);
+    const stressStar = starSelect();
     const stressLayout = layoutSelect();
     // Na cadeia, as torres ficam sempre no bloco compacto (precisam se tocar);
     // a disposição escolhida vale só para os inimigos.
@@ -222,6 +245,7 @@ export class DebugPanel {
         count: stressTowers.valueAsNumber,
         towerTypes: stressTowerType.types(),
         layout: stressTowerType.isChain() ? (chainScenario.towerLayout as DebugLayout) : layout,
+        star: Number(stressStar.value),
       });
       this.send({
         type: 'debugSetStress',
@@ -256,15 +280,15 @@ export class DebugPanel {
       speedRow,
       row('Núcleo', el('label', {}, [this.invulnerable, ' invulnerável'])),
       el('div', { className: 'debug-section', textContent: 'Torre' }),
-      row('Tipo', towerType.select, placeTower),
+      row('Tipo', towerType.select, towerStar, placeTower),
       this.placeNote,
       el('div', { className: 'debug-section', textContent: 'Estresse' }),
       row('Inimigos', stressCount, stressLayout),
-      row('Torres', stressTowers, stressTowerType.select),
+      row('Torres', stressTowers, stressTowerType.select, stressStar),
       row('', startScenario, stopStress),
       el('div', { className: 'debug-section', textContent: 'Spawn' }),
       row('Inimigos', enemyCount, enemyType, enemyLayout, spawnEnemies),
-      row('Torres', towerCount, towerLayout, spawnTowers),
+      row('Torres', towerCount, towerLayout, spawnStar, spawnTowers),
       row('', clear),
       el('div', { className: 'debug-section', textContent: 'Gravação' }),
       row('', record, copy, forget),

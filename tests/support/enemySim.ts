@@ -32,10 +32,36 @@ export const smallMap = loadMap({
 export const testEnemies: EnemyData = {
   armor: { scale: 100 },
   types: {
-    walker: { hp: 10, speed: 2, armor: 0, nexusDamage: 2, gold: 1, movement: 'ground' },
-    flyer: { hp: 10, speed: 2, armor: 0, nexusDamage: 1, gold: 1, movement: 'air' },
-    tank: { hp: 10, speed: 2, armor: 50, nexusDamage: 3, gold: 2, movement: 'ground' },
-    brick: { hp: 1e9, speed: 2, armor: 0, nexusDamage: 2, gold: 0, movement: 'ground' },
+    walker: {
+      hp: 10,
+      speed: 2,
+      armor: 0,
+      nexusDamage: 2,
+      gold: 1,
+      movement: 'ground',
+      boss: false,
+    },
+    flyer: { hp: 10, speed: 2, armor: 0, nexusDamage: 1, gold: 1, movement: 'air', boss: false },
+    tank: { hp: 10, speed: 2, armor: 50, nexusDamage: 3, gold: 2, movement: 'ground', boss: false },
+    /** Chefão de teste (o de verdade é da T13): imune à execução. */
+    titan: {
+      hp: 100,
+      speed: 2,
+      armor: 50,
+      nexusDamage: 5,
+      gold: 5,
+      movement: 'ground',
+      boss: true,
+    },
+    brick: {
+      hp: 1e9,
+      speed: 2,
+      armor: 0,
+      nexusDamage: 2,
+      gold: 0,
+      movement: 'ground',
+      boss: false,
+    },
   },
 };
 

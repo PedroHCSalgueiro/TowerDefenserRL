@@ -17,14 +17,22 @@ const MAX_STARS = 5;
 
 interface ParamSpec {
   readonly name: string;
-  /** Contagem: inteiro ≥ 1. Sem isso: número > 0. */
-  readonly integer: boolean;
+  /** `count`: inteiro ≥ 1. `positive`: número > 0. `flag`: verdadeiro ou falso. */
+  readonly kind: 'count' | 'positive' | 'flag';
   /** Teto inclusivo (porcentagens de vida). */
   readonly max?: number;
+  /** Valor quando o parâmetro não aparece nos dados; sem isso, ele é obrigatório. */
+  readonly fallback?: number | boolean;
 }
 
-const count = (name: string): ParamSpec => ({ name, integer: true });
-const positive = (name: string, max?: number): ParamSpec => ({ name, integer: false, max });
+const count = (name: string, fallback?: number): ParamSpec => ({ name, kind: 'count', fallback });
+const positive = (name: string, max?: number, fallback?: number): ParamSpec => ({
+  name,
+  kind: 'positive',
+  max,
+  fallback,
+});
+const flag = (name: string): ParamSpec => ({ name, kind: 'flag', fallback: false });
 
 /** Parâmetros de cada "quando". */
 const WHEN_PARAMS = {
@@ -42,21 +50,57 @@ const WHEN_PARAMS = {
   everyNKillsInRange: [count('kills')],
 } as const satisfies Record<string, readonly ParamSpec[]>;
 
-/** Parâmetros de cada "o quê". Porcentagens de dano são do dano base da torre. */
+/**
+ * Parâmetros de cada "o quê". Porcentagens de dano são do dano da torre.
+ * Os que têm valor padrão são opcionais nos dados (0 e `false` = desligado).
+ */
 const DO_PARAMS = {
-  multiShot: [count('extraShots')],
-  explosion: [positive('radius'), positive('damagePercent')],
-  activateNeighbors: [count('maxTargets')],
+  /** `spread`: cada tiro extra vai para um alvo diferente, na ordem de mira (dando a volta). */
+  multiShot: [count('extraShots'), flag('spread')],
+  /** `killWeight`: quanto as mortes da explosão valem nos contadores de abate. */
+  explosion: [positive('radius'), positive('damagePercent'), count('killWeight', 1)],
+  /**
+   * Sem `maxTargets` (0), ativa todas as vizinhas da vizinhança atual.
+   * `activatedDamagePercent`: dano do tiro ativado. `reach`: soma a cruz de
+   * alcance N à vizinhança. `selfToo`: a torre também ativa a si mesma.
+   */
+  activateNeighbors: [
+    count('maxTargets', 0),
+    positive('activatedDamagePercent', undefined, 100),
+    count('reach', 0),
+    flag('selfToo'),
+  ],
+  /** `activateOnDischarge`: ao soltar o raio, ativa as vizinhas. */
   chargeLightning: [
     count('charges'),
     count('targets'),
     positive('jumpRadius'),
     positive('damagePercent'),
+    flag('activateOnDischarge'),
   ],
-  pierceLine: [positive('halfWidth'), positive('damagePercent')],
-  execute: [positive('hpPercent', 100), count('killWeight')],
-  copyLast: [],
+  /** `unlimited`: a linha atravessa o mapa (comprimento `unlimitedLineLength`). */
+  pierceLine: [positive('halfWidth'), positive('damagePercent'), flag('unlimited')],
+  /**
+   * `bossMaxHpPercent`: o chefão nunca é executado; abaixo do limite de vida,
+   * leva um golpe de tantos % da vida máxima por disparo (0 = sem golpe).
+   * `explodeRadius` e `explodeDamagePercent` (juntos): cada execução explode.
+   */
+  execute: [
+    positive('hpPercent', 100),
+    count('killWeight'),
+    positive('bossMaxHpPercent', 100, 0),
+    positive('explodeRadius', undefined, 0),
+    positive('explodeDamagePercent', undefined, 0),
+  ],
+  /** `powerPercent`: escala o dano do efeito copiado. `copies`: quantos efeitos copia. */
+  copyLast: [positive('powerPercent', undefined, 100), count('copies', 1)],
 } as const satisfies Record<string, readonly ParamSpec[]>;
+
+/**
+ * Parâmetro de estrela que vale para qualquer gatilho: multiplica o dano do
+ * ataque normal da torre (e, com ele, tudo que é % do dano dela).
+ */
+const STAR_PARAMS: readonly ParamSpec[] = [positive('attackDamagePercent', undefined, 100)];
 
 export type WhenKind = keyof typeof WHEN_PARAMS;
 export type EffectKind = keyof typeof DO_PARAMS;
@@ -73,19 +117,47 @@ export type TriggerWhen =
   | { readonly kind: 'everyNKillsInRange'; readonly kills: number };
 
 export type TriggerEffect =
-  | { readonly kind: 'multiShot'; readonly extraShots: number }
-  | { readonly kind: 'explosion'; readonly radius: number; readonly damagePercent: number }
-  | { readonly kind: 'activateNeighbors'; readonly maxTargets: number }
+  | { readonly kind: 'multiShot'; readonly extraShots: number; readonly spread: boolean }
+  | {
+      readonly kind: 'explosion';
+      readonly radius: number;
+      readonly damagePercent: number;
+      readonly killWeight: number;
+    }
+  | {
+      readonly kind: 'activateNeighbors';
+      /** 0 = todas as vizinhas da vizinhança atual. */
+      readonly maxTargets: number;
+      readonly activatedDamagePercent: number;
+      /** 0 = sem a cruz de alcance. */
+      readonly reach: number;
+      readonly selfToo: boolean;
+    }
   | {
       readonly kind: 'chargeLightning';
       readonly charges: number;
       readonly targets: number;
       readonly jumpRadius: number;
       readonly damagePercent: number;
+      readonly activateOnDischarge: boolean;
     }
-  | { readonly kind: 'pierceLine'; readonly halfWidth: number; readonly damagePercent: number }
-  | { readonly kind: 'execute'; readonly hpPercent: number; readonly killWeight: number }
-  | { readonly kind: 'copyLast' };
+  | {
+      readonly kind: 'pierceLine';
+      readonly halfWidth: number;
+      readonly damagePercent: number;
+      readonly unlimited: boolean;
+    }
+  | {
+      readonly kind: 'execute';
+      readonly hpPercent: number;
+      readonly killWeight: number;
+      /** 0 = o chefão só é poupado, sem golpe. */
+      readonly bossMaxHpPercent: number;
+      /** 0 = a execução não explode. */
+      readonly explodeRadius: number;
+      readonly explodeDamagePercent: number;
+    }
+  | { readonly kind: 'copyLast'; readonly powerPercent: number; readonly copies: number };
 
 /** Um "o quê" que pode ser guardado e copiado (tudo, menos o próprio "copiar"). */
 export type CopyableEffect = Exclude<TriggerEffect, { kind: 'copyLast' }>;
@@ -94,6 +166,8 @@ export type CopyableEffect = Exclude<TriggerEffect, { kind: 'copyLast' }>;
 export interface TriggerStar {
   readonly when: TriggerWhen;
   readonly effect: TriggerEffect;
+  /** % do dano do ataque normal da torre nesta estrela (100 = sem mudança). */
+  readonly attackDamagePercent: number;
 }
 
 export interface TriggerDef {
@@ -109,6 +183,8 @@ export interface TriggerRules {
   readonly neighborhood: Neighborhood;
   /** Cada torre só pode ser ativada por gatilho uma vez a cada tantos segundos. */
   readonly activationCooldownSeconds: number;
+  /** Comprimento, em casas, das linhas "sem limite" (maior que qualquer mapa). */
+  readonly unlimitedLineLength: number;
   /** Profundidade de cadeia processada por tick; o resto continua no tick seguinte. */
   readonly maxChainDepthPerTick: number;
   /** Entradas da fila processadas por tick; o resto continua no tick seguinte. */
@@ -125,9 +201,10 @@ function isPositiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0;
 }
 
-function validParam(spec: ParamSpec, value: unknown): value is number {
+function validParam(spec: ParamSpec, value: unknown): boolean {
+  if (spec.kind === 'flag') return typeof value === 'boolean';
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return false;
-  if (spec.integer && !Number.isInteger(value)) return false;
+  if (spec.kind === 'count' && !Number.isInteger(value)) return false;
   return spec.max === undefined || value <= spec.max;
 }
 
@@ -144,9 +221,20 @@ function pick(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { kind };
   for (const spec of specs) {
+    if (!Object.hasOwn(raw, spec.name) && spec.fallback !== undefined) {
+      out[spec.name] = spec.fallback;
+      continue;
+    }
     const value = raw[spec.name];
     if (!validParam(spec, value)) {
-      const rule = spec.integer ? 'inteiro ≥ 1' : spec.max ? `> 0 e ≤ ${spec.max}` : '> 0';
+      const rule =
+        spec.kind === 'flag'
+          ? 'verdadeiro ou falso'
+          : spec.kind === 'count'
+            ? 'inteiro ≥ 1'
+            : spec.max
+              ? `> 0 e ≤ ${spec.max}`
+              : '> 0';
       throw new Error(`${where}: "${spec.name}" precisa ser ${rule} (${String(value)})`);
     }
     out[spec.name] = value;
@@ -171,7 +259,7 @@ export function parseTrigger(towerId: string, raw: unknown): TriggerDef | null {
   }
   const whenSpecs: readonly ParamSpec[] = WHEN_PARAMS[when];
   const doSpecs: readonly ParamSpec[] = DO_PARAMS[effect];
-  const allowed = new Set([...whenSpecs, ...doSpecs].map((s) => s.name));
+  const allowed = new Set([...whenSpecs, ...doSpecs, ...STAR_PARAMS].map((s) => s.name));
   const parsed = stars.map((entry: unknown, i): TriggerStar => {
     const at = `${where}, ★${i + 1}`;
     if (!isRecord(entry)) throw new Error(`${at}: não é um objeto`);
@@ -181,9 +269,14 @@ export function parseTrigger(towerId: string, raw: unknown): TriggerDef | null {
         `${at}: parâmetros que "${when}" e "${effect}" não usam: ${extra.join(', ')}`,
       );
     }
+    const params = pick(at, effect, doSpecs, entry);
+    if ((params.explodeRadius === 0) !== (params.explodeDamagePercent === 0)) {
+      throw new Error(`${at}: "explodeRadius" e "explodeDamagePercent" vêm juntos`);
+    }
     return {
       when: pick(at, when, whenSpecs, entry) as TriggerWhen,
-      effect: pick(at, effect, doSpecs, entry) as TriggerEffect,
+      effect: params as TriggerEffect,
+      attackDamagePercent: pick(at, '', STAR_PARAMS, entry).attackDamagePercent as number,
     };
   });
   return { stars: parsed };
@@ -204,6 +297,7 @@ export function parseTriggerRules(raw: unknown): TriggerRules {
   const {
     neighborhood,
     activationCooldownSeconds,
+    unlimitedLineLength,
     maxChainDepthPerTick,
     maxActivationsPerTick,
     maxQueueSize,
@@ -218,6 +312,13 @@ export function parseTriggerRules(raw: unknown): TriggerRules {
   ) {
     throw new Error('Regras de gatilho inválidas: "activationCooldownSeconds" precisa ser > 0');
   }
+  if (
+    typeof unlimitedLineLength !== 'number' ||
+    !Number.isFinite(unlimitedLineLength) ||
+    unlimitedLineLength <= 0
+  ) {
+    throw new Error('Regras de gatilho inválidas: "unlimitedLineLength" precisa ser > 0');
+  }
   for (const [name, value] of Object.entries({
     maxChainDepthPerTick,
     maxActivationsPerTick,
@@ -230,6 +331,7 @@ export function parseTriggerRules(raw: unknown): TriggerRules {
   return {
     neighborhood,
     activationCooldownSeconds,
+    unlimitedLineLength,
     maxChainDepthPerTick: maxChainDepthPerTick as number,
     maxActivationsPerTick: maxActivationsPerTick as number,
     maxQueueSize: maxQueueSize as number,

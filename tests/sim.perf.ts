@@ -17,23 +17,21 @@ import debugConfig from '../src/data/debug.json';
 import engineConfig from '../src/data/engine.json';
 import mapData from '../src/data/map.json';
 import classesJson from '../src/data/classes.json';
-import towersJson from '../src/data/towers.json';
 import { stat } from '../src/debug/metrics';
 import { loadClassData } from '../src/sim/classes/classData';
 import { Simulation } from '../src/sim/engine/simulation';
 import { loadMap } from '../src/sim/grid/map';
 import type { DebugLayout } from '../src/sim/state';
 import { createGameSystems } from '../src/sim/systems';
-import { loadTowerData } from '../src/sim/towers/towerData';
 
 const { enemyCount, towerCount, towerType } = debugConfig.defaults;
-const { chainScenario } = debugConfig;
+const { chainScenario, fullScenario } = debugConfig;
 const WARMUP_TICKS = 600;
 const MEASURED_TICKS = 3000;
 const TPS = engineConfig.ticksPerSecond;
 
-/** `bonus`: classes reais; `none`: sem níveis nos dados (= T07); `level4`: 4 tipos de teste a mais. */
-type Variant = 'bonus' | 'none' | 'level4';
+/** `bonus`: classes reais; `none`: sem níveis nos dados (= T07). */
+type Variant = 'bonus' | 'none';
 
 interface Scenario {
   name: string;
@@ -41,32 +39,7 @@ interface Scenario {
   enemyLayout: DebugLayout;
   towerLayout: DebugLayout;
   towerTypes: string[];
-}
-
-const LEVEL4_TYPES = ['testA', 'testB', 'testC', 'testD'];
-
-/** Tipos de teste (só para o bench): com os 4 provisórios, todas as classes chegam a 4 tipos. */
-function level4Towers() {
-  const raw = JSON.parse(JSON.stringify(towersJson)) as { types: Record<string, unknown> };
-  const plain = {
-    damage: 5,
-    shotsPerSecond: 1,
-    range: 3,
-    projectileSpeed: 8,
-    shot: { kind: 'single' },
-    targetMode: 'first',
-    trigger: null,
-  };
-  const classes = [
-    ['artillery', 'mechanical'],
-    ['arcane', 'shadow'],
-    ['mechanical', 'artillery'],
-    ['shadow', 'arcane'],
-  ];
-  LEVEL4_TYPES.forEach((id, i) => {
-    raw.types[id] = { name: id, classes: classes[i], ...plain };
-  });
-  return loadTowerData(raw);
+  star: number;
 }
 
 function noBonusClasses() {
@@ -83,6 +56,7 @@ const SCENARIOS: Scenario[] = [
     enemyLayout: 'spread',
     towerLayout: 'spread',
     towerTypes: [towerType],
+    star: 1,
   },
   {
     name: 'agrupado',
@@ -90,23 +64,31 @@ const SCENARIOS: Scenario[] = [
     enemyLayout: 'clustered',
     towerLayout: 'clustered',
     towerTypes: [towerType],
+    star: 1,
   },
   ...(
     [
       ['bonus', ''],
       ['none', ' sem bônus'],
-      ['level4', ' nível 4'],
     ] as const
   ).flatMap(([variant, suffix]) =>
     (['spread', 'clustered'] as const).map((layout) => ({
-      name: `cadeia ${layout === 'spread' ? 'espalhado' : 'agrupado'}${suffix}`,
+      name: `cadeia 4${layout === 'spread' ? 'esp' : 'agr'}${suffix}`,
       variant,
       enemyLayout: layout,
       towerLayout: chainScenario.towerLayout as DebugLayout,
-      towerTypes:
-        variant === 'level4'
-          ? [...chainScenario.towerTypes, ...LEVEL4_TYPES]
-          : chainScenario.towerTypes,
+      towerTypes: chainScenario.towerTypes,
+      star: 1,
+    })),
+  ),
+  ...[1, 2, 3].flatMap((star) =>
+    (['spread', 'clustered'] as const).map((layout) => ({
+      name: `cadeia 8${layout === 'spread' ? 'esp' : 'agr'} ★${star}`,
+      variant: 'bonus' as const,
+      enemyLayout: layout,
+      towerLayout: fullScenario.towerLayout as DebugLayout,
+      towerTypes: fullScenario.towerTypes,
+      star,
     })),
   ),
 ];
@@ -114,12 +96,7 @@ const SCENARIOS: Scenario[] = [
 const f = (value: number, digits = 3): string => value.toFixed(digits);
 
 function measure(s: Scenario): string {
-  const options =
-    s.variant === 'none'
-      ? { classes: noBonusClasses() }
-      : s.variant === 'level4'
-        ? { towers: level4Towers() }
-        : {};
+  const options = s.variant === 'none' ? { classes: noBonusClasses() } : {};
   const sim = Simulation.create(
     `bench-${s.enemyLayout}`,
     createGameSystems(loadMap(mapData), options),
@@ -130,6 +107,7 @@ function measure(s: Scenario): string {
     count: towerCount,
     towerTypes: s.towerTypes,
     layout: s.towerLayout,
+    star: s.star,
   });
   sim.enqueue({ type: 'debugSetStress', stress: { count: enemyCount, layout: s.enemyLayout } });
   for (let i = 0; i < WARMUP_TICKS; i++) {
@@ -170,12 +148,12 @@ function measure(s: Scenario): string {
     .map(([id, c]) => `${id} ${c.level}`)
     .join(', ');
   return [
-    `${s.name.padEnd(24)} tick médio ${f(avg)} ms | p99 ${f(p99)} ms | máx ${f(max)} ms`,
-    `${''.padEnd(24)} gatilhos/tick ${f(triggers.avg, 1)} (pior ${triggers.max}) | prof. máx ${maxDepth} | ` +
+    `${s.name.padEnd(26)} tick médio ${f(avg)} ms | p99 ${f(p99)} ms | máx ${f(max)} ms`,
+    `${''.padEnd(26)} gatilhos/tick ${f(triggers.avg, 1)} (pior ${triggers.max}) | prof. máx ${maxDepth} | ` +
       `adiados ${deferredTicks} ticks (fila máx ${maxDeferred}) | descartados ${dropped}`,
-    `${''.padEnd(24)} abates/s ${f(kills.avg * TPS, 1)} | pico ${kills.max} abates/tick | ` +
+    `${''.padEnd(26)} abates/s ${f(kills.avg * TPS, 1)} | pico ${kills.max} abates/tick | ` +
       `projéteis (média) ${f(projectiles / MEASURED_TICKS, 0)}`,
-    `${''.padEnd(24)} níveis: ${levels}`,
+    `${''.padEnd(26)} níveis: ${levels}`,
   ].join('\n');
 }
 

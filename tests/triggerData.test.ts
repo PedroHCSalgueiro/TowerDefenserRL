@@ -24,13 +24,14 @@ describe('gatilhos em dados (towers.json)', () => {
     expect(towerData.triggers).toEqual({
       neighborhood: 4,
       activationCooldownSeconds: 1,
+      unlimitedLineLength: 64,
       maxChainDepthPerTick: 8,
       maxActivationsPerTick: 2000,
       maxQueueSize: 10000,
     });
   });
 
-  it('as 4 torres provisórias do Mini-GDD, com os números aprovados', () => {
+  it('as 4 primeiras torres, com os números de ★1 da proposta da T09', () => {
     const t = towerData.types;
     expect(t.mortar).toMatchObject({
       name: 'Morteiro',
@@ -68,19 +69,19 @@ describe('gatilhos em dados (towers.json)', () => {
       projectileSpeed: 8,
       shot: { kind: 'single' },
     });
-    expect(triggerAt(t.mortar!.trigger!)).toEqual({
+    expect(triggerAt(t.mortar!.trigger!)).toMatchObject({
       when: { kind: 'everyNShots', shots: 5 },
       effect: { kind: 'multiShot', extraShots: 2 },
     });
-    expect(triggerAt(t.reaper!.trigger!)).toEqual({
+    expect(triggerAt(t.reaper!.trigger!)).toMatchObject({
       when: { kind: 'enemyDiesInRange' },
       effect: { kind: 'explosion', radius: 1, damagePercent: 100 },
     });
-    expect(triggerAt(t.relay!.trigger!)).toEqual({
+    expect(triggerAt(t.relay!.trigger!)).toMatchObject({
       when: { kind: 'onFire' },
-      effect: { kind: 'activateNeighbors', maxTargets: 4 },
+      effect: { kind: 'activateNeighbors', maxTargets: 0, activatedDamagePercent: 100 },
     });
-    expect(triggerAt(t.obelisk!.trigger!)).toEqual({
+    expect(triggerAt(t.obelisk!.trigger!)).toMatchObject({
       when: { kind: 'neighborKills' },
       effect: {
         kind: 'chargeLightning',
@@ -121,7 +122,7 @@ describe('gatilhos em dados (towers.json)', () => {
         const w = whenParams[when] ?? {};
         const d = doParams[effect]!;
         const def = parseTrigger('x', { when, do: effect, stars: [{ ...w, ...d }] });
-        expect(triggerAt(def!)).toEqual({
+        expect(triggerAt(def!)).toMatchObject({
           when: { kind: when, ...w },
           effect: { kind: effect, ...d },
         });
@@ -133,7 +134,7 @@ describe('gatilhos em dados (towers.json)', () => {
   it('parâmetros por estrela: de ★1 a ★5, cada uma com os seus números', () => {
     const stars = [1, 2, 3, 4, 5].map((n) => ({ shots: 6 - n, extraShots: n }));
     const def = parseTrigger('x', { when: 'everyNShots', do: 'multiShot', stars })!;
-    expect(triggerAt(def, 1).effect).toEqual({ kind: 'multiShot', extraShots: 1 });
+    expect(triggerAt(def, 1).effect).toMatchObject({ kind: 'multiShot', extraShots: 1 });
     expect(triggerAt(def, 5).when).toEqual({ kind: 'everyNShots', shots: 1 });
     const one = parseTrigger('x', { when: 'onFire', do: 'multiShot', stars: [{ extraShots: 1 }] })!;
     expect(() => triggerAt(one, 2)).toThrow(/★2/);
@@ -168,6 +169,7 @@ describe('gatilhos em dados (towers.json)', () => {
     ['trava de ativação zero', (r) => (r.triggers.activationCooldownSeconds = 0)],
     ['profundidade fracionária', (r) => (r.triggers.maxChainDepthPerTick = 2.5)],
     ['orçamento zero', (r) => (r.triggers.maxActivationsPerTick = 0)],
+    ['comprimento da linha sem limite ausente', (r) => delete r.triggers.unlimitedLineLength],
     ['teto da fila ausente', (r) => delete r.triggers.maxQueueSize],
     ['gatilho quebrado numa torre', (r) => (r.types.mortar!.trigger = { when: 'onFire' })],
   ])('rejeita dados de torres: %s', (_name, mutate) => {
