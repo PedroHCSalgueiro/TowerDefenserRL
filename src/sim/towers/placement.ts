@@ -33,6 +33,11 @@ export interface Tower {
   charges: number;
   /** Primeiro tick em que a torre pode ser ativada de novo por gatilho. */
   activationReadyTick: number;
+  /**
+   * Ouro gasto na torre. A venda devolve parte dele e a fusão (T11) soma o
+   * das cópias. Torres do debug e de teste têm 0.
+   */
+  invested: number;
   /** `null` = ainda não disparou nenhum "o quê" copiável. */
   lastEffect: LastEffect | null;
 }
@@ -49,6 +54,7 @@ export function createTower(id: number, type: string, cell: GridCoord, star = 1)
     triggerCounter: 0,
     charges: 0,
     activationReadyTick: 0,
+    invested: 0,
     lastEffect: null,
   };
 }

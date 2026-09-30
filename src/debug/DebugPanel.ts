@@ -101,7 +101,11 @@ function starSelect(): HTMLSelectElement {
 
 function button(text: string, onClick: () => void): HTMLButtonElement {
   const b = el('button', { type: 'button', textContent: text });
-  b.addEventListener('click', onClick);
+  b.addEventListener('click', () => {
+    onClick();
+    // Sem foco no painel, as teclas da loja e o F2 continuam chegando ao jogo.
+    b.blur();
+  });
   return b;
 }
 
@@ -256,6 +260,8 @@ export class DebugPanel {
       this.send({ type: 'debugSetStress', stress: null }),
     );
     const clear = button('Limpar tudo', () => this.send({ type: 'debugClear' }));
+    // Ainda não há ondas: fecha a onda atual (juros, bônus e loja nova).
+    const endWave = button('Encerrar onda', () => this.send({ type: 'endWave' }));
 
     // Gravação
     const record = button(`Gravar ${perf.recordSeconds} s`, () => this.startRecording());
@@ -290,6 +296,8 @@ export class DebugPanel {
       row('Inimigos', enemyCount, enemyType, enemyLayout, spawnEnemies),
       row('Torres', towerCount, towerLayout, spawnStar, spawnTowers),
       row('', clear),
+      el('div', { className: 'debug-section', textContent: 'Economia' }),
+      row('', endWave),
       el('div', { className: 'debug-section', textContent: 'Gravação' }),
       row('', record, copy, forget),
       this.recordStatus,

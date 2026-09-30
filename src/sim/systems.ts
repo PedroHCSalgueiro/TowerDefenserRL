@@ -1,19 +1,22 @@
 /**
  * Lista dos sistemas da partida, na ordem em que rodam a cada tick:
  * ações → reposição do estresse → movimento → chegada ao núcleo →
- * ataque do núcleo → projéteis → torres → gatilhos → classes.
+ * ataque do núcleo → projéteis → torres → gatilhos → ouro → classes.
  *
  * Todo spawn acontece antes do movimento e toda busca por alvo depois dele:
  * é o que permite montar o índice espacial uma única vez por tick. O índice
  * é compartilhado pelo núcleo, pelos projéteis (troca de alvo e área),
  * pelas torres e pelos gatilhos.
  *
- * Os gatilhos enxergam todos os tiros e abates do tick. As classes rodam por
+ * Os gatilhos enxergam todos os tiros e abates do tick; o ouro dos abates é
+ * somado depois deles. As classes rodam por
  * último: o bônus muda no tick seguinte a posicionar, vender ou fundir.
  */
 
 import engineConfig from '../data/engine.json';
 import { classData, type ClassData } from './classes/classData';
+import { createGoldSystem } from './economy/economy';
+import { economyData, type EconomyData } from './economy/economyData';
 import { createClassSystem } from './classes/systems';
 import { enemyData, type EnemyData } from './enemies/enemyData';
 import { buildRoutes } from './enemies/route';
@@ -38,6 +41,7 @@ export interface GameSystemsOptions {
   towers?: TowerData;
   classes?: ClassData;
   debug?: SimDebugData;
+  economy?: EconomyData;
   ticksPerSecond?: number;
 }
 
@@ -48,13 +52,14 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
     towers = towerData,
     classes = classData,
     debug = simDebugData,
+    economy = economyData,
     ticksPerSecond = engineConfig.ticksPerSecond,
   } = options;
   const routes = buildRoutes(map);
   const index = new SpatialIndex(engineConfig.spatialCellSize);
   const scores = createTargetScores(routes, enemies);
   return [
-    createCommandSystem(map, routes, enemies, towers, debug),
+    createCommandSystem(map, routes, enemies, towers, debug, economy),
     createStressSystem(routes, enemies),
     createMovementSystem(routes, enemies, ticksPerSecond),
     createNexusContactSystem(routes, enemies),
@@ -62,6 +67,7 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
     createProjectileSystem(enemies, index, towers.projectileRetargetRadius, ticksPerSecond),
     createTowerSystem(index, towers, scores, ticksPerSecond, classes),
     createTriggerSystem({ index, enemies, towers, classes, scores, ticksPerSecond }),
+    createGoldSystem(enemies),
     createClassSystem(towers, classes),
   ];
 }

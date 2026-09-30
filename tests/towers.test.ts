@@ -29,6 +29,7 @@ describe('posicionar torre (ação placeTower)', () => {
       triggerCounter: 0,
       charges: 0,
       activationReadyTick: 0,
+      invested: 0,
       lastEffect: null,
     });
     expect(events).toEqual([

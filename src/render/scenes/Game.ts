@@ -6,11 +6,14 @@ import { PerfMonitor } from '../../debug/PerfMonitor';
 import { resolveSeed } from '../../debug/seed';
 import { enemyData } from '../../sim/enemies/enemyData';
 import { Simulation, SimulationRunner } from '../../sim/engine/simulation';
-import { loadMap } from '../../sim/grid/map';
+import { loadMap, type GridMap } from '../../sim/grid/map';
 import { createGameSystems } from '../../sim/systems';
 import { towerData } from '../../sim/towers/towerData';
 import { ClassPanel } from '../../ui/classPanel';
+import { canPlaceAt } from '../../ui/shopModel';
+import { ShopController } from '../../ui/shopController';
 import { showDefeatScreen } from '../../ui/defeatScreen';
+import { CarryView } from '../views/CarryView';
 import { EnemyView } from '../views/EnemyView';
 import { GridView } from '../views/GridView';
 import { NexusView } from '../views/NexusView';
@@ -27,6 +30,9 @@ export class Game extends Phaser.Scene {
   private monitor!: PerfMonitor;
   private panel!: DebugPanel;
   private classPanel!: ClassPanel;
+  private shop!: ShopController;
+  private carryView!: CarryView;
+  private map!: GridMap;
   private removeDefeatScreen: (() => void) | null = null;
 
   constructor() {
@@ -35,6 +41,7 @@ export class Game extends Phaser.Scene {
 
   create(): void {
     const map = loadMap(mapData);
+    this.map = map;
     // `?seed=abc` fixa a semente (inclusive ao jogar de novo); sem ela, sorteia.
     const seed = resolveSeed(window.location.search, () => Date.now().toString(36));
     const sim = Simulation.create(seed, createGameSystems(map));
@@ -65,13 +72,29 @@ export class Game extends Phaser.Scene {
       selectedCell: () => grid.selectedCell,
     });
 
-    this.classPanel = new ClassPanel(this.game.canvas.parentElement ?? document.body);
+    const overlayParent = this.game.canvas.parentElement ?? document.body;
+    this.classPanel = new ClassPanel(overlayParent);
+    this.carryView = new CarryView(this, grid.projection, towerData);
+    this.shop = new ShopController({
+      parent: overlayParent,
+      map,
+      state: () => this.runner.sim.state,
+      enqueue: (command) => this.runner.sim.enqueue(command),
+      selectedCell: () => grid.selectedCell,
+      cellAtClient: (x, y) => grid.cellAtClient(x, y),
+    });
+    // Clique no mapa com a torre presa ao mouse (teclas 1 a 5) posiciona.
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
+      if (pointer.leftButtonDown()) this.shop.clickCell(grid.cellAt(pointer));
+    });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.removeDefeatScreen?.();
       this.removeDefeatScreen = null;
       this.panel.destroy();
       this.classPanel.destroy();
+      this.shop.destroy();
+      this.carryView.destroy();
       this.monitor.destroy();
     });
   }
@@ -82,6 +105,7 @@ export class Game extends Phaser.Scene {
 
     this.nexusView.handleEvents(events);
     this.projectileView.handleEvents(events);
+    this.towerView.handleEvents(events);
     this.towerView.draw(state, this.grid.selectedCell);
     this.nexusView.draw(state, delta);
     this.enemyView.draw(state, this.interpolationAlpha);
@@ -89,6 +113,14 @@ export class Game extends Phaser.Scene {
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
     this.classPanel.update(state.classes);
+    this.shop.update();
+    const carrying = this.shop.carrying;
+    const hovered = this.grid.hoveredCell;
+    this.carryView.draw(
+      carrying?.towerType ?? null,
+      hovered,
+      hovered !== null && canPlaceAt(state, this.map, hovered),
+    );
 
     if (state.status === 'lost' && !this.removeDefeatScreen) {
       this.removeDefeatScreen = showDefeatScreen(

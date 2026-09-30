@@ -122,3 +122,151 @@ body {
   margin-top: 6px;
   color: #9fb3c8;
 }
+
+.shop-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #3a3d40;
+  border-radius: 8px;
+  background: rgba(20, 21, 23, 0.92);
+  font:
+    13px system-ui,
+    sans-serif;
+  color: #dddddd;
+  user-select: none;
+}
+
+.shop-status {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 130px;
+  gap: 2px;
+}
+
+.shop-gold {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffd75e;
+}
+
+.shop-interest {
+  color: #9fd6a0;
+}
+
+.shop-wave {
+  color: #9a9a9a;
+  font-size: 12px;
+}
+
+.shop-slots {
+  display: flex;
+  gap: 6px;
+}
+
+.shop-slot {
+  position: relative;
+  width: 118px;
+  padding: 6px 8px;
+  border: 2px solid #4a4d50;
+  border-radius: 6px;
+  background: #26282b;
+  cursor: grab;
+  touch-action: none;
+}
+
+.shop-slot.shop-rarity-common {
+  border-color: #8a8f94;
+}
+
+.shop-slot.shop-rarity-uncommon {
+  border-color: #4fa86a;
+}
+
+.shop-slot.shop-rarity-rare {
+  border-color: #b06adf;
+}
+
+.shop-slot-dim {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.shop-slot-empty {
+  opacity: 0.3;
+  border-style: dashed;
+  cursor: default;
+}
+
+.shop-slot-carried {
+  background: #3a3520;
+  box-shadow: 0 0 0 2px #ffd75e;
+}
+
+.shop-key {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  color: #8a8a8a;
+}
+
+.shop-name {
+  font-weight: 600;
+  padding-right: 12px;
+}
+
+.shop-classes {
+  font-size: 11px;
+  color: #9fb3c8;
+}
+
+.shop-rarity {
+  font-size: 11px;
+  color: #aaaaaa;
+}
+
+.shop-price {
+  margin-top: 2px;
+  font-weight: 700;
+  color: #ffd75e;
+}
+
+.shop-price::before {
+  content: '● ';
+  font-size: 10px;
+}
+
+.shop-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.shop-button {
+  padding: 6px 10px;
+  border: 1px solid #4a4d50;
+  border-radius: 4px;
+  background: #33363a;
+  color: #eeeeee;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.shop-button:hover:not(:disabled),
+.shop-button:focus-visible {
+  background: #44484d;
+}
+
+.shop-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

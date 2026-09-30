@@ -11,6 +11,7 @@
 
 import Phaser from 'phaser';
 import renderConfig from '../../data/render.json';
+import type { SimEvent } from '../../sim/engine/events';
 import type { GridCoord } from '../../sim/grid/map';
 import type { RunState } from '../../sim/state';
 import type { Tower } from '../../sim/towers/placement';
@@ -46,6 +47,8 @@ export class TowerView {
   private readonly images = new Map<number, Phaser.GameObjects.Image>();
   private drawnList: readonly Tower[] | null = null;
   private drawnCount = -1;
+  /** Uma torre entrou ou saiu neste quadro (cobre vender e comprar no mesmo quadro). */
+  private dirty = false;
   /** Torre cujo alcance está desenhado (`null` = nenhuma). */
   private rangeTower: Tower | null = null;
 
@@ -63,6 +66,12 @@ export class TowerView {
     createTexture(scene);
   }
 
+  handleEvents(events: readonly SimEvent[]): void {
+    for (const event of events) {
+      if (event.type === 'towerPlaced' || event.type === 'towerSold') this.dirty = true;
+    }
+  }
+
   draw(state: Readonly<RunState>, selected: GridCoord | null): void {
     this.syncImages(state.towers);
     const tower = selected
@@ -72,7 +81,8 @@ export class TowerView {
   }
 
   private syncImages(towers: readonly Tower[]): void {
-    if (towers === this.drawnList && towers.length === this.drawnCount) return;
+    if (!this.dirty && towers === this.drawnList && towers.length === this.drawnCount) return;
+    this.dirty = false;
     this.drawnList = towers;
     this.drawnCount = towers.length;
 

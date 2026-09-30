@@ -18,12 +18,14 @@ function sameCell(a: GridCoord | null, b: GridCoord | null): boolean {
 export class GridView {
   readonly projection: IsoProjection;
   private readonly map: GridMap;
+  private readonly scene: Phaser.Scene;
   private readonly overlay: Phaser.GameObjects.Graphics;
   private hovered: GridCoord | null = null;
   private selected: GridCoord | null = null;
 
   constructor(scene: Phaser.Scene, map: GridMap) {
     this.map = map;
+    this.scene = scene;
     const camera = scene.cameras.main;
     this.projection = IsoProjection.centered(map, renderConfig.tile, camera);
 
@@ -51,8 +53,23 @@ export class GridView {
     return this.hovered;
   }
 
-  private cellAt(pointer: Phaser.Input.Pointer): GridCoord | null {
+  /** Casa sob o ponteiro do Phaser (`null` fora do mapa). */
+  cellAt(pointer: Phaser.Input.Pointer): GridCoord | null {
     return this.projection.toGrid({ x: pointer.worldX, y: pointer.worldY }, this.map);
+  }
+
+  /**
+   * Casa sob um ponto da tela em coordenadas do navegador. Serve para soltar
+   * a torre arrastada de um slot da loja (que é HTML, fora do Phaser).
+   */
+  cellAtClient(clientX: number, clientY: number): GridCoord | null {
+    const { canvas } = this.scene.game;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
+    const world = this.scene.cameras.main.getWorldPoint(x, y);
+    return this.projection.toGrid({ x: world.x, y: world.y }, this.map);
   }
 
   private setHovered(cell: GridCoord | null): void {

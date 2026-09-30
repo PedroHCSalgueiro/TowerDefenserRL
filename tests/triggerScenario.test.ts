@@ -101,12 +101,12 @@ describe('cadeia real (Morteiro, Ceifador, Relé, Obelisco)', () => {
   });
 });
 
-describe('save versão 7', () => {
+describe('save versão 8', () => {
   it('recusa um save sem o estado dos gatilhos, sem o das classes ou com torre sem os campos novos', () => {
     const sim = chainSim('clustered', 10);
     steps(sim, 5);
     const good = JSON.parse(sim.serialize()) as RunState;
-    expect(good.version).toBe(7);
+    expect(good.version).toBe(8);
     expect(() => deserializeRunState(JSON.stringify(good))).not.toThrow();
 
     const noTriggers = { ...good, triggers: undefined };
@@ -118,7 +118,7 @@ describe('save versão 7', () => {
     const noClasses = { ...good, classes: undefined };
     expect(() => deserializeRunState(JSON.stringify(noClasses))).toThrow(/inválido/);
 
-    expect(() => deserializeRunState(JSON.stringify({ ...good, version: 6 }))).toThrow(/Versão/);
+    expect(() => deserializeRunState(JSON.stringify({ ...good, version: 7 }))).toThrow(/Versão/);
   });
 
   it('debugClear também esvazia a fila de gatilhos', () => {

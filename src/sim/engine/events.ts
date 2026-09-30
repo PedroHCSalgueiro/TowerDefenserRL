@@ -53,6 +53,16 @@ export interface SimEventPayloads {
    * partir do tick seguinte. `count`: torres diferentes com a classe agora.
    */
   classLevelChanged: { classId: string; level: number; previousLevel: number; count: number };
+  /** O jogador comprou o slot: a torre já está no mapa (`towerPlaced` vem antes). */
+  towerBought: { towerId: number; towerType: string; slot: number; price: number };
+  /** `refund`: ouro devolvido. */
+  towerSold: { towerId: number; towerType: string; x: number; y: number; refund: number };
+  /** Os slots da loja mudaram. */
+  shopChanged: { reason: 'bought' | 'reroll' | 'newWave' };
+  /** No máximo um por tick, com o saldo final; `delta` = saldo menos o último informado. */
+  goldChanged: { gold: number; delta: number };
+  /** Onda fechada: `interest` e `bonus` já somados a `gold` (juros primeiro). */
+  waveEnded: { wave: number; interest: number; bonus: number; gold: number };
   towersMerged: { towerId: number; stars: number };
   waveStarted: { wave: number };
 }

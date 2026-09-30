@@ -4,6 +4,8 @@
  */
 
 import type { SimDebugData } from './debug/debugData';
+import { endWave } from './economy/economy';
+import { economyData, type EconomyData } from './economy/economyData';
 import { spawnDebugEnemy } from './debug/stress';
 import { patternTowerType, pickTowerCells } from './debug/towerCells';
 import type { EnemyData } from './enemies/enemyData';
@@ -13,6 +15,7 @@ import { spawnEnemy } from './enemies/systems';
 import type { System } from './engine/simulation';
 import type { GridMap } from './grid/map';
 import { releaseAllProjectiles } from './projectiles/pool';
+import { buyTower, rerollShop, sellTower } from './shop/shop';
 import { placeTower } from './towers/placement';
 import type { TowerData } from './towers/towerData';
 
@@ -22,6 +25,7 @@ export function createCommandSystem(
   enemies: EnemyData,
   towers: TowerData,
   debug: SimDebugData,
+  economy: EconomyData = economyData,
 ): System {
   /** Quantidade pedida, presa em [0, maxSpawnPerCommand]. */
   const clampCount = (count: number): number =>
@@ -36,6 +40,18 @@ export function createCommandSystem(
           break;
         case 'placeTower':
           placeTower(ctx, map, towers, command.towerType, command, command.star);
+          break;
+        case 'buyTower':
+          buyTower(ctx, map, towers, economy, command.slot, command);
+          break;
+        case 'rerollShop':
+          rerollShop(ctx, towers, economy);
+          break;
+        case 'sellTower':
+          sellTower(ctx, economy, command.towerId);
+          break;
+        case 'endWave':
+          endWave(ctx, economy, towers);
           break;
         case 'debugSpawnEnemies': {
           const count = clampCount(command.count);

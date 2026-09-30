@@ -1,19 +1,22 @@
 /**
  * Estado completo da run. Tudo aqui precisa caber em JSON: é a base do save
- * no meio da run. As próximas tarefas acrescentam ondas, ouro etc.
+ * no meio da run. As próximas tarefas acrescentam ondas etc.
  */
 
 import engineConfig from '../data/engine.json';
 import { classData } from './classes/classData';
+import { economyData } from './economy/economyData';
 import { createClassState, type ClassState } from './classes/classState';
 import { createEnemyPool, type EnemyPool } from './enemies/pool';
-import { hashSeed } from './engine/rng';
+import { Rng, hashSeed } from './engine/rng';
 import { nexusData } from './nexus/nexusData';
 import { createProjectilePool, type ProjectilePool } from './projectiles/pool';
+import { newShop, type ShopState } from './shop/shop';
 import type { Tower } from './towers/placement';
+import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 
-export const RUN_STATE_VERSION = 7;
+export const RUN_STATE_VERSION = 8;
 
 /**
  * Disposição usada pelo debug:
@@ -76,10 +79,44 @@ export interface DebugSetNexusInvulnerableCommand {
   value: boolean;
 }
 
+/**
+ * Ação do jogador: compra o slot da loja e posiciona a torre na casa (x, y).
+ * O ouro só é cobrado se a torre for posicionada.
+ */
+export interface BuyTowerCommand {
+  type: 'buyTower';
+  slot: number;
+  x: number;
+  y: number;
+}
+
+/** Ação do jogador: troca os slots da loja pagando o reroll. */
+export interface RerollShopCommand {
+  type: 'rerollShop';
+}
+
+/** Ação do jogador: vende a torre, devolvendo parte do valor investido. */
+export interface SellTowerCommand {
+  type: 'sellTower';
+  towerId: number;
+}
+
+/**
+ * Fecha a onda atual: juros, bônus e loja nova. Enquanto não há ondas, é o
+ * botão "Encerrar onda" do debug.
+ */
+export interface EndWaveCommand {
+  type: 'endWave';
+}
+
 /** Ação do jogador, aplicada no início do próximo tick. */
 export type SimCommand =
   | SpawnEnemyCommand
   | PlaceTowerCommand
+  | BuyTowerCommand
+  | RerollShopCommand
+  | SellTowerCommand
+  | EndWaveCommand
   | DebugSpawnEnemiesCommand
   | DebugSpawnTowersCommand
   | DebugClearCommand
@@ -105,6 +142,8 @@ export interface NexusState {
   maxHp: number;
   /** Ticks até o próximo ataque; 0 = pronto. */
   attackCooldownTicks: number;
+  /** Nível do núcleo (define as chances de raridade da loja). Sobe na tarefa do núcleo. */
+  level: number;
 }
 
 export interface RunState {
@@ -123,28 +162,47 @@ export interface RunState {
   triggers: TriggerState;
   /** Contagem e nível de bônus de cada classe (atualizado no fim de cada tick). */
   classes: ClassState;
+  /** Ouro guardado. */
+  gold: number;
+  /** Último saldo informado em `goldChanged` (para emitir no máximo um por tick). */
+  reportedGold: number;
+  /** Ondas encerradas até agora (a primeira a fechar é a 1). */
+  wave: number;
+  shop: ShopState;
   debug: DebugState;
   /** Ações enfileiradas que ainda não foram aplicadas. */
   commandQueue: SimCommand[];
 }
 
 export function createRunState(seed: string): RunState {
-  return {
+  const state: RunState = {
     version: RUN_STATE_VERSION,
     seed,
     tick: 0,
     rngState: hashSeed(seed),
     nextEntityId: 1,
     status: 'playing',
-    nexus: { hp: nexusData.maxHp, maxHp: nexusData.maxHp, attackCooldownTicks: 0 },
+    nexus: {
+      hp: nexusData.maxHp,
+      maxHp: nexusData.maxHp,
+      attackCooldownTicks: 0,
+      level: economyData.nexusStartLevel,
+    },
     enemies: createEnemyPool(engineConfig.enemyPoolInitialCapacity),
     projectiles: createProjectilePool(engineConfig.projectilePoolInitialCapacity),
     towers: [],
     triggers: createTriggerState(),
     classes: createClassState(classData),
+    gold: economyData.startingGold,
+    reportedGold: economyData.startingGold,
+    wave: 0,
+    shop: { slots: [] },
     debug: { nexusInvulnerable: false, stress: null },
     commandQueue: [],
   };
+  // A primeira loja da run sai do RNG da própria semente e garante uma comum.
+  state.shop = newShop(new Rng(state), economyData, towerData, state.nexus.level, true);
+  return state;
 }
 
 export function serializeRunState(state: RunState): string {
@@ -158,6 +216,7 @@ function isTowerState(value: unknown): boolean {
     t !== null &&
     Number.isInteger(t.id) &&
     Number.isInteger(t.star) &&
+    Number.isInteger(t.invested) &&
     typeof t.type === 'string' &&
     Number.isInteger(t.cooldownTicks) &&
     Number.isInteger(t.triggerCounter) &&
@@ -189,7 +248,7 @@ export function deserializeRunState(json: string): RunState {
   if (state.version !== RUN_STATE_VERSION) {
     throw new Error(`Versão de save não suportada: ${String(state.version)}`);
   }
-  const { nexus, enemies, projectiles, towers, triggers, classes, debug } = state;
+  const { nexus, enemies, projectiles, towers, triggers, classes, debug, shop } = state;
   if (
     typeof state.seed !== 'string' ||
     !Number.isInteger(state.tick) ||
@@ -199,6 +258,12 @@ export function deserializeRunState(json: string): RunState {
     typeof nexus?.hp !== 'number' ||
     typeof nexus.maxHp !== 'number' ||
     !Number.isInteger(nexus.attackCooldownTicks) ||
+    !Number.isInteger(nexus.level) ||
+    !Number.isInteger(state.gold) ||
+    !Number.isInteger(state.reportedGold) ||
+    !Number.isInteger(state.wave) ||
+    !Array.isArray(shop?.slots) ||
+    !shop.slots.every((slot) => slot === null || typeof slot === 'string') ||
     !Array.isArray(enemies?.slots) ||
     !Array.isArray(enemies.free) ||
     !Number.isInteger(enemies.activeCount) ||

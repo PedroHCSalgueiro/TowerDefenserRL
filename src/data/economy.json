@@ -1,0 +1,20 @@
+{
+  "startingGold": 10,
+  "nexusStartLevel": 1,
+  "interest": { "percent": 10, "cap": 15 },
+  "waveBonus": { "base": 10, "perWave": 1 },
+  "shop": {
+    "slots": 5,
+    "rerollCost": 4,
+    "sellRefundPercent": 70,
+    "firstShopGuarantee": "common",
+    "prices": { "common": 10, "uncommon": 15, "rare": 25 },
+    "rarityChances": [
+      { "common": 70, "uncommon": 25, "rare": 5 },
+      { "common": 60, "uncommon": 30, "rare": 10 },
+      { "common": 50, "uncommon": 35, "rare": 15 },
+      { "common": 40, "uncommon": 38, "rare": 22 },
+      { "common": 30, "uncommon": 40, "rare": 30 }
+    ]
+  }
+}

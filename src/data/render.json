@@ -13,6 +13,7 @@
     "blockedColor": "#e39b9b",
     "alpha": 0.55
   },
+  "carry": { "alpha": 0.7 },
   "selection": { "color": "#ffd24a", "lineWidth": 3 },
   "enemies": {
     "radius": 7,
