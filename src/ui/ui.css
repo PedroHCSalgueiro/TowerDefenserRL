@@ -270,3 +270,44 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.tower-tip {
+  position: absolute;
+  z-index: 5;
+  width: 280px;
+  padding: 8px 10px;
+  border: 1px solid #5a5f64;
+  border-radius: 6px;
+  background: rgba(20, 21, 23, 0.97);
+  font:
+    12px/1.4 system-ui,
+    sans-serif;
+  color: #dddddd;
+  pointer-events: none;
+}
+
+.tower-tip[hidden] {
+  display: none;
+}
+
+.tower-tip-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffe9a8;
+}
+
+.tower-tip-sub {
+  margin-bottom: 6px;
+  color: #9fb3c8;
+}
+
+.tower-tip-row {
+  margin-top: 4px;
+}
+
+.tower-tip-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a8f94;
+}

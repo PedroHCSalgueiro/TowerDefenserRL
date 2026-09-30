@@ -1,17 +1,23 @@
 import Phaser from 'phaser';
 import engineConfig from '../../data/engine.json';
+import renderConfig from '../../data/render.json';
 import mapData from '../../data/map.json';
 import { DebugPanel } from '../../debug/DebugPanel';
 import { PerfMonitor } from '../../debug/PerfMonitor';
 import { resolveSeed } from '../../debug/seed';
 import { enemyData } from '../../sim/enemies/enemyData';
 import { Simulation, SimulationRunner } from '../../sim/engine/simulation';
+import type { RunState } from '../../sim/state';
 import { loadMap, type GridMap } from '../../sim/grid/map';
 import { createGameSystems } from '../../sim/systems';
-import { towerData } from '../../sim/towers/towerData';
+import { classData } from '../../sim/classes/classData';
+import type { Tower } from '../../sim/towers/placement';
+import { getTowerType, towerData } from '../../sim/towers/towerData';
 import { ClassPanel } from '../../ui/classPanel';
 import { canPlaceAt } from '../../ui/shopModel';
 import { ShopController } from '../../ui/shopController';
+import { describeTower } from '../../ui/towerInfo';
+import { TowerTooltip } from '../../ui/towerTooltip';
 import { showDefeatScreen } from '../../ui/defeatScreen';
 import { CarryView } from '../views/CarryView';
 import { EnemyView } from '../views/EnemyView';
@@ -31,6 +37,7 @@ export class Game extends Phaser.Scene {
   private panel!: DebugPanel;
   private classPanel!: ClassPanel;
   private shop!: ShopController;
+  private tooltip!: TowerTooltip;
   private carryView!: CarryView;
   private map!: GridMap;
   private removeDefeatScreen: (() => void) | null = null;
@@ -74,6 +81,7 @@ export class Game extends Phaser.Scene {
 
     const overlayParent = this.game.canvas.parentElement ?? document.body;
     this.classPanel = new ClassPanel(overlayParent);
+    this.tooltip = new TowerTooltip(overlayParent);
     this.carryView = new CarryView(this, grid.projection, towerData);
     this.shop = new ShopController({
       parent: overlayParent,
@@ -94,6 +102,7 @@ export class Game extends Phaser.Scene {
       this.panel.destroy();
       this.classPanel.destroy();
       this.shop.destroy();
+      this.tooltip.destroy();
       this.carryView.destroy();
       this.monitor.destroy();
     });
@@ -116,6 +125,7 @@ export class Game extends Phaser.Scene {
     this.shop.update();
     const carrying = this.shop.carrying;
     const hovered = this.grid.hoveredCell;
+    this.updateTooltip(state, carrying !== null, hovered);
     this.carryView.draw(
       carrying?.towerType ?? null,
       hovered,
@@ -129,6 +139,53 @@ export class Game extends Phaser.Scene {
         () => this.scene.restart(),
       );
     }
+  }
+
+  /** Janela "o que esta torre faz": slot da loja sob o mouse ou torre do mapa (sem torre presa ao mouse). */
+  private updateTooltip(
+    state: Readonly<RunState>,
+    carrying: boolean,
+    hovered: { x: number; y: number } | null,
+  ): void {
+    let type: string | null = null;
+    let star = 1;
+    let key: string | null = null;
+    const shopType = this.shop.hoveredTowerType;
+    if (shopType !== null) {
+      type = shopType;
+      key = `loja:${shopType}`;
+    } else if (!carrying && hovered && this.tooltip.pointerOverCanvas) {
+      const tower = this.towerUnderPointer(state, hovered);
+      if (tower) {
+        type = tower.type;
+        star = tower.star;
+        key = `torre:${tower.id}:${tower.star}`;
+      }
+    }
+    this.tooltip.update(
+      type === null ? null : describeTower(getTowerType(towerData, type), star, classData),
+      key,
+      performance.now(),
+    );
+  }
+
+  /**
+   * Torre sob o mouse: a que tem o bloco desenhado sob o ponteiro (a da frente,
+   * se houver duas) ou, se não houver, a da casa sob o mouse.
+   */
+  private towerUnderPointer(
+    state: Readonly<RunState>,
+    cell: { x: number; y: number },
+  ): Tower | undefined {
+    const { worldX, worldY } = this.input.activePointer;
+    const { width, height } = renderConfig.towers;
+    let best: Tower | undefined;
+    for (const tower of state.towers) {
+      const p = this.grid.projection.toScreen(tower);
+      const inside = Math.abs(worldX - p.x) <= width / 2 && worldY <= p.y && worldY >= p.y - height;
+      if (inside && (!best || tower.x + tower.y > best.x + best.y)) best = tower;
+    }
+    return best ?? state.towers.find((t) => t.x === cell.x && t.y === cell.y);
   }
 
   /** Fator de interpolação entre o tick anterior e o atual, em [0, 1). */

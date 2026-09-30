@@ -96,6 +96,12 @@ export class ShopController {
       : null;
   }
 
+  /** Torre do slot sob o mouse na loja (`null` = nenhuma), para a janela de informações. */
+  get hoveredTowerType(): string | null {
+    const slot = this.panel.hoveredSlot;
+    return slot === null ? null : (this.deps.state().shop.slots[slot] ?? null);
+  }
+
   /** Clique no mapa com a torre presa ao mouse: posiciona se a casa serve. */
   clickCell(cell: GridCoord | null): void {
     const carry = this.carry;

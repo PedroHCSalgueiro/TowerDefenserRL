@@ -25,12 +25,26 @@ function el<K extends keyof HTMLElementTagNameMap>(
 export class ShopPanel {
   private readonly root: HTMLElement;
   private readonly handlers: ShopPanelHandlers;
+  private hovered: number | null = null;
 
   constructor(parent: HTMLElement, handlers: ShopPanelHandlers) {
     this.handlers = handlers;
     this.root = el('div', 'shop-panel');
     this.root.setAttribute('aria-label', 'Loja');
     parent.append(this.root);
+    // Por delegação: o DOM dos slots é refeito quando o ouro muda, e o slot sob o mouse continua valendo.
+    this.root.addEventListener('pointerover', (event) => {
+      const slot = (event.target as Element).closest<HTMLElement>('.shop-slot');
+      this.hovered = slot ? Number(slot.dataset.slot) : null;
+    });
+    this.root.addEventListener('pointerleave', () => {
+      this.hovered = null;
+    });
+  }
+
+  /** Slot sob o mouse (`null` = nenhum). */
+  get hoveredSlot(): number | null {
+    return this.hovered;
   }
 
   render(model: ShopModel, carrySlot: number | null): void {
