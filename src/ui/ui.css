@@ -60,3 +60,65 @@ body {
     opacity: 0;
   }
 }
+
+.class-panel {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 170px;
+  font:
+    13px system-ui,
+    sans-serif;
+  color: #dddddd;
+}
+
+.class-row {
+  position: relative;
+  margin-bottom: 4px;
+  padding: 6px 10px;
+  border: 1px solid #3a3d40;
+  border-radius: 6px;
+  background: rgba(20, 21, 23, 0.88);
+  cursor: default;
+}
+
+.class-row.class-active {
+  border-color: #e0b84a;
+  background: rgba(58, 48, 20, 0.92);
+  color: #ffe9a8;
+  font-weight: 600;
+}
+
+.class-tip {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: calc(100% + 6px);
+  width: 260px;
+  padding: 8px 10px;
+  border: 1px solid #3a3d40;
+  border-radius: 6px;
+  background: rgba(20, 21, 23, 0.96);
+  font-weight: 400;
+  color: #dddddd;
+  z-index: 1;
+}
+
+.class-row:hover .class-tip {
+  display: block;
+}
+
+.class-level {
+  margin-bottom: 4px;
+  color: #999999;
+}
+
+.class-level-active {
+  color: #ffe9a8;
+  font-weight: 600;
+}
+
+.class-members {
+  margin-top: 6px;
+  color: #9fb3c8;
+}

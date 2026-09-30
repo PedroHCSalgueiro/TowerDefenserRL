@@ -101,12 +101,12 @@ describe('cadeia real (Morteiro, Ceifador, Relé, Obelisco)', () => {
   });
 });
 
-describe('save versão 5', () => {
-  it('recusa um save sem o estado do motor de gatilhos ou com torre sem os campos novos', () => {
+describe('save versão 6', () => {
+  it('recusa um save sem o estado dos gatilhos, sem o das classes ou com torre sem os campos novos', () => {
     const sim = chainSim('clustered', 10);
     steps(sim, 5);
     const good = JSON.parse(sim.serialize()) as RunState;
-    expect(good.version).toBe(5);
+    expect(good.version).toBe(6);
     expect(() => deserializeRunState(JSON.stringify(good))).not.toThrow();
 
     const noTriggers = { ...good, triggers: undefined };
@@ -115,7 +115,10 @@ describe('save versão 5', () => {
     const oldTower = { ...good, towers: [{ id: 1, type: 'basic', x: 0, y: 0, cooldownTicks: 0 }] };
     expect(() => deserializeRunState(JSON.stringify(oldTower))).toThrow(/inválido/);
 
-    expect(() => deserializeRunState(JSON.stringify({ ...good, version: 4 }))).toThrow(/Versão/);
+    const noClasses = { ...good, classes: undefined };
+    expect(() => deserializeRunState(JSON.stringify(noClasses))).toThrow(/inválido/);
+
+    expect(() => deserializeRunState(JSON.stringify({ ...good, version: 5 }))).toThrow(/Versão/);
   });
 
   it('debugClear também esvazia a fila de gatilhos', () => {

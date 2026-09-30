@@ -48,6 +48,11 @@ export interface SimEventPayloads {
   };
   /** Uma torre foi ativada por gatilho de uma vizinha (origem → destino). */
   towerActivated: { towerId: number; sourceTowerId: number; depth: number };
+  /**
+   * O nível de bônus de uma classe mudou (ligou, subiu ou desligou). Vale a
+   * partir do tick seguinte. `count`: torres diferentes com a classe agora.
+   */
+  classLevelChanged: { classId: string; level: number; previousLevel: number; count: number };
   towersMerged: { towerId: number; stars: number };
   waveStarted: { wave: number };
 }

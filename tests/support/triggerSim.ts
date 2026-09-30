@@ -7,6 +7,7 @@
  * todos empatam e o alvo normal é o de menor id dentro do alcance.
  */
 
+import { classData, type ClassData } from '../../src/sim/classes/classData';
 import type { SimEvent, SimEventOf, SimEventType } from '../../src/sim/engine/events';
 import { Simulation, type System } from '../../src/sim/engine/simulation';
 import { createProjectileSystem } from '../../src/sim/projectiles/systems';
@@ -80,20 +81,29 @@ export function triggerData(rules: Partial<TriggerRules> = {}): TowerData {
 
 /**
  * Projéteis, torres e gatilhos, com os inimigos parados. `before` roda antes
- * de tudo (para emitir fatos sintéticos, por exemplo).
+ * de tudo (para emitir fatos sintéticos, por exemplo). Sem o sistema de
+ * classes: os níveis de bônus são os de `state.classes`, escolhidos pelo teste.
  */
 export function triggerSim(
   state: RunState = makeState(),
   data: TowerData = triggerData(),
   before: System[] = [],
+  classes: ClassData = classData,
 ): Simulation {
   const index = new SpatialIndex(1);
   const scores = createTargetScores(smallRoutes, testEnemies);
   return new Simulation(state, [
     ...before,
     createProjectileSystem(testEnemies, index, data.projectileRetargetRadius, TPS),
-    createTowerSystem(index, data, scores, TPS),
-    createTriggerSystem({ index, enemies: testEnemies, towers: data, scores, ticksPerSecond: TPS }),
+    createTowerSystem(index, data, scores, TPS, classes),
+    createTriggerSystem({
+      index,
+      enemies: testEnemies,
+      towers: data,
+      classes,
+      scores,
+      ticksPerSecond: TPS,
+    }),
   ]);
 }
 

@@ -15,6 +15,10 @@
  *    seguinte (com a profundidade do tick zerada). Acima de `maxQueueSize`,
  *    entradas novas são descartadas (as mais novas) e contadas.
  *
+ * Bônus de classe (`RunState.classes`, lidos por torre a cada tick): a
+ * Mecânica reduz o N dos "a cada N"; a Arcana amplia a vizinhança de quem a
+ * tem; a Sombria multiplica o peso das mortes para as torres Sombria.
+ *
  * Não existe loop infinito: toda entrada vem de um tiro normal (limitado pela
  * cadência), de uma ativação (no máximo 1 por `activationCooldownSeconds`
  * por torre) ou de uma morte (cada inimigo morre uma vez). Os tiros extras do
@@ -22,6 +26,8 @@
  * menor id.
  */
 
+import { killWeight, neighborhoodRadius, reducedTriggerCount } from '../classes/bonuses';
+import { classData, type ClassData } from '../classes/classData';
 import type { EnemyData } from '../enemies/enemyData';
 import type { SimEventOf } from '../engine/events';
 import type { System, TickContext } from '../engine/simulation';
@@ -38,6 +44,8 @@ export interface TriggerSystemDeps {
   readonly index: SpatialIndex;
   readonly enemies: EnemyData;
   readonly towers: TowerData;
+  /** Padrão: os dados de `classes.json`. */
+  readonly classes?: ClassData;
   readonly scores: TargetScores;
   readonly ticksPerSecond: number;
 }
@@ -47,11 +55,20 @@ interface Armed {
   tower: Tower;
   type: TowerType;
   star: TriggerStar;
+  /** Contagem do "a cada N" neste tick, já com o desconto da Mecânica (0 = sem contagem). */
+  count: number;
+  /** Raio da vizinhança quadrada dada pela Arcana (0 = vizinhança dos dados). */
+  neighborRadius: number;
 }
 
-function isNeighbor(a: Tower, b: Tower, neighborhood: 4 | 8): boolean {
+/**
+ * `b` é vizinha de `a`? Com bônus de raio, é o quadrado de lado 2·raio+1 em
+ * volta de `a`; sem ele, a vizinhança dos dados (4 lados ou 8 com diagonais).
+ */
+function isNeighbor(a: Tower, b: Tower, neighborhood: 4 | 8, radius: number): boolean {
   const dx = Math.abs(a.x - b.x);
   const dy = Math.abs(a.y - b.y);
+  if (radius > 0) return dx + dy > 0 && Math.max(dx, dy) <= radius;
   return neighborhood === 4 ? dx + dy === 1 : Math.max(dx, dy) === 1;
 }
 
@@ -65,6 +82,7 @@ class TriggerEngine implements EffectEnv {
   readonly index: SpatialIndex;
   readonly enemies: EnemyData;
   readonly towers: TowerData;
+  readonly classes: ClassData;
   readonly scores: TargetScores;
   readonly activationCooldownTicks: number;
   private readonly rules: TriggerRules;
@@ -90,6 +108,7 @@ class TriggerEngine implements EffectEnv {
     this.index = deps.index;
     this.enemies = deps.enemies;
     this.towers = deps.towers;
+    this.classes = deps.classes ?? classData;
     this.scores = deps.scores;
     this.rules = deps.towers.triggers;
     this.activationCooldownTicks = Math.max(
@@ -108,12 +127,18 @@ class TriggerEngine implements EffectEnv {
   neighborsOf(tower: Tower): readonly Tower[] {
     let list = this.neighborCache.get(tower.id);
     if (!list) {
+      const radius = this.armedById.get(tower.id)?.neighborRadius ?? this.radiusOf(tower);
       list = this.sorted.filter(
-        (t) => t !== tower && isNeighbor(tower, t, this.rules.neighborhood),
+        (t) => t !== tower && isNeighbor(tower, t, this.rules.neighborhood, radius),
       );
       this.neighborCache.set(tower.id, list);
     }
     return list;
+  }
+
+  private radiusOf(tower: Tower): number {
+    const type = getTowerType(this.towers, tower.type);
+    return neighborhoodRadius(this.classes, this.ctx.state, type);
   }
 
   run(ctx: TickContext): void {
@@ -166,14 +191,27 @@ class TriggerEngine implements EffectEnv {
       this.towerById.set(tower.id, tower);
       const star = this.starByType.get(tower.type);
       if (!star) continue;
-      const armed = { tower, type: getTowerType(this.towers, tower.type), star };
+      const type = getTowerType(this.towers, tower.type);
+      const when = star.when;
+      const baseCount =
+        when.kind === 'everyNShots'
+          ? when.shots
+          : when.kind === 'everyNKillsInRange'
+            ? when.kills
+            : 0;
+      const armed: Armed = {
+        tower,
+        type,
+        star,
+        count: baseCount > 0 ? reducedTriggerCount(this.classes, ctx.state, type, baseCount) : 0,
+        neighborRadius: neighborhoodRadius(this.classes, ctx.state, type),
+      };
       this.armed.push(armed);
       this.armedById.set(tower.id, armed);
-      const when = star.when.kind;
       if (
-        when === 'enemyDiesInRange' ||
-        when === 'everyNKillsInRange' ||
-        when === 'neighborKills'
+        when.kind === 'enemyDiesInRange' ||
+        when.kind === 'everyNKillsInRange' ||
+        when.kind === 'neighborKills'
       ) {
         this.killListeners.push(armed);
       }
@@ -239,9 +277,10 @@ class TriggerEngine implements EffectEnv {
       this.enqueue(armed, tower.id, 1, depth, tickDepth, null);
       enqueued = true;
     } else if (star.when.kind === 'everyNShots') {
+      // Contador acima do novo N (a Mecânica baixou o N): completa neste fato, não sozinho.
       tower.triggerCounter++;
-      while (tower.triggerCounter >= star.when.shots) {
-        tower.triggerCounter -= star.when.shots;
+      while (tower.triggerCounter >= armed.count) {
+        tower.triggerCounter -= armed.count;
         this.enqueue(armed, tower.id, 1, depth, tickDepth, null);
         enqueued = true;
       }
@@ -256,6 +295,7 @@ class TriggerEngine implements EffectEnv {
   /** Um inimigo morreu: "morre no alcance", "a cada N abates no alcance" e "vizinha abate". */
   private onKill(event: SimEventOf<'enemyKilled'>, depth: number, tickDepth: number): void {
     const killer = event.towerId === null ? undefined : this.towerById.get(event.towerId);
+    const killerType = killer ? getTowerType(this.towers, killer.type) : null;
     for (const armed of this.killListeners) {
       const when = armed.star.when;
       switch (when.kind) {
@@ -267,22 +307,31 @@ class TriggerEngine implements EffectEnv {
         case 'everyNKillsInRange': {
           if (!inRange(armed, event.x, event.y)) break;
           const { tower } = armed;
-          tower.triggerCounter += event.weight;
-          while (tower.triggerCounter >= when.kills) {
-            tower.triggerCounter -= when.kills;
+          tower.triggerCounter += this.weightFor(armed, killerType, event.weight);
+          while (tower.triggerCounter >= armed.count) {
+            tower.triggerCounter -= armed.count;
             this.enqueue(armed, event.towerId, 1, depth, tickDepth, event);
           }
           break;
         }
         case 'neighborKills':
-          if (killer && isNeighbor(armed.tower, killer, this.rules.neighborhood)) {
-            this.enqueue(armed, killer.id, event.weight, depth, tickDepth, event);
+          if (
+            killer &&
+            isNeighbor(armed.tower, killer, this.rules.neighborhood, armed.neighborRadius)
+          ) {
+            const weight = this.weightFor(armed, killerType, event.weight);
+            this.enqueue(armed, killer.id, weight, depth, tickDepth, event);
           }
           break;
         default:
           break;
       }
     }
+  }
+
+  /** Peso da morte para o contador ou as cargas de `armed`, com o bônus da Sombria. */
+  private weightFor(armed: Armed, killerType: TowerType | null, base: number): number {
+    return killWeight(this.classes, this.ctx.state, armed.type, killerType, base);
   }
 
   private execute(entry: PendingTrigger): void {

@@ -1,17 +1,20 @@
 /**
  * Lista dos sistemas da partida, na ordem em que rodam a cada tick:
  * ações → reposição do estresse → movimento → chegada ao núcleo →
- * ataque do núcleo → projéteis → torres → gatilhos.
+ * ataque do núcleo → projéteis → torres → gatilhos → classes.
  *
  * Todo spawn acontece antes do movimento e toda busca por alvo depois dele:
  * é o que permite montar o índice espacial uma única vez por tick. O índice
  * é compartilhado pelo núcleo, pelos projéteis (troca de alvo e área),
  * pelas torres e pelos gatilhos.
  *
- * Os gatilhos rodam por último: enxergam todos os tiros e abates do tick.
+ * Os gatilhos enxergam todos os tiros e abates do tick. As classes rodam por
+ * último: o bônus muda no tick seguinte a posicionar, vender ou fundir.
  */
 
 import engineConfig from '../data/engine.json';
+import { classData, type ClassData } from './classes/classData';
+import { createClassSystem } from './classes/systems';
 import { enemyData, type EnemyData } from './enemies/enemyData';
 import { buildRoutes } from './enemies/route';
 import { createCommandSystem } from './commands';
@@ -33,6 +36,7 @@ export interface GameSystemsOptions {
   enemies?: EnemyData;
   nexus?: NexusData;
   towers?: TowerData;
+  classes?: ClassData;
   debug?: SimDebugData;
   ticksPerSecond?: number;
 }
@@ -42,6 +46,7 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
     enemies = enemyData,
     nexus = nexusData,
     towers = towerData,
+    classes = classData,
     debug = simDebugData,
     ticksPerSecond = engineConfig.ticksPerSecond,
   } = options;
@@ -55,7 +60,8 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
     createNexusContactSystem(routes, enemies),
     createNexusAttackSystem(map.nexus, enemies, nexus, ticksPerSecond, index),
     createProjectileSystem(enemies, index, towers.projectileRetargetRadius, ticksPerSecond),
-    createTowerSystem(index, towers, scores, ticksPerSecond),
-    createTriggerSystem({ index, enemies, towers, scores, ticksPerSecond }),
+    createTowerSystem(index, towers, scores, ticksPerSecond, classes),
+    createTriggerSystem({ index, enemies, towers, classes, scores, ticksPerSecond }),
+    createClassSystem(towers, classes),
   ];
 }

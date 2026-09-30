@@ -1,6 +1,69 @@
 {
-  "artillery": { "name": "Artilharia" },
-  "mechanical": { "name": "Mecânica" },
-  "arcane": { "name": "Arcana" },
-  "shadow": { "name": "Sombria" }
+  "minTriggerCount": 2,
+  "maxKillWeight": 4,
+  "classes": {
+    "artillery": {
+      "name": "Artilharia",
+      "levels": [
+        {
+          "count": 2,
+          "text": "Raio da área do ataque normal e das explosões de gatilho ×1,25",
+          "areaRadiusMultiplier": 1.25
+        },
+        {
+          "count": 4,
+          "text": "Raio ×1,5 e dano da área e das explosões +25%",
+          "areaRadiusMultiplier": 1.5,
+          "areaDamageMultiplier": 1.25
+        }
+      ]
+    },
+    "mechanical": {
+      "name": "Mecânica",
+      "levels": [
+        {
+          "count": 2,
+          "text": "Contagem dos gatilhos \"a cada N\" −20% (arredonda para baixo, mínimo 2)",
+          "triggerCountReductionPercent": 20
+        },
+        {
+          "count": 4,
+          "text": "Contagem dos gatilhos \"a cada N\" −40% (arredonda para baixo, mínimo 2)",
+          "triggerCountReductionPercent": 40
+        }
+      ]
+    },
+    "arcane": {
+      "name": "Arcana",
+      "levels": [
+        {
+          "count": 2,
+          "text": "Vizinhança de 8 casas (com diagonais); o Relé ativa todas",
+          "neighborhoodRadius": 1
+        },
+        {
+          "count": 4,
+          "text": "Vizinhança de raio 2 (quadrado 5×5, 24 casas); o Relé ativa todas",
+          "neighborhoodRadius": 2
+        }
+      ]
+    },
+    "shadow": {
+      "name": "Sombria",
+      "levels": [
+        {
+          "count": 2,
+          "text": "Mortes causadas por torres Sombria valem 2 nos gatilhos das torres Sombria",
+          "killWeightMultiplier": 2,
+          "killWeightFrom": "sameClass"
+        },
+        {
+          "count": 4,
+          "text": "Toda morte, de qualquer autor, vale 2 nos gatilhos das torres Sombria",
+          "killWeightMultiplier": 2,
+          "killWeightFrom": "any"
+        }
+      ]
+    }
+  }
 }

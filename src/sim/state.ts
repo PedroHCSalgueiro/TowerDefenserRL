@@ -4,6 +4,8 @@
  */
 
 import engineConfig from '../data/engine.json';
+import { classData } from './classes/classData';
+import { createClassState, type ClassState } from './classes/classState';
 import { createEnemyPool, type EnemyPool } from './enemies/pool';
 import { hashSeed } from './engine/rng';
 import { nexusData } from './nexus/nexusData';
@@ -11,7 +13,7 @@ import { createProjectilePool, type ProjectilePool } from './projectiles/pool';
 import type { Tower } from './towers/placement';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 
-export const RUN_STATE_VERSION = 5;
+export const RUN_STATE_VERSION = 6;
 
 /**
  * Disposição usada pelo debug:
@@ -115,6 +117,8 @@ export interface RunState {
   towers: Tower[];
   /** Motor de gatilhos: fila pendente, ordem de disparo e contadores. */
   triggers: TriggerState;
+  /** Contagem e nível de bônus de cada classe (atualizado no fim de cada tick). */
+  classes: ClassState;
   debug: DebugState;
   /** Ações enfileiradas que ainda não foram aplicadas. */
   commandQueue: SimCommand[];
@@ -133,6 +137,7 @@ export function createRunState(seed: string): RunState {
     projectiles: createProjectilePool(engineConfig.projectilePoolInitialCapacity),
     towers: [],
     triggers: createTriggerState(),
+    classes: createClassState(classData),
     debug: { nexusInvulnerable: false, stress: null },
     commandQueue: [],
   };
@@ -157,6 +162,19 @@ function isTowerState(value: unknown): boolean {
   );
 }
 
+function isClassState(value: unknown): value is ClassState {
+  if (typeof value !== 'object' || value === null) return false;
+  return classData.ids.every((id) => {
+    const status = (value as Record<string, Partial<ClassState[string]> | undefined>)[id];
+    return (
+      typeof status === 'object' &&
+      status !== null &&
+      Number.isInteger(status.level) &&
+      Array.isArray(status.members)
+    );
+  });
+}
+
 export function deserializeRunState(json: string): RunState {
   const data: unknown = JSON.parse(json);
   if (typeof data !== 'object' || data === null) {
@@ -166,7 +184,7 @@ export function deserializeRunState(json: string): RunState {
   if (state.version !== RUN_STATE_VERSION) {
     throw new Error(`Versão de save não suportada: ${String(state.version)}`);
   }
-  const { nexus, enemies, projectiles, towers, triggers, debug } = state;
+  const { nexus, enemies, projectiles, towers, triggers, classes, debug } = state;
   if (
     typeof state.seed !== 'string' ||
     !Number.isInteger(state.tick) ||
@@ -189,6 +207,7 @@ export function deserializeRunState(json: string): RunState {
     typeof triggers.lastTick !== 'object' ||
     triggers.lastTick === null ||
     !Number.isInteger(triggers.droppedTotal) ||
+    !isClassState(classes) ||
     typeof debug?.nexusInvulnerable !== 'boolean' ||
     (debug.stress !== null && typeof debug.stress !== 'object') ||
     !Array.isArray(state.commandQueue)

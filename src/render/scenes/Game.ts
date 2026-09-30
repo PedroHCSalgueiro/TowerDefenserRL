@@ -9,6 +9,7 @@ import { Simulation, SimulationRunner } from '../../sim/engine/simulation';
 import { loadMap } from '../../sim/grid/map';
 import { createGameSystems } from '../../sim/systems';
 import { towerData } from '../../sim/towers/towerData';
+import { ClassPanel } from '../../ui/classPanel';
 import { showDefeatScreen } from '../../ui/defeatScreen';
 import { EnemyView } from '../views/EnemyView';
 import { GridView } from '../views/GridView';
@@ -25,6 +26,7 @@ export class Game extends Phaser.Scene {
   private projectileView!: ProjectileView;
   private monitor!: PerfMonitor;
   private panel!: DebugPanel;
+  private classPanel!: ClassPanel;
   private removeDefeatScreen: (() => void) | null = null;
 
   constructor() {
@@ -63,10 +65,13 @@ export class Game extends Phaser.Scene {
       selectedCell: () => grid.selectedCell,
     });
 
+    this.classPanel = new ClassPanel(this.game.canvas.parentElement ?? document.body);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.removeDefeatScreen?.();
       this.removeDefeatScreen = null;
       this.panel.destroy();
+      this.classPanel.destroy();
       this.monitor.destroy();
     });
   }
@@ -83,6 +88,7 @@ export class Game extends Phaser.Scene {
     this.projectileView.draw(state, this.interpolationAlpha, delta);
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
+    this.classPanel.update(state.classes);
 
     if (state.status === 'lost' && !this.removeDefeatScreen) {
       this.removeDefeatScreen = showDefeatScreen(

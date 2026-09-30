@@ -6,8 +6,12 @@
  * - Explosão, raio em cadeia, tiro perfurante e execução são instantâneos.
  * - Todo dano passa por `damageEnemy()`, com o id da torre, e os alvos são
  *   atingidos em ordem de id (o raio segue a ordem dos saltos).
+ * - Bônus de classe (`RunState.classes`): a Artilharia aumenta raio e dano da
+ *   explosão; a Arcana tira o teto de vizinhas ativadas do Relé.
  */
 
+import { areaDamageMultiplier, areaRadiusMultiplier, neighborhoodRadius } from '../classes/bonuses';
+import type { ClassData } from '../classes/classData';
 import { damageEnemy } from '../enemies/damage';
 import type { EnemyData } from '../enemies/enemyData';
 import { sortEnemiesById } from '../enemies/order';
@@ -29,6 +33,7 @@ export interface EffectEnv {
   readonly index: SpatialIndex;
   readonly enemies: EnemyData;
   readonly towers: TowerData;
+  readonly classes: ClassData;
   readonly scores: TargetScores;
   /** Trava de ativação, em ticks (`activationCooldownSeconds`). */
   readonly activationCooldownTicks: number;
@@ -53,7 +58,7 @@ function multiShot(env: EffectEnv, tower: Tower, type: TowerType, e: Effect<'mul
   const target = findTowerTarget(env.index, env.ctx.state, tower, type, env.scores);
   if (!target) return;
   for (let i = 0; i < e.extraShots; i++) {
-    fireTowerShot(env.ctx, tower, type, target, 'extra');
+    fireTowerShot(env.ctx, tower, type, target, 'extra', env.classes);
   }
 }
 
@@ -74,16 +79,18 @@ function explosion(
     y = target.y;
   }
   const { ctx } = env;
+  const radius = e.radius * areaRadiusMultiplier(env.classes, ctx.state, type);
   ctx.emit({
     type: 'areaExploded',
     tick: ctx.state.tick,
     towerId: tower.id,
     x,
     y,
-    radius: e.radius,
+    radius,
   });
-  const damage = percentOf(type, e.damagePercent);
-  for (const enemy of collectSorted(env, x, y, e.radius)) {
+  const damage =
+    percentOf(type, e.damagePercent) * areaDamageMultiplier(env.classes, ctx.state, type);
+  for (const enemy of collectSorted(env, x, y, radius)) {
     damageEnemy(ctx, env.enemies, enemy, damage, tower.id);
   }
 }
@@ -92,18 +99,23 @@ function explosion(
  * Ativa até `maxTargets` vizinhas, em ordem de id, pulando as que ainda estão
  * na trava de ativação. A ativada dispara na hora um tiro extra no alvo
  * normal dela (sem gastar a recarga); sem alvo, a ativação vale mesmo assim.
+ * Com o bônus de vizinhança da Arcana, o teto acompanha o tamanho da
+ * vizinhança: o Relé ativa todas as vizinhas.
  */
 function activateNeighbors(
   env: EffectEnv,
   tower: Tower,
+  type: TowerType,
   e: Effect<'activateNeighbors'>,
   depth: number,
 ): void {
   const { ctx } = env;
   const { state } = ctx;
+  const radius = neighborhoodRadius(env.classes, state, type);
+  const limit = radius > 0 ? Math.max(e.maxTargets, (2 * radius + 1) ** 2 - 1) : e.maxTargets;
   let activated = 0;
   for (const neighbor of env.neighborsOf(tower)) {
-    if (activated >= e.maxTargets) break;
+    if (activated >= limit) break;
     if (state.tick < neighbor.activationReadyTick) continue;
     neighbor.activationReadyTick = state.tick + env.activationCooldownTicks;
     activated++;
@@ -114,9 +126,9 @@ function activateNeighbors(
       sourceTowerId: tower.id,
       depth,
     });
-    const type = getTowerType(env.towers, neighbor.type);
-    const target = findTowerTarget(env.index, state, neighbor, type, env.scores);
-    if (target) fireTowerShot(ctx, neighbor, type, target, 'activated');
+    const neighborType = getTowerType(env.towers, neighbor.type);
+    const target = findTowerTarget(env.index, state, neighbor, neighborType, env.scores);
+    if (target) fireTowerShot(ctx, neighbor, neighborType, target, 'activated', env.classes);
   }
 }
 
@@ -241,7 +253,7 @@ export function runEffect(
       explosion(env, tower, type, effect, entry);
       return true;
     case 'activateNeighbors':
-      activateNeighbors(env, tower, effect, entry.depth);
+      activateNeighbors(env, tower, type, effect, entry.depth);
       return true;
     case 'chargeLightning': {
       if (!copied) return chargeLightning(env, tower, type, effect, entry);

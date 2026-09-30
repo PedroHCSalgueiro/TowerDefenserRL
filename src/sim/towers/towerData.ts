@@ -66,7 +66,7 @@ function parseClasses(id: string, raw: unknown, classes: ClassData): string[] {
     !Array.isArray(raw) ||
     raw.length !== CLASSES_PER_TOWER ||
     new Set(raw).size !== raw.length ||
-    !raw.every((c) => typeof c === 'string' && Object.hasOwn(classes, c))
+    !raw.every((c) => typeof c === 'string' && Object.hasOwn(classes.classes, c))
   ) {
     throw new Error(
       `Torre inválida: "${id}" precisa de ${CLASSES_PER_TOWER} classes diferentes e existentes`,

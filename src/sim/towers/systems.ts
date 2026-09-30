@@ -11,6 +11,8 @@
  * gatilhos (tiro de ativação e disparo múltiplo).
  */
 
+import { areaDamageMultiplier, areaRadiusMultiplier } from '../classes/bonuses';
+import { classData, type ClassData } from '../classes/classData';
 import type { Enemy } from '../enemies/pool';
 import type { ShotKind } from '../engine/events';
 import type { System, TickContext } from '../engine/simulation';
@@ -32,14 +34,19 @@ export function findTowerTarget(
   return index.findBest(state, tower.x, tower.y, type.range, scores[type.targetMode]);
 }
 
-/** Emite `towerFired` e cria o projétil da torre mirando `target`. */
+/**
+ * Emite `towerFired` e cria o projétil da torre mirando `target`. No tiro em
+ * área, o bônus de Artilharia vigente neste tick aumenta o raio e o dano.
+ */
 export function fireTowerShot(
   ctx: TickContext,
   tower: Tower,
   type: TowerType,
   target: Enemy,
   shot: ShotKind,
+  classes: ClassData = classData,
 ): void {
+  const area = type.shot.kind === 'area';
   ctx.emit({
     type: 'towerFired',
     tick: ctx.state.tick,
@@ -53,9 +60,12 @@ export function fireTowerShot(
       sourceId: tower.id,
       x: tower.x,
       y: tower.y,
-      damage: type.damage,
+      damage: area ? type.damage * areaDamageMultiplier(classes, ctx.state, type) : type.damage,
       speed: type.projectileSpeed,
-      areaRadius: type.shot.kind === 'area' ? type.shot.radius : 0,
+      areaRadius:
+        type.shot.kind === 'area'
+          ? type.shot.radius * areaRadiusMultiplier(classes, ctx.state, type)
+          : 0,
     },
     target,
   );
@@ -66,6 +76,7 @@ export function createTowerSystem(
   data: TowerData,
   scores: TargetScores,
   ticksPerSecond: number,
+  classes: ClassData = classData,
 ): System {
   const cooldownTicks = new Map<string, number>();
   for (const [id, type] of Object.entries(data.types)) {
@@ -83,7 +94,7 @@ export function createTowerSystem(
       if (!target) continue;
 
       tower.cooldownTicks = cooldownTicks.get(tower.type)!;
-      fireTowerShot(ctx, tower, type, target, 'normal');
+      fireTowerShot(ctx, tower, type, target, 'normal', classes);
     }
   };
 }
