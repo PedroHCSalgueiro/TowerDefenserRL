@@ -52,6 +52,11 @@ describe('"quando" (fatos do tick → fila)', () => {
         when: 'everyNShots',
         effect: 'multiShot',
         depth: 1,
+        chainId: 1,
+        originTowerId: t.id,
+        visible: true,
+        chainLength: 1,
+        copiedFromTowerId: null,
       },
     ]);
     expect(t.triggerCounter).toBe(1); // o 4º tiro já conta para o próximo ciclo
@@ -198,7 +203,16 @@ describe('"o quê" (efeitos)', () => {
     ]);
     const events = run(sim, 1);
     expect(ofType(events, 'areaExploded')).toEqual([
-      { type: 'areaExploded', tick: 1, towerId: t.id, x: 1, y: 0.5, radius: 0.5 },
+      {
+        type: 'areaExploded',
+        tick: 1,
+        towerId: t.id,
+        x: 1,
+        y: 0.5,
+        radius: 0.5,
+        trigger: true,
+        damage: 3,
+      },
     ]);
     expect(target.hp).toBe(97);
   });

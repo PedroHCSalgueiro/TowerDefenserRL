@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import engineConfig from '../../data/engine.json';
 import renderConfig from '../../data/render.json';
+import uiConfig from '../../data/ui.json';
 import mapData from '../../data/map.json';
 import { DebugPanel } from '../../debug/DebugPanel';
 import { PerfMonitor } from '../../debug/PerfMonitor';
+import { triggerFxDisabled } from '../../debug/flags';
 import { resolveSeed } from '../../debug/seed';
 import { enemyData } from '../../sim/enemies/enemyData';
 import type { SimEvent } from '../../sim/engine/events';
@@ -14,6 +16,8 @@ import { createGameSystems } from '../../sim/systems';
 import { classData } from '../../sim/classes/classData';
 import type { Tower } from '../../sim/towers/placement';
 import { getTowerType, towerData } from '../../sim/towers/towerData';
+import { affectedNeighbors } from '../../sim/triggers/neighborhood';
+import { previewKey, purchasePreview } from '../../ui/classPreview';
 import { ClassPanel } from '../../ui/classPanel';
 import { NexusPanel } from '../../ui/nexusPanel';
 import { canPlaceAt } from '../../ui/shopModel';
@@ -28,9 +32,11 @@ import { defaultWaveSchedules } from '../../ui/waveHudModel';
 import { CarryView } from '../views/CarryView';
 import { EnemyView } from '../views/EnemyView';
 import { GridView } from '../views/GridView';
+import { HoverView } from '../views/HoverView';
 import { NexusView } from '../views/NexusView';
 import { ProjectileView } from '../views/ProjectileView';
 import { TowerView } from '../views/TowerView';
+import { TriggerFxView } from '../views/TriggerFxView';
 
 export class Game extends Phaser.Scene {
   private runner!: SimulationRunner;
@@ -39,6 +45,10 @@ export class Game extends Phaser.Scene {
   private nexusView!: NexusView;
   private towerView!: TowerView;
   private projectileView!: ProjectileView;
+  private triggerFx!: TriggerFxView;
+  /** `?fx=0` desliga os efeitos dos gatilhos (só para medir o custo deles). */
+  private triggerFxOn = true;
+  private hoverView!: HoverView;
   private monitor!: PerfMonitor;
   private panel!: DebugPanel;
   private classPanel!: ClassPanel;
@@ -71,6 +81,17 @@ export class Game extends Phaser.Scene {
     this.nexusView = new NexusView(this, grid.projection, map);
     this.enemyView = new EnemyView(this, grid.projection, enemyData, units);
     this.projectileView = new ProjectileView(this, grid.projection);
+    this.hoverView = new HoverView(this, grid.projection, towerData);
+    this.triggerFx = new TriggerFxView(this, grid.projection, map, towerData);
+    this.triggerFxOn = !triggerFxDisabled(window.location.search);
+    // N liga e desliga os números de dano dos gatilhos (T16).
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      if (event.key.toLowerCase() === uiConfig.triggerFx.numbersToggleKey) {
+        this.triggerFx.toggleNumbers();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
 
     this.monitor = new PerfMonitor(
       this.game,
@@ -156,6 +177,9 @@ export class Game extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.removeEndScreen?.();
       this.removeEndScreen = null;
+      window.removeEventListener('keydown', onKeyDown);
+      this.triggerFx.destroy();
+      this.hoverView.destroy();
       this.waveHud.destroy();
       this.panel.destroy();
       this.classPanel.destroy();
@@ -182,6 +206,10 @@ export class Game extends Phaser.Scene {
     this.nexusView.draw(state, frameDelta);
     this.enemyView.draw(state, this.interpolationAlpha);
     this.projectileView.draw(state, this.interpolationAlpha, frameDelta);
+    if (this.triggerFxOn) {
+      this.triggerFx.handleEvents(state, events);
+      this.triggerFx.draw(state, frameDelta);
+    }
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
     this.classPanel.update(state.classes);
@@ -218,6 +246,7 @@ export class Game extends Phaser.Scene {
           totalWaves,
           seconds: state.tick / engineConfig.ticksPerSecond,
           kills: state.stats.kills,
+          longestChain: state.stats.longestChain,
           seed: state.seed,
         },
         () => this.scene.restart(),
@@ -249,7 +278,11 @@ export class Game extends Phaser.Scene {
     }
   }
 
-  /** Janela "o que esta torre faz": slot da loja sob o mouse ou torre do mapa (sem torre presa ao mouse). */
+  /**
+   * Janela "o que esta torre faz": slot da loja sob o mouse ou torre do mapa
+   * (sem torre presa ao mouse). No slot, a prévia da compra (classes ou
+   * fusão); na torre, com a janela aberta, o alcance e as vizinhas que ela afeta.
+   */
   private updateTooltip(
     state: Readonly<RunState>,
     carrying: boolean,
@@ -258,12 +291,15 @@ export class Game extends Phaser.Scene {
     let type: string | null = null;
     let star = 1;
     let key: string | null = null;
+    let tower: Tower | null = null;
+    let purchase = null;
     const shopType = this.shop.hoveredTowerType;
     if (shopType !== null) {
       type = shopType;
-      key = `loja:${shopType}`;
+      purchase = purchasePreview(state.towers, shopType, towerData, classData);
+      key = `loja:${shopType}:${previewKey(purchase)}`;
     } else if (!carrying && hovered && this.tooltip.pointerOverCanvas) {
-      const tower = this.towerUnderPointer(state, hovered);
+      tower = this.towerUnderPointer(state, hovered) ?? null;
       if (tower) {
         type = tower.type;
         star = tower.star;
@@ -274,7 +310,10 @@ export class Game extends Phaser.Scene {
       type === null ? null : describeTower(getTowerType(towerData, type), star, classData),
       key,
       performance.now(),
+      purchase,
     );
+    const shown = tower !== null && this.tooltip.visible ? tower : null;
+    this.hoverView.draw(shown, shown ? affectedNeighbors(state, shown, towerData, classData) : []);
   }
 
   /**

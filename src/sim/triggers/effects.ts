@@ -78,13 +78,19 @@ const spreadTargets: Enemy[] = [];
  * normal; com `spread`, cada um num alvo diferente pela ordem de mira (o
  * melhor primeiro), dando a volta se houver menos alvos que tiros.
  */
-function multiShot(env: EffectEnv, tower: Tower, type: TowerType, e: Effect<'multiShot'>): void {
+function multiShot(
+  env: EffectEnv,
+  tower: Tower,
+  type: TowerType,
+  e: Effect<'multiShot'>,
+  entry: PendingTrigger,
+): void {
   const { state } = env.ctx;
   if (!e.spread) {
     const target = findTowerTarget(env.index, state, tower, type, env.scores);
     if (!target) return;
     for (let i = 0; i < e.extraShots; i++) {
-      fireTowerShot(env.ctx, tower, type, target, 'extra', env.classes);
+      fireTowerShot(env.ctx, tower, type, target, 'extra', env.classes, 100, entry);
     }
     return;
   }
@@ -99,7 +105,16 @@ function multiShot(env: EffectEnv, tower: Tower, type: TowerType, e: Effect<'mul
   );
   if (targets.length === 0) return;
   for (let i = 0; i < e.extraShots; i++) {
-    fireTowerShot(env.ctx, tower, type, targets[i % targets.length]!, 'extra', env.classes);
+    fireTowerShot(
+      env.ctx,
+      tower,
+      type,
+      targets[i % targets.length]!,
+      'extra',
+      env.classes,
+      100,
+      entry,
+    );
   }
 }
 
@@ -121,19 +136,25 @@ function explosion(
   }
   const { ctx } = env;
   const radius = e.radius * areaRadiusMultiplier(env.classes, ctx.state, type);
-  ctx.emit({
-    type: 'areaExploded',
+  const event = {
+    type: 'areaExploded' as const,
     tick: ctx.state.tick,
     towerId: tower.id,
     x,
     y,
     radius,
-  });
+    trigger: true,
+    damage: 0,
+  };
+  ctx.emit(event);
   const damage =
     percentOf(tower, type, e.damagePercent) * areaDamageMultiplier(env.classes, ctx.state, type);
   const options = e.killWeight !== 1 ? { killWeight: e.killWeight } : undefined;
   for (const enemy of collectSorted(env, x, y, radius)) {
+    // Soma só a vida tirada (sem o excesso além da vida que o inimigo tinha).
+    const before = enemy.hp;
     damageEnemy(ctx, env.enemies, enemy, damage, tower.id, options);
+    event.damage += before - enemy.hp;
   }
 }
 
@@ -146,7 +167,7 @@ function activate(
   env: EffectEnv,
   source: Tower,
   target: Tower,
-  depth: number,
+  entry: PendingTrigger,
   damagePercent: number,
 ): void {
   const { ctx } = env;
@@ -157,12 +178,14 @@ function activate(
     tick: state.tick,
     towerId: target.id,
     sourceTowerId: source.id,
-    depth,
+    depth: entry.depth,
   });
   const targetType = getTowerType(env.towers, target.type);
   if (!targetType.attacks) return;
   const enemy = findTowerTarget(env.index, state, target, targetType, env.scores);
-  if (enemy) fireTowerShot(ctx, target, targetType, enemy, 'activated', env.classes, damagePercent);
+  if (enemy) {
+    fireTowerShot(ctx, target, targetType, enemy, 'activated', env.classes, damagePercent, entry);
+  }
 }
 
 /**
@@ -177,7 +200,7 @@ function activateNeighbors(
   tower: Tower,
   type: TowerType,
   e: Effect<'activateNeighbors'>,
-  depth: number,
+  entry: PendingTrigger,
 ): void {
   const { state } = env.ctx;
   const capped = e.maxTargets > 0 && neighborhoodRadius(env.classes, state, type) === 0;
@@ -187,10 +210,10 @@ function activateNeighbors(
     if (capped && activated >= e.maxTargets) break;
     if (state.tick < neighbor.activationReadyTick) continue;
     activated++;
-    activate(env, tower, neighbor, depth, e.activatedDamagePercent);
+    activate(env, tower, neighbor, entry, e.activatedDamagePercent);
   }
   if (e.selfToo && state.tick >= tower.activationReadyTick) {
-    activate(env, tower, tower, depth, e.activatedDamagePercent);
+    activate(env, tower, tower, entry, e.activatedDamagePercent);
   }
 }
 
@@ -215,22 +238,33 @@ function releaseLightning(
   type: TowerType,
   e: Effect<'chargeLightning'>,
   first: Enemy,
-  depth: number,
+  entry: PendingTrigger,
 ): void {
   const { ctx } = env;
   const damage = percentOf(tower, type, e.damagePercent);
   const skip = (enemy: Enemy): boolean => struck.includes(enemy.id);
+  const event = {
+    type: 'lightningStruck' as const,
+    tick: ctx.state.tick,
+    towerId: tower.id,
+    points: [] as { x: number; y: number }[],
+    damage: 0,
+  };
+  ctx.emit(event);
   struck.length = 0;
   let current: Enemy | null = first;
   while (current && struck.length < e.targets) {
     struck.push(current.id);
     const { x, y } = current;
+    event.points.push({ x, y });
+    const before = current.hp;
     damageEnemy(ctx, env.enemies, current, damage, tower.id);
+    event.damage += before - current.hp;
     if (struck.length < e.targets) {
       current = env.index.findNearest(ctx.state, x, y, e.jumpRadius, skip);
     }
   }
-  if (e.activateOnDischarge) activateNeighbors(env, tower, type, DISCHARGE_ACTIVATION, depth);
+  if (e.activateOnDischarge) activateNeighbors(env, tower, type, DISCHARGE_ACTIVATION, entry);
 }
 
 /**
@@ -254,7 +288,7 @@ function chargeLightning(
     return false;
   }
   tower.charges -= e.charges;
-  releaseLightning(env, tower, type, e, target, entry.depth);
+  releaseLightning(env, tower, type, e, target, entry);
   return true;
 }
 
@@ -263,7 +297,8 @@ function chargeLightning(
  * inteiro, se `unlimited`): atinge todos nela.
  */
 function pierceLine(env: EffectEnv, tower: Tower, type: TowerType, e: Effect<'pierceLine'>): void {
-  const target = findTowerTarget(env.index, env.ctx.state, tower, type, env.scores);
+  const { ctx } = env;
+  const target = findTowerTarget(env.index, ctx.state, tower, type, env.scores);
   if (!target) return;
   const dx = target.x - tower.x;
   const dy = target.y - tower.y;
@@ -279,8 +314,21 @@ function pierceLine(env: EffectEnv, tower: Tower, type: TowerType, e: Effect<'pi
     const along = px * ux + py * uy;
     return along >= 0 && along <= reach && Math.abs(px * uy - py * ux) <= e.halfWidth;
   });
+  const event = {
+    type: 'lineFired' as const,
+    tick: ctx.state.tick,
+    towerId: tower.id,
+    x: tower.x,
+    y: tower.y,
+    toX: tower.x + ux * reach,
+    toY: tower.y + uy * reach,
+    damage: 0,
+  };
+  ctx.emit(event);
   for (const enemy of inLine) {
-    damageEnemy(env.ctx, env.enemies, enemy, damage, tower.id);
+    const before = enemy.hp;
+    damageEnemy(ctx, env.enemies, enemy, damage, tower.id);
+    event.damage += before - enemy.hp;
   }
 }
 
@@ -364,24 +412,27 @@ function scaleEffect(effect: CopyableEffect, power: number): CopyableEffect {
   }
 }
 
+/** Um efeito a copiar e a vizinha de onde ele veio. */
+export interface ResolvedCopy {
+  effect: CopyableEffect;
+  fromTowerId: number;
+}
+
 /**
  * Os "o quê" que "copiar" vai repetir: o último efeito disparado por cada
  * vizinha, os `copies` mais recentes (maior `seq`), de vizinhas diferentes,
  * com o dano escalado por `powerPercent`. Vazio se nenhuma vizinha disparou.
  */
-export function resolveCopies(
-  env: EffectEnv,
-  tower: Tower,
-  e: Effect<'copyLast'>,
-): CopyableEffect[] {
+export function resolveCopies(env: EffectEnv, tower: Tower, e: Effect<'copyLast'>): ResolvedCopy[] {
   candidates.length = 0;
   for (const neighbor of env.neighborsOf(tower)) {
     if (neighbor.lastEffect) candidates.push(neighbor);
   }
   candidates.sort((a, b) => b.lastEffect!.seq - a.lastEffect!.seq);
-  return candidates
-    .slice(0, e.copies)
-    .map((neighbor) => scaleEffect(neighbor.lastEffect!.effect, e.powerPercent));
+  return candidates.slice(0, e.copies).map((neighbor) => ({
+    effect: scaleEffect(neighbor.lastEffect!.effect, e.powerPercent),
+    fromTowerId: neighbor.id,
+  }));
 }
 
 /**
@@ -399,18 +450,18 @@ export function runEffect(
 ): boolean {
   switch (effect.kind) {
     case 'multiShot':
-      multiShot(env, tower, type, effect);
+      multiShot(env, tower, type, effect, entry);
       return true;
     case 'explosion':
       explosion(env, tower, type, effect, entry);
       return true;
     case 'activateNeighbors':
-      activateNeighbors(env, tower, type, effect, entry.depth);
+      activateNeighbors(env, tower, type, effect, entry);
       return true;
     case 'chargeLightning': {
       if (!copied) return chargeLightning(env, tower, type, effect, entry);
       const target = findTowerTarget(env.index, env.ctx.state, tower, type, env.scores);
-      if (target) releaseLightning(env, tower, type, effect, target, entry.depth);
+      if (target) releaseLightning(env, tower, type, effect, target, entry);
       return true;
     }
     case 'pierceLine':

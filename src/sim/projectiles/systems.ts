@@ -23,6 +23,7 @@ import type { Enemy } from '../enemies/pool';
 import type { System, TickContext } from '../engine/simulation';
 import type { SpatialIndex } from '../spatial/spatialIndex';
 import type { RunState } from '../state';
+import type { ChainMark } from '../triggers/triggerState';
 import { acquireProjectile, releaseProjectile, type Projectile } from './pool';
 
 export interface FireParams {
@@ -33,6 +34,8 @@ export interface FireParams {
   speed: number;
   /** Raio do tiro em área, em casas; 0 = tiro único. */
   areaRadius: number;
+  /** Cadeia do gatilho que disparou (padrão: sem cadeia). */
+  chain?: ChainMark;
 }
 
 /** Cria um projétil na posição de quem disparou, mirando `target`. */
@@ -40,6 +43,8 @@ export function fireProjectile(ctx: TickContext, params: FireParams, target: Ene
   const projectile = acquireProjectile(ctx.state.projectiles);
   projectile.id = ctx.allocateId();
   projectile.sourceId = params.sourceId;
+  projectile.chainId = params.chain?.chainId ?? 0;
+  projectile.originTowerId = params.chain?.originTowerId ?? null;
   aim(projectile, target);
   projectile.retargeted = false;
   projectile.damage = params.damage;
@@ -75,22 +80,30 @@ export function createProjectileSystem(
   ticksPerSecond: number,
 ): System {
   const hits: Enemy[] = [];
+  /** Cadeia do projétil que está causando dano (reaproveitada). */
+  const mark: ChainMark = { chainId: 0, originTowerId: null };
+  const damageOptions = { chain: mark };
 
   /** Dano em área: todos no raio do ponto de impacto, em ordem de id. */
   const explode = (ctx: TickContext, projectile: Projectile, x: number, y: number): void => {
     const radius = projectile.areaRadius;
-    ctx.emit({
-      type: 'areaExploded',
+    const event = {
+      type: 'areaExploded' as const,
       tick: ctx.state.tick,
       towerId: projectile.sourceId,
       x,
       y,
       radius,
-    });
+      trigger: false,
+      damage: 0,
+    };
+    ctx.emit(event);
     hits.length = 0;
     index.collectInRange(ctx.state, x, y, radius, hits);
     for (const enemy of sortEnemiesById(hits)) {
-      damageEnemy(ctx, enemies, enemy, projectile.damage, projectile.sourceId);
+      const before = enemy.hp;
+      damageEnemy(ctx, enemies, enemy, projectile.damage, projectile.sourceId, damageOptions);
+      event.damage += before - enemy.hp;
     }
   };
 
@@ -123,10 +136,12 @@ export function createProjectileSystem(
         projectile.x = target.x;
         projectile.y = target.y;
         releaseProjectile(pool, projectile);
+        mark.chainId = projectile.chainId;
+        mark.originTowerId = projectile.originTowerId;
         if (projectile.areaRadius > 0) {
           explode(ctx, projectile, target.x, target.y);
         } else {
-          damageEnemy(ctx, enemies, target, projectile.damage, projectile.sourceId);
+          damageEnemy(ctx, enemies, target, projectile.damage, projectile.sourceId, damageOptions);
         }
       } else {
         projectile.x += (dx / dist) * step;

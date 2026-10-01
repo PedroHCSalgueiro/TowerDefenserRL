@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { triggerFxDisabled } from '../src/debug/flags';
 import mapData from '../src/data/map.json';
 import type { SimDebugData } from '../src/sim/debug/debugData';
 import { pickTowerCells } from '../src/sim/debug/towerCells';
@@ -258,5 +259,14 @@ describe('save com o estado de debug', () => {
       delete data[field];
       expect(() => deserializeRunState(JSON.stringify(data))).toThrow(/inválido/);
     }
+  });
+});
+
+describe('chave ?fx=0 (T16)', () => {
+  it('só desliga os efeitos dos gatilhos com fx=0', () => {
+    expect(triggerFxDisabled('?fx=0')).toBe(true);
+    expect(triggerFxDisabled('?seed=abc&fx=0')).toBe(true);
+    expect(triggerFxDisabled('')).toBe(false);
+    expect(triggerFxDisabled('?fx=1')).toBe(false);
   });
 });

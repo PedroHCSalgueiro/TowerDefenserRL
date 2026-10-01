@@ -33,6 +33,12 @@ const classColors: Readonly<Record<string, string>> = style.classColors;
 
 const TEXTURE_BLOCK = 'tower-block';
 
+/** Cor da torre: a da classe principal (a primeira da lista). */
+export function towerColor(data: TowerData, towerType: string): number {
+  const mainClass = getTowerType(data, towerType).classes[0] ?? '';
+  return hexColor(classColors[mainClass] ?? style.fallbackColor);
+}
+
 /** Estrelas da torre, como texto: ★1 = "★", ★3 = "★★★". */
 export function starsLabel(star: number): string {
   return '★'.repeat(Math.max(1, Math.floor(star)));
@@ -265,7 +271,6 @@ export class TowerView {
   }
 
   private colorOf(towerType: string): number {
-    const mainClass = getTowerType(this.data, towerType).classes[0] ?? '';
-    return hexColor(classColors[mainClass] ?? style.fallbackColor);
+    return towerColor(this.data, towerType);
   }
 }

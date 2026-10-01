@@ -151,6 +151,8 @@ describe('ataque do núcleo', () => {
         x: 1,
         y: 2,
         weight: 1,
+        chainId: 0,
+        originTowerId: null,
       },
     ]);
     expect(weak.active).toBe(false);

@@ -112,6 +112,8 @@ describe('ataque das torres', () => {
         x: 0,
         y: 0.4,
         weight: 1,
+        chainId: 0,
+        originTowerId: null,
       },
     ]);
   });
@@ -176,9 +178,20 @@ describe('tiro em área', () => {
       x,
       y,
       weight: 1,
+      chainId: 0,
+      originTowerId: null,
     });
     expect(impact).toEqual([
-      { type: 'areaExploded', tick: 4, towerId: tower.id, x: 2.8, y: 1, radius: 0.75 },
+      {
+        type: 'areaExploded',
+        tick: 4,
+        towerId: tower.id,
+        x: 2.8,
+        y: 1,
+        radius: 0.75,
+        trigger: false,
+        damage: 12, // 3 inimigos de 4 de vida: só a vida tirada, sem o excesso
+      },
       killed(flyer, 'flyer', 2.8, 1.5),
       killed(behind, 'walker', 3.3, 1),
       killed(target, 'walker', 2.8, 1),

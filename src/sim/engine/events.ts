@@ -17,6 +17,8 @@ export interface SimEventPayloads {
    * `towerId` é `null` quando quem matou foi o núcleo. `x`/`y`: onde morreu.
    * `weight`: quanto vale nos contadores de abate (2 = abate duplo da execução).
    * `wave`: onda dona do inimigo (0 = sem onda).
+   * `chainId`/`originTowerId`: cadeia do tiro que matou, quando o projétil
+   * saiu de um gatilho (tiro de ativação ou extra); `chainId` 0 = sem cadeia.
    */
   enemyKilled: {
     enemyId: number;
@@ -26,6 +28,8 @@ export interface SimEventPayloads {
     x: number;
     y: number;
     weight: number;
+    chainId: number;
+    originTowerId: number | null;
   };
   enemyReachedNexus: { enemyId: number; damage: number };
   /** O chefão chegou ao núcleo: derrota imediata (`runLost` vem depois no mesmo tick). */
@@ -36,12 +40,32 @@ export interface SimEventPayloads {
   /** `x`/`y`: casa da torre. */
   towerPlaced: { towerId: number; towerType: string; x: number; y: number };
   towerFired: { towerId: number; targetId: number; shot: ShotKind };
-  /** Dano em área (tiro em área ou explosão de gatilho): ponto na grade e raio, em casas. */
-  areaExploded: { towerId: number; x: number; y: number; radius: number };
+  /**
+   * Dano em área (tiro em área ou explosão de gatilho): ponto na grade e raio,
+   * em casas. `trigger`: veio de um gatilho. `damage`: soma da vida tirada.
+   */
+  areaExploded: {
+    towerId: number;
+    x: number;
+    y: number;
+    radius: number;
+    trigger: boolean;
+    damage: number;
+  };
+  /** Raio em cadeia de um gatilho: os pontos atingidos, na ordem dos saltos, e a vida tirada. */
+  lightningStruck: { towerId: number; points: { x: number; y: number }[]; damage: number };
+  /** Linha perfurante de um gatilho: da torre (`x`, `y`) até o fim da linha, e a vida tirada. */
+  lineFired: { towerId: number; x: number; y: number; toX: number; toY: number; damage: number };
   /**
    * Um gatilho executou o "o quê". Destino = `towerId` (a torre do gatilho);
    * origem = `sourceTowerId` (quem causou; `null` = núcleo). `effect` é o que
    * foi executado (no "copiar", o efeito copiado). `depth` 1 = início da cadeia.
+   *
+   * Cadeia (T16): `chainId` e `originTowerId` (torre que começou; `null` =
+   * núcleo). `visible`: o gatilho teve efeito visível (o Obelisco ganhando
+   * carga sem soltar o raio e o "copiar" sem nada não têm). `chainLength`:
+   * gatilhos visíveis da cadeia até agora, contando este. `copiedFromTowerId`:
+   * no "copiar", a vizinha copiada.
    */
   triggerFired: {
     towerId: number;
@@ -49,6 +73,11 @@ export interface SimEventPayloads {
     when: WhenKind;
     effect: EffectKind;
     depth: number;
+    chainId: number;
+    originTowerId: number | null;
+    visible: boolean;
+    chainLength: number;
+    copiedFromTowerId: number | null;
   };
   /** Uma torre foi ativada por gatilho de uma vizinha (origem → destino). */
   towerActivated: { towerId: number; sourceTowerId: number; depth: number };

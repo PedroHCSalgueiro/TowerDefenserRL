@@ -23,6 +23,17 @@
  * Mecânica reduz o N dos "a cada N"; a Arcana amplia a vizinhança de quem a
  * tem; a Sombria multiplica o peso das mortes para as torres Sombria.
  *
+ * **Cadeia (T16):** cada fato de fora do motor (tiro normal, morte) abre uma
+ * cadeia nova, com id sequencial (`TriggerState.nextChainId`), alocada só se
+ * o fato puser alguma entrada na fila; a origem é a torre que atirou ou que
+ * matou (`null` = núcleo). Tudo que nasce de uma entrada herda a cadeia dela:
+ * fatos novos, explosões da execução, sobras para o tick seguinte e os
+ * projéteis dos tiros de ativação e extras (a morte causada por eles continua
+ * a cadeia). `ChainRecord.length` conta só os gatilhos com efeito visível;
+ * a maior cadeia vai para `RunState.stats.longestChain`. Uma cadeia sai de
+ * `TriggerState.chains` quando não sobra entrada dela na fila nem projétil
+ * dela no ar.
+ *
  * Não existe loop infinito: toda entrada vem de um tiro normal (limitado pela
  * cadência), de uma ativação (no máximo 1 por `activationCooldownSeconds`
  * por torre) ou de uma morte (cada inimigo morre uma vez). Os tiros extras do
@@ -42,8 +53,15 @@ import { findTowerTarget } from '../towers/systems';
 import { clampStar } from '../towers/stars';
 import { getTowerType, type TowerData, type TowerType } from '../towers/towerData';
 import { resolveCopies, runBlast, runEffect, type EffectEnv } from './effects';
+import { isNeighbor, isReachNeighbor } from './neighborhood';
 import { triggerAt, type EffectKind, type TriggerRules, type TriggerStar } from './triggerData';
-import type { PendingTrigger, TriggerState, TriggerTickStats } from './triggerState';
+import type {
+  ChainMark,
+  ChainRecord,
+  PendingTrigger,
+  TriggerState,
+  TriggerTickStats,
+} from './triggerState';
 
 export interface TriggerSystemDeps {
   readonly index: SpatialIndex;
@@ -64,17 +82,6 @@ interface Armed {
   count: number;
   /** Raio da vizinhança quadrada dada pela Arcana (0 = vizinhança dos dados). */
   neighborRadius: number;
-}
-
-/**
- * `b` é vizinha de `a`? Com bônus de raio, é o quadrado de lado 2·raio+1 em
- * volta de `a`; sem ele, a vizinhança dos dados (4 lados ou 8 com diagonais).
- */
-function isNeighbor(a: Tower, b: Tower, neighborhood: 4 | 8, radius: number): boolean {
-  const dx = Math.abs(a.x - b.x);
-  const dy = Math.abs(a.y - b.y);
-  if (radius > 0) return dx + dy > 0 && Math.max(dx, dy) <= radius;
-  return neighborhood === 4 ? dx + dy === 1 : Math.max(dx, dy) === 1;
 }
 
 function inRange(armed: Armed, x: number, y: number): boolean {
@@ -103,6 +110,13 @@ class TriggerEngine implements EffectEnv {
   private killListeners: Armed[] = [];
   private readonly neighborCache = new Map<number, Tower[]>();
   private readonly reachCache = new Map<number, Tower[]>();
+
+  /** Cadeias vivas, por id (montadas de `TriggerState.chains` a cada tick). */
+  private readonly chains = new Map<number, ChainRecord>();
+  /** Ids das cadeias vivas no fim do tick (reaproveitado). */
+  private readonly liveChains = new Set<number>();
+  /** Cadeia das entradas que vão para a fila agora (`chainId` 0 = abrir uma nova). */
+  private readonly mark: ChainMark = { chainId: 0, originTowerId: null };
 
   private queue: PendingTrigger[] = [];
   private head = 0;
@@ -144,13 +158,9 @@ class TriggerEngine implements EffectEnv {
     let list = this.reachCache.get(key);
     if (!list) {
       const radius = this.armedById.get(tower.id)?.neighborRadius ?? this.radiusOf(tower);
-      list = this.sorted.filter((t) => {
-        if (t === tower) return false;
-        if (isNeighbor(tower, t, this.rules.neighborhood, radius)) return true;
-        const dx = Math.abs(tower.x - t.x);
-        const dy = Math.abs(tower.y - t.y);
-        return (dx === 0 || dy === 0) && dx + dy <= reach;
-      });
+      list = this.sorted.filter(
+        (t) => t !== tower && isReachNeighbor(tower, t, this.rules.neighborhood, radius, reach),
+      );
       this.reachCache.set(key, list);
     }
     return list;
@@ -199,9 +209,11 @@ class TriggerEngine implements EffectEnv {
     this.stats = stats;
     this.queue = triggers.queue;
     this.head = 0;
+    this.chains.clear();
+    for (const chain of triggers.chains) this.chains.set(chain.id, chain);
 
     // Sobras do tick anterior já estão na frente; os fatos deste tick entram atrás.
-    let cursor = this.convertFacts(0, 1, 1);
+    let cursor = this.convertFacts(0, 1, 1, false);
     let processed = 0;
     while (this.head < this.queue.length) {
       const entry = this.queue[this.head]!;
@@ -209,15 +221,65 @@ class TriggerEngine implements EffectEnv {
       if (processed >= this.rules.maxActivationsPerTick) break;
       this.head++;
       processed++;
+      this.mark.chainId = entry.chainId;
+      this.mark.originTowerId = entry.originTowerId;
       this.execute(entry);
-      cursor = this.convertFacts(cursor, entry.depth + 1, entry.tickDepth + 1);
+      cursor = this.convertFacts(cursor, entry.depth + 1, entry.tickDepth + 1, true);
     }
 
     if (this.head > 0) this.queue.splice(0, this.head);
     this.head = 0;
     for (const entry of this.queue) entry.tickDepth = 1;
     stats.deferred = this.queue.length;
+    this.pruneChains(ctx);
     this.tick = null;
+  }
+
+  /** Guarda em `TriggerState.chains` só as cadeias com entrada na fila ou projétil no ar. */
+  private pruneChains(ctx: TickContext): void {
+    const triggers = ctx.state.triggers;
+    if (this.chains.size === 0) {
+      triggers.chains = [];
+      return;
+    }
+    // A fila pode ter milhares de entradas de poucas cadeias: entradas vizinhas
+    // costumam ser da mesma cadeia, e a busca para quando todas foram achadas.
+    const live = this.liveChains;
+    live.clear();
+    const total = this.chains.size;
+    let last = 0;
+    for (const entry of this.queue) {
+      if (entry.chainId === last) continue;
+      last = entry.chainId;
+      live.add(last);
+      if (live.size === total) break;
+    }
+    if (live.size < total) {
+      for (const projectile of ctx.state.projectiles.slots) {
+        if (projectile.active && projectile.chainId > 0) live.add(projectile.chainId);
+      }
+    }
+    // O Map guarda a ordem de inserção: as do save (em ordem) e depois as novas (ids crescentes).
+    const kept: ChainRecord[] = [];
+    for (const chain of this.chains.values()) if (live.has(chain.id)) kept.push(chain);
+    triggers.chains = kept;
+    this.chains.clear();
+  }
+
+  /** A cadeia `id`, criando o registro se ainda não existir. */
+  private chainRecord(id: number, originTowerId: number | null): ChainRecord {
+    let chain = this.chains.get(id);
+    if (!chain) {
+      chain = { id, originTowerId, length: 0 };
+      this.chains.set(id, chain);
+    }
+    return chain;
+  }
+
+  /** Marca dos fatos de fora do motor: a cadeia do projétil, se houver; senão, uma nova. */
+  private markFact(chainId: number, originTowerId: number | null): void {
+    this.mark.chainId = chainId;
+    this.mark.originTowerId = originTowerId;
   }
 
   /** Índices do tick: torres por id, torres com gatilho e vizinhanças. */
@@ -276,6 +338,11 @@ class TriggerEngine implements EffectEnv {
       this.state.droppedTotal++;
       return;
     }
+    const mark = this.mark;
+    if (mark.chainId === 0) {
+      mark.chainId = this.state.nextChainId++;
+      this.chainRecord(mark.chainId, mark.originTowerId);
+    }
     this.queue.push({
       towerId: armed.tower.id,
       sourceTowerId,
@@ -287,26 +354,44 @@ class TriggerEngine implements EffectEnv {
       y: point?.y ?? 0,
       blastRadius,
       blastPercent,
+      chainId: mark.chainId,
+      originTowerId: mark.originTowerId,
     });
   }
 
-  /** Transforma os eventos a partir de `from` em entradas; devolve o novo cursor. */
-  private convertFacts(from: number, depth: number, tickDepth: number): number {
+  /**
+   * Transforma os eventos a partir de `from` em entradas; devolve o novo
+   * cursor. `inherit`: os fatos nasceram da entrada que acabou de executar e
+   * ficam na cadeia dela (`this.mark`); senão, cada fato abre a própria.
+   */
+  private convertFacts(from: number, depth: number, tickDepth: number, inherit: boolean): number {
     const events = this.ctx.tickEvents;
     for (let i = from; i < events.length; i++) {
       const event = events[i]!;
       switch (event.type) {
         case 'towerFired':
-          if (event.shot !== 'extra') this.onShot(event.towerId, depth, tickDepth);
+          if (event.shot === 'extra') break;
+          if (!inherit) this.markFact(0, event.towerId);
+          this.onShot(event.towerId, depth, tickDepth);
           break;
         case 'towerActivated': {
           const armed = this.armedById.get(event.towerId);
           if (armed?.star.when.kind === 'onActivated') {
+            if (!inherit) this.markFact(0, event.sourceTowerId);
             this.enqueue(armed, event.sourceTowerId, 1, depth, tickDepth, null);
           }
           break;
         }
         case 'enemyKilled':
+          if (!inherit) {
+            // Morte por tiro de um gatilho: continua a cadeia que disparou o tiro.
+            if (event.chainId > 0) {
+              this.chainRecord(event.chainId, event.originTowerId);
+              this.markFact(event.chainId, event.originTowerId);
+            } else {
+              this.markFact(0, event.towerId);
+            }
+          }
           this.onKill(event, depth, tickDepth);
           break;
       }
@@ -389,17 +474,17 @@ class TriggerEngine implements EffectEnv {
     const own = star.effect;
 
     if (entry.blastRadius > 0) {
-      this.fired(armed, entry, 'explosion');
+      this.fired(armed, entry, 'explosion', true, null);
       runBlast(this, tower, type, entry);
       return;
     }
 
     if (own.kind === 'copyLast') {
-      const effects = resolveCopies(this, tower, own);
-      // Nada para copiar: o gatilho disparou, mas não há efeito.
-      if (effects.length === 0) this.fired(armed, entry, 'copyLast');
-      for (const effect of effects) {
-        this.fired(armed, entry, effect.kind);
+      const copies = resolveCopies(this, tower, own);
+      // Nada para copiar: o gatilho disparou, mas não há efeito (não conta na cadeia).
+      if (copies.length === 0) this.fired(armed, entry, 'copyLast', false, null);
+      for (const { effect, fromTowerId } of copies) {
+        this.fired(armed, entry, effect.kind, true, fromTowerId);
         if (runEffect(this, tower, type, effect, entry, true)) {
           tower.lastEffect = { effect, seq: this.state.nextSeq++ };
         }
@@ -413,16 +498,29 @@ class TriggerEngine implements EffectEnv {
       if (!findTowerTarget(this.index, this.ctx.state, tower, type, this.scores)) return;
     }
 
-    this.fired(armed, entry, own.kind);
+    // O raio em cadeia só é visível se sair: ganhar carga sem soltar não conta na cadeia.
+    const charging = own.kind === 'chargeLightning';
+    const event = this.fired(armed, entry, own.kind, !charging, null);
     if (runEffect(this, tower, type, own, entry, false)) {
       tower.lastEffect = { effect: own, seq: this.state.nextSeq++ };
+      if (charging) this.countVisible(event, entry);
     }
   }
 
-  /** Registra um gatilho executado: evento e contadores. */
-  private fired(armed: Armed, entry: PendingTrigger, effect: EffectKind): void {
+  /**
+   * Registra um gatilho executado: evento e contadores. Devolve o evento, que
+   * pode virar visível depois do efeito (`countVisible`).
+   */
+  private fired(
+    armed: Armed,
+    entry: PendingTrigger,
+    effect: EffectKind,
+    visible: boolean,
+    copiedFromTowerId: number | null,
+  ): SimEventOf<'triggerFired'> {
     const { ctx } = this;
-    ctx.emit({
+    const chain = this.chainRecord(entry.chainId, entry.originTowerId);
+    const event: SimEventOf<'triggerFired'> = {
       type: 'triggerFired',
       tick: ctx.state.tick,
       towerId: armed.tower.id,
@@ -430,9 +528,27 @@ class TriggerEngine implements EffectEnv {
       when: armed.star.when.kind,
       effect,
       depth: entry.depth,
-    });
+      chainId: chain.id,
+      originTowerId: chain.originTowerId,
+      visible: false,
+      chainLength: chain.length,
+      copiedFromTowerId,
+    };
+    ctx.emit(event);
+    if (visible) this.countVisible(event, entry);
     this.stats.fired++;
     if (entry.depth > this.stats.maxDepth) this.stats.maxDepth = entry.depth;
+    return event;
+  }
+
+  /** O gatilho teve efeito visível: conta na cadeia (o "x7") e na maior cadeia da run. */
+  private countVisible(event: SimEventOf<'triggerFired'>, entry: PendingTrigger): void {
+    const chain = this.chainRecord(entry.chainId, entry.originTowerId);
+    chain.length++;
+    event.visible = true;
+    event.chainLength = chain.length;
+    const stats = this.ctx.state.stats;
+    if (chain.length > stats.longestChain) stats.longestChain = chain.length;
   }
 }
 

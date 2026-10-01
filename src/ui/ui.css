@@ -390,6 +390,10 @@ body {
   margin-top: 4px;
 }
 
+.tower-tip-text {
+  white-space: pre-line;
+}
+
 .tower-tip-label {
   font-size: 11px;
   letter-spacing: 0.04em;

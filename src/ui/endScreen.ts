@@ -1,6 +1,6 @@
 /**
  * Telas de fim de run (vitória e derrota), em HTML sobre o canvas, com as
- * mesmas estatísticas: onda, tempo de jogo e abates.
+ * mesmas estatísticas: onda, tempo de jogo, abates e a maior cadeia.
  */
 
 export interface EndInfo {
@@ -10,6 +10,8 @@ export interface EndInfo {
   totalWaves: number;
   seconds: number;
   kills: number;
+  /** Maior cadeia da run, em gatilhos (`RunState.stats.longestChain`). */
+  longestChain: number;
   seed: string;
 }
 
@@ -39,7 +41,7 @@ export function showEndScreen(
   const summary = document.createElement('p');
   summary.textContent =
     `Onda ${info.wave}/${info.totalWaves} · Tempo: ${formatTime(info.seconds)} · ` +
-    `Abates: ${info.kills}`;
+    `Abates: ${info.kills} · Maior cadeia: x${info.longestChain}`;
 
   const seed = document.createElement('p');
   seed.className = 'end-seed';

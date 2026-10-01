@@ -5,6 +5,7 @@
  */
 
 import uiConfig from '../data/ui.json';
+import type { PurchasePreview } from './classPreview';
 import type { TowerInfo } from './towerInfo';
 
 const { delayMs, offsetX, offsetY, edgeMarginPx } = uiConfig.tooltip;
@@ -39,6 +40,11 @@ export class TowerTooltip {
     window.addEventListener('pointermove', this.onPointerMove);
   }
 
+  /** A janela está aberta (passou a espera)? */
+  get visible(): boolean {
+    return this.shown;
+  }
+
   /** O mouse está sobre o mapa (e não sobre a loja ou outro painel)? */
   get pointerOverCanvas(): boolean {
     return this.overCanvas;
@@ -47,8 +53,14 @@ export class TowerTooltip {
   /**
    * Chame a cada quadro. `info` é a torre a mostrar (`null` = nenhuma) e `key`
    * identifica a torre e a estrela: a espera de `delayMs` recomeça quando ela muda.
+   * `purchase`: prévia da compra (só no slot da loja).
    */
-  update(info: TowerInfo | null, key: string | null, now: number): void {
+  update(
+    info: TowerInfo | null,
+    key: string | null,
+    now: number,
+    purchase: PurchasePreview | null = null,
+  ): void {
     if (info === null || key === null) {
       this.key = null;
       this.hide();
@@ -58,7 +70,7 @@ export class TowerTooltip {
       this.key = key;
       this.since = now;
       this.hide();
-      this.fill(info);
+      this.fill(info, purchase);
     }
     if (!this.shown && now - this.since >= delayMs) {
       this.shown = true;
@@ -67,10 +79,14 @@ export class TowerTooltip {
     }
   }
 
-  private fill(info: TowerInfo): void {
+  private fill(info: TowerInfo, purchase: PurchasePreview | null): void {
     const parts = [el('tower-tip-title', info.title), el('tower-tip-sub', info.subtitle)];
     parts.push(labelled('Ataque', info.attack));
     if (info.trigger) parts.push(labelled('Gatilho', info.trigger));
+    if (purchase?.fusion) parts.push(labelled('Compra', `funde: ${purchase.fusion}`));
+    else if (purchase && purchase.classes.length > 0) {
+      parts.push(labelled('Compra', purchase.classes.join('\n')));
+    }
     this.root.replaceChildren(...parts);
   }
 

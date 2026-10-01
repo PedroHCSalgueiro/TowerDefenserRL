@@ -116,5 +116,56 @@
       "durationMs": 180,
       "maxActive": 64
     }
+  },
+  "triggerFx": {
+    "pulse": {
+      "durationMs": 300,
+      "maxActive": 64,
+      "lineWidth": 2,
+      "alpha": 0.9
+    },
+    "flash": {
+      "durationMs": 150,
+      "color": "#ffffff",
+      "lineWidth": 2,
+      "alpha": 0.9,
+      "padPx": 2
+    },
+    "chain": {
+      "text": "Cadeia x{n}!",
+      "minLength": 3,
+      "maxLabels": 5,
+      "lingerMs": 600,
+      "labelRefreshMs": 100,
+      "fontSize": 13,
+      "color": "#ffe08a",
+      "strokeColor": "#1d1f21",
+      "strokeWidth": 3,
+      "offsetY": 16,
+      "nexusOffsetY": 44,
+      "ring": {
+        "radius": 0.6,
+        "color": "#ffe08a",
+        "lineWidth": 2,
+        "alpha": 0.9,
+        "pulseScale": 0.15,
+        "pulseMs": 400
+      }
+    },
+    "numbers": {
+      "minDamage": 30,
+      "maxActive": 20,
+      "durationMs": 900,
+      "risePx": 18,
+      "fontSize": 11,
+      "color": "#ffffff",
+      "strokeColor": "#1d1f21",
+      "strokeWidth": 3
+    }
+  },
+  "hoverInfo": {
+    "neighborColor": "#7fd7ff",
+    "neighborLineWidth": 2,
+    "neighborAlpha": 0.95
   }
 }

@@ -30,6 +30,34 @@ export interface PendingTrigger {
    */
   blastRadius: number;
   blastPercent: number;
+  /** Cadeia a que a entrada pertence (`TriggerState.chains`). */
+  chainId: number;
+  /** Torre que começou a cadeia (`null` = núcleo). */
+  originTowerId: number | null;
+}
+
+/**
+ * Marcação de cadeia (T16) que um projétil ou uma morte carrega: a cadeia
+ * continua quando a morte vem de um tiro disparado por um gatilho.
+ * `chainId` 0 = sem cadeia (tiro normal).
+ */
+export interface ChainMark {
+  chainId: number;
+  originTowerId: number | null;
+}
+
+export const NO_CHAIN: ChainMark = { chainId: 0, originTowerId: null };
+
+/**
+ * Uma cadeia viva: tudo que nasceu de um mesmo fato inicial (tiro normal,
+ * morte ou ativação). Fica em `TriggerState.chains` enquanto houver entrada
+ * dela na fila ou projétil dela no ar.
+ */
+export interface ChainRecord {
+  id: number;
+  originTowerId: number | null;
+  /** Gatilhos com efeito visível executados na cadeia até agora (o "x7"). */
+  length: number;
 }
 
 export interface TriggerTickStats {
@@ -51,6 +79,10 @@ export interface TriggerState {
   lastTick: TriggerTickStats;
   /** Total de descartados na run (deve ficar em zero). */
   droppedTotal: number;
+  /** Próximo id de cadeia (começa em 1; 0 = sem cadeia). */
+  nextChainId: number;
+  /** Cadeias vivas, em ordem de id. */
+  chains: ChainRecord[];
 }
 
 export function emptyTickStats(): TriggerTickStats {
@@ -58,5 +90,12 @@ export function emptyTickStats(): TriggerTickStats {
 }
 
 export function createTriggerState(): TriggerState {
-  return { queue: [], nextSeq: 1, lastTick: emptyTickStats(), droppedTotal: 0 };
+  return {
+    queue: [],
+    nextSeq: 1,
+    lastTick: emptyTickStats(),
+    droppedTotal: 0,
+    nextChainId: 1,
+    chains: [],
+  };
 }

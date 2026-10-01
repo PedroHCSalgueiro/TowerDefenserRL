@@ -10,6 +10,10 @@ export interface Projectile {
   id: number;
   /** Quem disparou (id da torre). */
   sourceId: number;
+  /** Cadeia do gatilho que disparou o tiro (0 = tiro normal, sem cadeia). */
+  chainId: number;
+  /** Torre que começou essa cadeia (`null` = núcleo ou sem cadeia). */
+  originTowerId: number | null;
   /** Alvo: id do inimigo e o slot onde ele mora (o id confirma que é o mesmo). */
   targetId: number;
   targetSlot: number;
@@ -46,6 +50,8 @@ function blankProjectile(slot: number): Projectile {
     active: false,
     id: 0,
     sourceId: 0,
+    chainId: 0,
+    originTowerId: null,
     targetId: 0,
     targetSlot: 0,
     targetX: 0,

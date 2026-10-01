@@ -19,6 +19,7 @@ import type { System, TickContext } from '../engine/simulation';
 import { fireProjectile } from '../projectiles/systems';
 import type { SpatialIndex } from '../spatial/spatialIndex';
 import type { RunState } from '../state';
+import type { ChainMark } from '../triggers/triggerState';
 import type { Tower } from './placement';
 import type { TargetScores } from './targeting';
 import { towerDamage } from './stars';
@@ -49,6 +50,7 @@ export function fireTowerShot(
   shot: ShotKind,
   classes: ClassData = classData,
   damagePercent = 100,
+  chain?: ChainMark,
 ): void {
   const area = type.shot.kind === 'area';
   let shotDamage = towerDamage(type, tower);
@@ -73,6 +75,7 @@ export function fireTowerShot(
         type.shot.kind === 'area'
           ? type.shot.radius * areaRadiusMultiplier(classes, ctx.state, type)
           : 0,
+      chain,
     },
     target,
   );

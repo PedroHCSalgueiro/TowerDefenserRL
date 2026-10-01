@@ -11,20 +11,38 @@ import type { System } from '../engine/simulation';
 import { getTowerType, type TowerData } from '../towers/towerData';
 import type { ClassData } from './classData';
 
+/**
+ * Torres diferentes de cada classe e o nível ativo, para um conjunto de tipos
+ * no mapa. É a contagem do sistema e da prévia de classes da loja (T16).
+ */
+export function countClasses(
+  types: Iterable<string>,
+  towers: TowerData,
+  classes: ClassData,
+): Record<string, { members: string[]; level: number }> {
+  const sortedTypes = [...new Set(types)].sort();
+  const result: Record<string, { members: string[]; level: number }> = {};
+  for (const id of classes.ids) {
+    const members = sortedTypes.filter((t) => getTowerType(towers, t).classes.includes(id));
+    let level = 0;
+    for (const l of classes.classes[id]!.levels) if (members.length >= l.count) level++;
+    result[id] = { members, level };
+  }
+  return result;
+}
+
 export function createClassSystem(towers: TowerData, classes: ClassData): System {
-  const present = new Set<string>();
   return (ctx) => {
     const { state } = ctx;
-    present.clear();
-    for (const tower of state.towers) present.add(tower.type);
-    const sortedTypes = [...present].sort();
-
+    const counted = countClasses(
+      state.towers.map((t) => t.type),
+      towers,
+      classes,
+    );
     for (const id of classes.ids) {
       const status = state.classes[id]!;
-      const members = sortedTypes.filter((t) => getTowerType(towers, t).classes.includes(id));
+      const { members, level } = counted[id]!;
       status.members = members;
-      let level = 0;
-      for (const l of classes.classes[id]!.levels) if (members.length >= l.count) level++;
       if (level !== status.level) {
         const previousLevel = status.level;
         status.level = level;

@@ -7,12 +7,15 @@ import type { TickContext } from '../engine/simulation';
 import { applyArmor } from './armor';
 import { getEnemyType, type EnemyData } from './enemyData';
 import { releaseEnemy, type Enemy } from './pool';
+import { NO_CHAIN, type ChainMark } from '../triggers/triggerState';
 
 export interface DamageOptions {
   /** Ignora a armadura (execução). */
   readonly ignoreArmor?: boolean;
   /** Quanto o abate vale nos contadores de abate (padrão 1; execução usa o valor dos dados). */
   readonly killWeight?: number;
+  /** Cadeia do tiro (projétil disparado por um gatilho); padrão: sem cadeia. */
+  readonly chain?: ChainMark;
 }
 
 /**
@@ -32,6 +35,7 @@ export function damageEnemy(
   const damage = options?.ignoreArmor ? rawDamage : applyArmor(rawDamage, type.armor, data.armor);
   enemy.hp -= damage;
   if (enemy.hp <= 0) {
+    const chain = options?.chain ?? NO_CHAIN;
     enemy.hp = 0;
     releaseEnemy(ctx.state.enemies, enemy);
     ctx.emit({
@@ -44,6 +48,8 @@ export function damageEnemy(
       x: enemy.x,
       y: enemy.y,
       weight: options?.killWeight ?? 1,
+      chainId: chain.chainId,
+      originTowerId: chain.originTowerId,
     });
   }
   return damage;

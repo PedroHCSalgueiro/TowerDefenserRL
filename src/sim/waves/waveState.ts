@@ -45,4 +45,6 @@ export function nextWaveNumber(state: {
 export interface RunStats {
   /** Todos os inimigos mortos, por qualquer autor (inclusive o núcleo). */
   kills: number;
+  /** Maior cadeia da run, em gatilhos com efeito visível (T16). */
+  longestChain: number;
 }

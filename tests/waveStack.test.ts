@@ -373,7 +373,7 @@ describe('save com ondas empilhadas', () => {
     const sim = shopSim('save-pilha-ruim');
     call(sim, 3);
     const good = JSON.parse(sim.serialize()) as RunState;
-    expect(good.version).toBe(10);
+    expect(good.version).toBe(11);
     const swapped = structuredClone(good);
     swapped.waves.active.reverse();
     expect(() => Simulation.restore(JSON.stringify(swapped))).toThrow(/inválido/);

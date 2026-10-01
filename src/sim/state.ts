@@ -17,7 +17,7 @@ import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 import { createWaveState, type ActiveWave, type RunStats, type WaveState } from './waves/waveState';
 
-export const RUN_STATE_VERSION = 10;
+export const RUN_STATE_VERSION = 11;
 
 /**
  * Disposição usada pelo debug:
@@ -240,7 +240,7 @@ export function createRunState(seed: string): RunState {
     reportedGold: economyData.startingGold,
     wave: 0,
     waves: createWaveState(),
-    stats: { kills: 0 },
+    stats: { kills: 0, longestChain: 0 },
     shop: { slots: [] },
     debug: { nexusInvulnerable: false, stress: null },
     commandQueue: [],
@@ -345,12 +345,14 @@ export function deserializeRunState(json: string): RunState {
     !Number.isInteger(state.wave) ||
     !isWaveState(waves, state.wave as number) ||
     !Number.isInteger(stats?.kills) ||
+    !Number.isInteger(stats?.longestChain) ||
     !Array.isArray(shop?.slots) ||
     !shop.slots.every((slot) => slot === null || typeof slot === 'string') ||
     !Array.isArray(enemies?.slots) ||
     !Array.isArray(enemies.free) ||
     !Number.isInteger(enemies.activeCount) ||
     !Array.isArray(projectiles?.slots) ||
+    !projectiles.slots.every((p) => Number.isInteger(p.chainId)) ||
     !Array.isArray(projectiles.free) ||
     !Number.isInteger(projectiles.activeCount) ||
     !Array.isArray(towers) ||
@@ -360,6 +362,9 @@ export function deserializeRunState(json: string): RunState {
     typeof triggers.lastTick !== 'object' ||
     triggers.lastTick === null ||
     !Number.isInteger(triggers.droppedTotal) ||
+    !Number.isInteger(triggers.nextChainId) ||
+    !Array.isArray(triggers.chains) ||
+    !triggers.queue.every((entry) => Number.isInteger(entry.chainId)) ||
     !isClassState(classes) ||
     typeof debug?.nexusInvulnerable !== 'boolean' ||
     (debug.stress !== null && typeof debug.stress !== 'object') ||

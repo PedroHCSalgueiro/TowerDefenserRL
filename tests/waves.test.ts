@@ -430,7 +430,7 @@ describe('HUD das ondas', () => {
   });
 });
 
-describe('save versão 10 com ondas', () => {
+describe('save versão 11 com ondas', () => {
   function midWave(): Simulation {
     const sim = Simulation.create('save', createGameSystems(realMap));
     sim.enqueue({
@@ -471,7 +471,7 @@ describe('save versão 10 com ondas', () => {
 
   it('recusa save sem as ondas ou sem as estatísticas, e aceita a vitória', () => {
     const good = JSON.parse(midWave().serialize()) as RunState;
-    expect(good.version).toBe(10);
+    expect(good.version).toBe(11);
     expect(() => deserializeRunState(JSON.stringify(good))).not.toThrow();
     const noWaves = { ...good, waves: undefined };
     expect(() => deserializeRunState(JSON.stringify(noWaves))).toThrow(/inválido/);

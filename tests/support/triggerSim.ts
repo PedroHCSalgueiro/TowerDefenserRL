@@ -134,5 +134,16 @@ export function killFact(
   weight = 1,
   enemyId = 9999,
 ): SimEvent {
-  return { type: 'enemyKilled', tick: 0, enemyId, enemyType: 'walker', towerId, x, y, weight };
+  return {
+    type: 'enemyKilled',
+    tick: 0,
+    enemyId,
+    enemyType: 'walker',
+    towerId,
+    x,
+    y,
+    weight,
+    chainId: 0,
+    originTowerId: null,
+  };
 }
