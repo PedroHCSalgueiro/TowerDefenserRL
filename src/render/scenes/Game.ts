@@ -19,7 +19,9 @@ import { canPlaceAt } from '../../ui/shopModel';
 import { ShopController } from '../../ui/shopController';
 import { describeTower } from '../../ui/towerInfo';
 import { TowerTooltip } from '../../ui/towerTooltip';
-import { showDefeatScreen } from '../../ui/defeatScreen';
+import { showEndScreen } from '../../ui/endScreen';
+import { WaveHud } from '../../ui/waveHud';
+import { defaultWaveSchedules } from '../../ui/waveHudModel';
 import { CarryView } from '../views/CarryView';
 import { EnemyView } from '../views/EnemyView';
 import { GridView } from '../views/GridView';
@@ -41,8 +43,9 @@ export class Game extends Phaser.Scene {
   private shop!: ShopController;
   private tooltip!: TowerTooltip;
   private carryView!: CarryView;
+  private waveHud!: WaveHud;
   private map!: GridMap;
-  private removeDefeatScreen: (() => void) | null = null;
+  private removeEndScreen: (() => void) | null = null;
 
   constructor() {
     super('Game');
@@ -86,6 +89,7 @@ export class Game extends Phaser.Scene {
     const evolveNexus = () => this.runner.sim.enqueue({ type: 'evolveNexus' });
     this.nexusPanel = new NexusPanel(overlayParent, evolveNexus);
     this.tooltip = new TowerTooltip(overlayParent);
+    this.waveHud = new WaveHud(overlayParent, () => this.runner.sim.enqueue({ type: 'callWave' }));
     this.carryView = new CarryView(this, grid.projection, towerData);
     this.shop = new ShopController({
       parent: overlayParent,
@@ -102,8 +106,9 @@ export class Game extends Phaser.Scene {
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.removeDefeatScreen?.();
-      this.removeDefeatScreen = null;
+      this.removeEndScreen?.();
+      this.removeEndScreen = null;
+      this.waveHud.destroy();
       this.panel.destroy();
       this.classPanel.destroy();
       this.nexusPanel.destroy();
@@ -129,6 +134,7 @@ export class Game extends Phaser.Scene {
     this.panel.update();
     this.classPanel.update(state.classes);
     this.nexusPanel.update(state);
+    this.waveHud.update(state);
     this.shop.update();
     const carrying = this.shop.carrying;
     const hovered = this.grid.hoveredCell;
@@ -139,10 +145,18 @@ export class Game extends Phaser.Scene {
       hovered !== null && canPlaceAt(state, this.map, hovered),
     );
 
-    if (state.status === 'lost' && !this.removeDefeatScreen) {
-      this.removeDefeatScreen = showDefeatScreen(
+    if (state.status !== 'playing' && !this.removeEndScreen) {
+      const totalWaves = defaultWaveSchedules.length;
+      this.removeEndScreen = showEndScreen(
         this.game.canvas.parentElement ?? document.body,
-        { seconds: state.tick / engineConfig.ticksPerSecond, seed: state.seed },
+        {
+          won: state.status === 'won',
+          wave: Math.min(state.waves.active ? state.wave + 1 : state.wave, totalWaves),
+          totalWaves,
+          seconds: state.tick / engineConfig.ticksPerSecond,
+          kills: state.stats.kills,
+          seed: state.seed,
+        },
         () => this.scene.restart(),
       );
     }

@@ -101,12 +101,13 @@ describe('spawn de inimigos pelo debug', () => {
     }
   });
 
-  it('tipos sorteados e espalhados pela rota', () => {
+  it('tipos sorteados (sem chefão) e espalhados pela rota', () => {
     const sim = smallSim();
     sim.enqueue({ type: 'debugSpawnEnemies', count: 50, enemyType: null, layout: 'spread' });
     run(sim, 1);
     const enemies = activeEnemies(sim.state);
-    expect(new Set(enemies.map((e) => e.type))).toEqual(new Set(Object.keys(testEnemies.types)));
+    const nonBoss = Object.keys(testEnemies.types).filter((id) => !testEnemies.types[id]!.boss);
+    expect(new Set(enemies.map((e) => e.type))).toEqual(new Set(nonBoss));
     const routes = buildRoutes(smallMap);
     const far = enemies.filter((e) => {
       const route = routes[testEnemies.types[e.type]!.movement];

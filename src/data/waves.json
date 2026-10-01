@@ -1,0 +1,391 @@
+{
+  "timing": {
+    "pulseSpawnSeconds": 0.5,
+    "pulsePauseSeconds": 4,
+    "massSpawnSeconds": 0.15
+  },
+  "waves": [
+    {
+      "hpMultiplier": 1.0,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 3
+          }
+        ],
+        [
+          {
+            "type": "common",
+            "count": 3
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.12,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 3
+          }
+        ],
+        [
+          {
+            "type": "common",
+            "count": 4
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.25,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 4
+          }
+        ],
+        [
+          {
+            "type": "common",
+            "count": 3
+          },
+          {
+            "type": "fast",
+            "count": 2
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 10
+        },
+        {
+          "type": "fast",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.4,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 5
+          }
+        ],
+        [
+          {
+            "type": "armored",
+            "count": 3
+          },
+          {
+            "type": "common",
+            "count": 2
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 14
+        },
+        {
+          "type": "fast",
+          "count": 4
+        },
+        {
+          "type": "armored",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.57,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 6
+          }
+        ],
+        [
+          {
+            "type": "flying",
+            "count": 4
+          }
+        ],
+        [
+          {
+            "type": "armored",
+            "count": 3
+          },
+          {
+            "type": "fast",
+            "count": 3
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 14
+        },
+        {
+          "type": "fast",
+          "count": 5
+        },
+        {
+          "type": "armored",
+          "count": 4
+        },
+        {
+          "type": "flying",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.76,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 6
+          }
+        ],
+        [
+          {
+            "type": "armored",
+            "count": 4
+          },
+          {
+            "type": "fast",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "flying",
+            "count": 6
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 18
+        },
+        {
+          "type": "fast",
+          "count": 8
+        },
+        {
+          "type": "armored",
+          "count": 6
+        },
+        {
+          "type": "flying",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.97,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 7
+          }
+        ],
+        [
+          {
+            "type": "armored",
+            "count": 5
+          },
+          {
+            "type": "fast",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "flying",
+            "count": 7
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 24
+        },
+        {
+          "type": "fast",
+          "count": 10
+        },
+        {
+          "type": "armored",
+          "count": 8
+        },
+        {
+          "type": "flying",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 2.21,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 8
+          }
+        ],
+        [
+          {
+            "type": "armored",
+            "count": 6
+          },
+          {
+            "type": "fast",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "flying",
+            "count": 8
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 32
+        },
+        {
+          "type": "fast",
+          "count": 14
+        },
+        {
+          "type": "armored",
+          "count": 10
+        },
+        {
+          "type": "flying",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 2.48,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 8
+          }
+        ],
+        [
+          {
+            "type": "fast",
+            "count": 8
+          }
+        ],
+        [
+          {
+            "type": "armored",
+            "count": 8
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 50
+        },
+        {
+          "type": "fast",
+          "count": 20
+        },
+        {
+          "type": "armored",
+          "count": 18
+        },
+        {
+          "type": "flying",
+          "count": 18
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 2.77,
+      "pulses": [
+        [
+          {
+            "type": "common",
+            "count": 8
+          }
+        ],
+        [
+          {
+            "type": "armored",
+            "count": 6
+          },
+          {
+            "type": "fast",
+            "count": 2
+          }
+        ],
+        [
+          {
+            "type": "flying",
+            "count": 8
+          }
+        ]
+      ],
+      "mass": [
+        {
+          "type": "common",
+          "count": 9
+        },
+        {
+          "type": "fast",
+          "count": 9
+        },
+        {
+          "type": "boss",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 9
+        },
+        {
+          "type": "flying",
+          "count": 9
+        }
+      ]
+    }
+  ]
+}

@@ -26,6 +26,8 @@ export interface SimEventPayloads {
     weight: number;
   };
   enemyReachedNexus: { enemyId: number; damage: number };
+  /** O chefão chegou ao núcleo: derrota imediata (`runLost` vem depois no mesmo tick). */
+  bossReachedNexus: { enemyId: number; enemyType: string };
   /** `x`/`y`: posição do alvo na grade no momento do ataque. */
   nexusFired: { targetId: number; x: number; y: number };
   runLost: Record<never, never>;
@@ -95,7 +97,15 @@ export interface SimEventPayloads {
    * nova e o mapa já está no limite do núcleo.
    */
   buyRefused: { slot: number; reason: 'limit' };
+  /** A onda `wave` (a primeira é a 1) foi chamada; os inimigos dela começam a nascer. */
   waveStarted: { wave: number };
+  /**
+   * "Chamar onda" recusado: `over` = run encerrada ou sem ondas restantes;
+   * `active` = onda em andamento; `enemies` = ainda há inimigo vivo no mapa.
+   */
+  callWaveRefused: { reason: 'over' | 'active' | 'enemies' };
+  /** A última onda terminou com o chefão morto (`waveEnded` vem antes). */
+  runWon: { wave: number };
 }
 
 export type SimEventType = keyof SimEventPayloads;

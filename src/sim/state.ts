@@ -15,8 +15,9 @@ import { newShop, type ShopState } from './shop/shop';
 import type { Tower } from './towers/placement';
 import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
+import { createWaveState, type RunStats, type WaveState } from './waves/waveState';
 
-export const RUN_STATE_VERSION = 8;
+export const RUN_STATE_VERSION = 9;
 
 /**
  * Disposição usada pelo debug:
@@ -104,11 +105,23 @@ export interface SellTowerCommand {
 }
 
 /**
- * Fecha a onda atual: juros, bônus e loja nova. Enquanto não há ondas, é o
- * botão "Encerrar onda" do debug.
+ * Debug ("Encerrar onda"): fecha a onda atual pelo mesmo `endWave` do fim
+ * automático (juros, bônus e loja nova). Com onda em andamento, tira do mapa
+ * os inimigos que restam, sem ouro de abate.
  */
 export interface EndWaveCommand {
   type: 'endWave';
+}
+
+/** Ação do jogador: chama a próxima onda (só com o mapa limpo, por enquanto). */
+export interface CallWaveCommand {
+  type: 'callWave';
+}
+
+/** Debug: entre ondas, fecha ondas (com juros e bônus) até a próxima ser `wave`. */
+export interface DebugSkipToWaveCommand {
+  type: 'debugSkipToWave';
+  wave: number;
 }
 
 /** Ação do jogador: evolui o núcleo pagando o custo do próximo nível. */
@@ -124,12 +137,14 @@ export type SimCommand =
   | RerollShopCommand
   | SellTowerCommand
   | EndWaveCommand
+  | CallWaveCommand
   | EvolveNexusCommand
   | DebugSpawnEnemiesCommand
   | DebugSpawnTowersCommand
   | DebugClearCommand
   | DebugSetStressCommand
-  | DebugSetNexusInvulnerableCommand;
+  | DebugSetNexusInvulnerableCommand
+  | DebugSkipToWaveCommand;
 
 /** Modo estresse: mantém `count` inimigos ativos, repondo quem morre ou chega. */
 export interface StressConfig {
@@ -143,7 +158,7 @@ export interface DebugState {
   stress: StressConfig | null;
 }
 
-export type RunStatus = 'playing' | 'lost';
+export type RunStatus = 'playing' | 'lost' | 'won';
 
 export interface NexusState {
   hp: number;
@@ -176,6 +191,9 @@ export interface RunState {
   reportedGold: number;
   /** Ondas encerradas até agora (a primeira a fechar é a 1). */
   wave: number;
+  /** Onda em andamento (a de número `wave + 1`), se houver. */
+  waves: WaveState;
+  stats: RunStats;
   shop: ShopState;
   debug: DebugState;
   /** Ações enfileiradas que ainda não foram aplicadas. */
@@ -204,6 +222,8 @@ export function createRunState(seed: string): RunState {
     gold: economyData.startingGold,
     reportedGold: economyData.startingGold,
     wave: 0,
+    waves: createWaveState(),
+    stats: { kills: 0 },
     shop: { slots: [] },
     debug: { nexusInvulnerable: false, stress: null },
     commandQueue: [],
@@ -256,13 +276,14 @@ export function deserializeRunState(json: string): RunState {
   if (state.version !== RUN_STATE_VERSION) {
     throw new Error(`Versão de save não suportada: ${String(state.version)}`);
   }
-  const { nexus, enemies, projectiles, towers, triggers, classes, debug, shop } = state;
+  const { nexus, enemies, projectiles, towers, triggers, classes, debug, shop, waves, stats } =
+    state;
   if (
     typeof state.seed !== 'string' ||
     !Number.isInteger(state.tick) ||
     !Number.isInteger(state.rngState) ||
     !Number.isInteger(state.nextEntityId) ||
-    (state.status !== 'playing' && state.status !== 'lost') ||
+    (state.status !== 'playing' && state.status !== 'lost' && state.status !== 'won') ||
     typeof nexus?.hp !== 'number' ||
     typeof nexus.maxHp !== 'number' ||
     !Number.isInteger(nexus.attackCooldownTicks) ||
@@ -274,6 +295,12 @@ export function deserializeRunState(json: string): RunState {
     !Number.isInteger(state.gold) ||
     !Number.isInteger(state.reportedGold) ||
     !Number.isInteger(state.wave) ||
+    typeof waves?.active !== 'boolean' ||
+    !Number.isInteger(waves.startTick) ||
+    !Number.isInteger(waves.spawned) ||
+    waves.spawned < 0 ||
+    !Number.isInteger(waves.bossesKilled) ||
+    !Number.isInteger(stats?.kills) ||
     !Array.isArray(shop?.slots) ||
     !shop.slots.every((slot) => slot === null || typeof slot === 'string') ||
     !Array.isArray(enemies?.slots) ||

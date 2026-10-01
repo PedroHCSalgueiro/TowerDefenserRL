@@ -9,7 +9,8 @@ import type { Routes } from './route';
 
 /**
  * Coloca um inimigo do tipo pedido a `distance` casas do início da sua rota
- * (0 = na entrada) e emite `enemySpawned`.
+ * (0 = na entrada) e emite `enemySpawned`. `hpMultiplier` multiplica a vida
+ * dos dados (o multiplicador da onda).
  */
 export function spawnEnemy(
   ctx: TickContext,
@@ -17,13 +18,14 @@ export function spawnEnemy(
   data: EnemyData,
   enemyType: string,
   distance = 0,
+  hpMultiplier = 1,
 ): Enemy {
   const type = getEnemyType(data, enemyType);
   const enemy = acquireEnemy(ctx.state.enemies);
   enemy.id = ctx.allocateId();
   enemy.type = enemyType;
-  enemy.hp = type.hp;
-  enemy.maxHp = type.hp;
+  enemy.hp = type.hp * hpMultiplier;
+  enemy.maxHp = enemy.hp;
   enemy.distance = distance;
   routes[type.movement].sampleInto(distance, enemy);
   // Sem isso, um slot reaproveitado seria interpolado a partir da posição antiga.

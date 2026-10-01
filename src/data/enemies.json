@@ -1,5 +1,7 @@
 {
-  "armor": { "scale": 100 },
+  "armor": {
+    "scale": 100
+  },
   "types": {
     "common": {
       "hp": 30,
@@ -25,6 +27,22 @@
       "gold": 2,
       "movement": "ground"
     },
-    "flying": { "hp": 24, "speed": 1.2, "armor": 0, "nexusDamage": 1, "gold": 2, "movement": "air" }
+    "flying": {
+      "hp": 24,
+      "speed": 1.2,
+      "armor": 0,
+      "nexusDamage": 1,
+      "gold": 2,
+      "movement": "air"
+    },
+    "boss": {
+      "hp": 1500,
+      "speed": 0.5,
+      "armor": 30,
+      "nexusDamage": 0,
+      "gold": 50,
+      "movement": "ground",
+      "boss": true
+    }
   }
 }

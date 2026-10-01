@@ -11,9 +11,23 @@ import { spawnEnemy } from '../enemies/systems';
 import type { System, TickContext } from '../engine/simulation';
 import type { DebugLayout } from '../state';
 
+const randomTypeCache = new WeakMap<EnemyData, string[]>();
+
+/** Tipos sorteáveis pelo debug e pelo estresse: todos menos os chefões. */
+function randomTypes(data: EnemyData): string[] {
+  let types = randomTypeCache.get(data);
+  if (!types) {
+    types = Object.keys(data.types).filter((id) => !getEnemyType(data, id).boss);
+    randomTypeCache.set(data, types);
+  }
+  return types;
+}
+
 /**
  * Cria um inimigo segundo a disposição: `clustered` nasce na entrada;
- * `spread` nasce num ponto sorteado da sua rota. `enemyType` `null` sorteia o tipo.
+ * `spread` nasce num ponto sorteado da sua rota. `enemyType` `null` sorteia o
+ * tipo entre os que não são chefão (o chefão só vem pelas ondas ou pelo tipo
+ * escolhido no painel).
  */
 export function spawnDebugEnemy(
   ctx: TickContext,
@@ -22,7 +36,7 @@ export function spawnDebugEnemy(
   enemyType: string | null,
   layout: DebugLayout,
 ): void {
-  const typeId = enemyType ?? ctx.rng.pick(Object.keys(data.types));
+  const typeId = enemyType ?? ctx.rng.pick(randomTypes(data));
   const route = routes[getEnemyType(data, typeId).movement];
   const distance = layout === 'spread' ? ctx.rng.nextFloat() * route.length : 0;
   spawnEnemy(ctx, routes, data, typeId, distance);

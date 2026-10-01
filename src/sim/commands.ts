@@ -4,7 +4,6 @@
  */
 
 import type { SimDebugData } from './debug/debugData';
-import { endWave } from './economy/economy';
 import { economyData, type EconomyData } from './economy/economyData';
 import { spawnDebugEnemy } from './debug/stress';
 import { patternTowerType, pickTowerCells } from './debug/towerCells';
@@ -20,6 +19,8 @@ import { releaseAllProjectiles } from './projectiles/pool';
 import { buyTower, rerollShop, sellTower } from './shop/shop';
 import { placeTower } from './towers/placement';
 import type { TowerData } from './towers/towerData';
+import type { WaveSchedule } from './waves/schedule';
+import { callWave, forceEndWave, skipToWave } from './waves/waves';
 
 export function createCommandSystem(
   map: GridMap,
@@ -27,6 +28,7 @@ export function createCommandSystem(
   enemies: EnemyData,
   towers: TowerData,
   debug: SimDebugData,
+  schedules: readonly WaveSchedule[],
   economy: EconomyData = economyData,
   nexus: NexusData = nexusData,
 ): System {
@@ -66,8 +68,14 @@ export function createCommandSystem(
         case 'evolveNexus':
           evolveNexus(ctx, nexus);
           break;
+        case 'callWave':
+          callWave(ctx, schedules);
+          break;
         case 'endWave':
-          endWave(ctx, economy, towers);
+          forceEndWave(ctx, schedules, economy, towers);
+          break;
+        case 'debugSkipToWave':
+          skipToWave(ctx, schedules, economy, towers, command.wave);
           break;
         case 'debugSpawnEnemies': {
           const count = clampCount(command.count);

@@ -13,6 +13,7 @@ import { hasRoomForTower } from '../sim/towers/limit';
 import { fusionStar } from '../sim/towers/fusion';
 import type { RunState } from '../sim/state';
 import { getTowerType, type Rarity, type TowerData } from '../sim/towers/towerData';
+import { waveData } from '../sim/waves/waveData';
 
 export const RARITY_LABELS: Readonly<Record<Rarity, string>> = {
   common: 'Comum',
@@ -102,7 +103,8 @@ export function buildShopModel(
   return {
     gold: state.gold,
     interest: interestFor(economy, state.gold),
-    nextWave: state.wave + 1,
+    // Depois da última onda, o rótulo fica na última.
+    nextWave: Math.min(state.wave + 1, waveData.waves.length),
     rerollCost: economy.shop.rerollCost,
     canReroll: state.gold >= economy.shop.rerollCost,
     slots,

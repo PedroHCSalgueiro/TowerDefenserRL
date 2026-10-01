@@ -24,8 +24,8 @@ describe('applyArmor', () => {
 });
 
 describe('dados de inimigos', () => {
-  it('enemies.json tem os 4 tipos do protótipo', () => {
-    expect(Object.keys(enemyData.types)).toEqual(['common', 'fast', 'armored', 'flying']);
+  it('enemies.json tem os 4 tipos do protótipo e o chefão', () => {
+    expect(Object.keys(enemyData.types)).toEqual(['common', 'fast', 'armored', 'flying', 'boss']);
     expect(getEnemyType(enemyData, 'flying').movement).toBe('air');
     expect(getEnemyType(enemyData, 'armored').armor).toBe(50);
     expect(enemyData.armor.scale).toBe(100);

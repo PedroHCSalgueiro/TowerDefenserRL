@@ -61,10 +61,10 @@ export class Simulation {
     this.runState.commandQueue.push(command);
   }
 
-  /** Avança um tick. Depois da derrota a run fica congelada. */
+  /** Avança um tick. Depois da derrota ou da vitória a run fica congelada. */
   step(): void {
     const state = this.runState;
-    if (state.status === 'lost') return;
+    if (state.status !== 'playing') return;
     const commands = state.commandQueue.splice(0);
     state.tick++;
     const tickEvents = this.tickEvents;

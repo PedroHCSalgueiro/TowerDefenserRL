@@ -260,8 +260,15 @@ export class DebugPanel {
       this.send({ type: 'debugSetStress', stress: null }),
     );
     const clear = button('Limpar tudo', () => this.send({ type: 'debugClear' }));
-    // Ainda não há ondas: fecha a onda atual (juros, bônus e loja nova).
+    // Fecha a onda atual (juros, bônus e loja nova); com onda em andamento,
+    // tira do mapa os inimigos que restam.
     const endWave = button('Encerrar onda', () => this.send({ type: 'endWave' }));
+    // Entre ondas: fecha ondas (com juros e bônus) até a próxima ser a escolhida.
+    const skipWave = numberInput(10);
+    skipWave.min = '1';
+    const skipToWave = button('Pular para onda', () =>
+      this.send({ type: 'debugSkipToWave', wave: skipWave.valueAsNumber }),
+    );
 
     // Gravação
     const record = button(`Gravar ${perf.recordSeconds} s`, () => this.startRecording());
@@ -285,6 +292,9 @@ export class DebugPanel {
       this.stats,
       speedRow,
       row('Núcleo', el('label', {}, [this.invulnerable, ' invulnerável'])),
+      el('div', { className: 'debug-section', textContent: 'Ondas e economia' }),
+      row('', endWave),
+      row('', skipToWave, skipWave),
       el('div', { className: 'debug-section', textContent: 'Torre' }),
       row('Tipo', towerType.select, towerStar, placeTower),
       this.placeNote,
@@ -296,8 +306,6 @@ export class DebugPanel {
       row('Inimigos', enemyCount, enemyType, enemyLayout, spawnEnemies),
       row('Torres', towerCount, towerLayout, spawnStar, spawnTowers),
       row('', clear),
-      el('div', { className: 'debug-section', textContent: 'Economia' }),
-      row('', endWave),
       el('div', { className: 'debug-section', textContent: 'Gravação' }),
       row('', record, copy, forget),
       this.recordStatus,

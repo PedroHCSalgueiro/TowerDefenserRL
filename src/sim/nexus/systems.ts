@@ -14,8 +14,10 @@ import type { NexusData } from './nexusData';
 
 /**
  * Inimigo que chegou ao fim da rota causa `nexusDamage` e sai do mapa. Se a
- * vida do núcleo zerar, a run termina (`runLost` é emitido uma vez). Com o
- * núcleo invulnerável (debug), o inimigo sai do mapa sem causar dano.
+ * vida do núcleo zerar, a run termina (`runLost` é emitido uma vez). O
+ * chefão que chega é derrota imediata, qualquer que seja a vida: o núcleo
+ * vai a 0. Com o núcleo invulnerável (debug), o inimigo (chefão inclusive)
+ * sai do mapa sem causar dano.
  */
 export function createNexusContactSystem(routes: Routes, data: EnemyData): System {
   return (ctx) => {
@@ -24,10 +26,19 @@ export function createNexusContactSystem(routes: Routes, data: EnemyData): Syste
       if (!enemy.active) continue;
       const type = getEnemyType(data, enemy.type);
       if (enemy.distance < routes[type.movement].length) continue;
-      const damage = state.debug.nexusInvulnerable ? 0 : type.nexusDamage;
+      const invulnerable = state.debug.nexusInvulnerable;
+      const damage = invulnerable ? 0 : type.boss ? state.nexus.hp : type.nexusDamage;
       state.nexus.hp = Math.max(0, state.nexus.hp - damage);
       releaseEnemy(state.enemies, enemy);
       ctx.emit({ type: 'enemyReachedNexus', tick: state.tick, enemyId: enemy.id, damage });
+      if (type.boss && !invulnerable) {
+        ctx.emit({
+          type: 'bossReachedNexus',
+          tick: state.tick,
+          enemyId: enemy.id,
+          enemyType: enemy.type,
+        });
+      }
     }
     if (state.nexus.hp <= 0 && state.status === 'playing') {
       state.status = 'lost';

@@ -8,7 +8,7 @@ body {
   width: fit-content;
 }
 
-.defeat-screen {
+.end-screen {
   position: absolute;
   inset: 0;
   display: flex;
@@ -17,10 +17,10 @@ body {
   background: rgba(10, 10, 12, 0.72);
   font-family: system-ui, sans-serif;
   color: #eeeeee;
-  animation: defeat-fade 250ms ease-out;
+  animation: end-fade 250ms ease-out;
 }
 
-.defeat-panel {
+.end-panel {
   padding: 32px 48px;
   border: 1px solid #b54848;
   border-radius: 8px;
@@ -28,19 +28,19 @@ body {
   text-align: center;
 }
 
-.defeat-panel h1 {
+.end-panel h1 {
   margin: 0 0 12px;
   font-size: 32px;
   color: #e25555;
 }
 
-.defeat-panel p {
-  margin: 0 0 24px;
+.end-panel p {
+  margin: 0 0 8px;
   font-family: monospace;
   color: #bbbbbb;
 }
 
-.defeat-panel button {
+.end-panel button {
   padding: 10px 24px;
   border: none;
   border-radius: 4px;
@@ -50,12 +50,35 @@ body {
   cursor: pointer;
 }
 
-.defeat-panel button:hover,
-.defeat-panel button:focus-visible {
+.end-panel button:hover,
+.end-panel button:focus-visible {
   background: #d05a5a;
 }
 
-@keyframes defeat-fade {
+.end-panel .end-seed {
+  margin-bottom: 24px;
+  font-size: 12px;
+  color: #888888;
+}
+
+.end-won {
+  border-color: #4f9a5b;
+}
+
+.end-won h1 {
+  color: #6ccf7c;
+}
+
+.end-won button {
+  background: #3f8a4b;
+}
+
+.end-won button:hover,
+.end-won button:focus-visible {
+  background: #4fa65d;
+}
+
+@keyframes end-fade {
   from {
     opacity: 0;
   }
@@ -372,4 +395,32 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #8a8f94;
+}
+
+.wave-hud {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border: 1px solid #3a3d40;
+  border-radius: 8px;
+  background: rgba(20, 21, 23, 0.92);
+  font:
+    13px system-ui,
+    sans-serif;
+  color: #dddddd;
+}
+
+.wave-label {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.wave-detail {
+  min-width: 120px;
+  color: #aaaaaa;
 }
