@@ -48,6 +48,13 @@ export class GridView {
     return this.selected;
   }
 
+  /** Seleciona a casa (a seleção acompanha a torre movida, T15). */
+  select(cell: GridCoord | null): void {
+    if (sameCell(cell, this.selected)) return;
+    this.selected = cell && { x: cell.x, y: cell.y };
+    this.refresh();
+  }
+
   /** Casa sob o mouse (mostrada no painel de debug). */
   get hoveredCell(): GridCoord | null {
     return this.hovered;

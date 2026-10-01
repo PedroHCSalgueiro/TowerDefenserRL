@@ -6,6 +6,7 @@ import { DebugPanel } from '../../debug/DebugPanel';
 import { PerfMonitor } from '../../debug/PerfMonitor';
 import { resolveSeed } from '../../debug/seed';
 import { enemyData } from '../../sim/enemies/enemyData';
+import type { SimEvent } from '../../sim/engine/events';
 import { Simulation, SimulationRunner } from '../../sim/engine/simulation';
 import type { RunState } from '../../sim/state';
 import { loadMap, type GridMap } from '../../sim/grid/map';
@@ -17,6 +18,8 @@ import { ClassPanel } from '../../ui/classPanel';
 import { NexusPanel } from '../../ui/nexusPanel';
 import { canPlaceAt } from '../../ui/shopModel';
 import { ShopController } from '../../ui/shopController';
+import { TowerDragController } from '../../ui/towerDragController';
+import { canDropAt } from '../../ui/towerDragModel';
 import { describeTower } from '../../ui/towerInfo';
 import { TowerTooltip } from '../../ui/towerTooltip';
 import { showEndScreen } from '../../ui/endScreen';
@@ -43,6 +46,7 @@ export class Game extends Phaser.Scene {
   private shop!: ShopController;
   private tooltip!: TowerTooltip;
   private carryView!: CarryView;
+  private towerDrag!: TowerDragController;
   private waveHud!: WaveHud;
   private map!: GridMap;
   private removeEndScreen: (() => void) | null = null;
@@ -115,9 +119,38 @@ export class Game extends Phaser.Scene {
       selectedCell: () => grid.selectedCell,
       cellAtClient: (x, y) => grid.cellAtClient(x, y),
     });
-    // Clique no mapa com a torre presa ao mouse (teclas 1 a 5) posiciona.
+    const cellOf = (towerId: number) => {
+      const tower = this.runner.sim.state.towers.find((t) => t.id === towerId);
+      return tower ? { x: tower.x, y: tower.y } : null;
+    };
+    this.towerDrag = new TowerDragController({
+      parent: overlayParent,
+      map,
+      state: () => this.runner.sim.state,
+      paused,
+      enqueue: (command) => {
+        if (!paused()) this.runner.sim.enqueue(command);
+      },
+      cellAtClient: (x, y) => grid.cellAtClient(x, y),
+      // A seleção acompanha a torre arrastada (vender com S e o alcance).
+      onStart: (towerId) => grid.select(cellOf(towerId)),
+      onLocked: (towerId) => {
+        const cell = cellOf(towerId);
+        if (cell) this.towerView.showLocked(towerId, cell);
+      },
+    });
+    // Clique no mapa com a torre presa ao mouse (teclas 1 a 5) posiciona; sem
+    // ela, apertar sobre uma torre pode virar um arrasto para mover (T15).
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      if (pointer.leftButtonDown()) this.shop.clickCell(grid.cellAt(pointer));
+      if (!pointer.leftButtonDown()) return;
+      const cell = grid.cellAt(pointer);
+      if (this.shop.carrying) {
+        this.shop.clickCell(cell);
+        return;
+      }
+      const tower = cell ? this.towerUnderPointer(this.runner.sim.state, cell) : undefined;
+      const event = pointer.event as PointerEvent;
+      if (tower) this.towerDrag.press(tower, event.clientX, event.clientY);
     });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -130,6 +163,7 @@ export class Game extends Phaser.Scene {
       this.shop.destroy();
       this.tooltip.destroy();
       this.carryView.destroy();
+      this.towerDrag.destroy();
       this.monitor.destroy();
     });
   }
@@ -143,6 +177,7 @@ export class Game extends Phaser.Scene {
     this.nexusView.handleEvents(events);
     this.projectileView.handleEvents(events);
     this.towerView.handleEvents(events);
+    this.handleMoveEvents(events);
     this.towerView.draw(state, this.grid.selectedCell);
     this.nexusView.draw(state, frameDelta);
     this.enemyView.draw(state, this.interpolationAlpha);
@@ -153,14 +188,21 @@ export class Game extends Phaser.Scene {
     this.nexusPanel.update(state);
     this.waveHud.update(state, { speed: this.runner.clock.speed, paused: this.runner.paused });
     this.shop.update();
+    this.towerDrag.update();
     const carrying = this.shop.carrying;
+    const dragging = this.towerDrag.dragging;
     const hovered = this.grid.hoveredCell;
-    this.updateTooltip(state, carrying !== null, hovered);
-    this.carryView.draw(
-      carrying?.towerType ?? null,
-      hovered,
-      hovered !== null && canPlaceAt(state, this.map, hovered),
-    );
+    this.updateTooltip(state, carrying !== null || dragging !== null, hovered);
+    if (dragging) {
+      // Mover: verde se a casa está livre ou tem outra torre (troca), vermelho se não.
+      this.carryView.draw(dragging.towerType, hovered, canDropAt(this.map, hovered));
+    } else {
+      this.carryView.draw(
+        carrying?.towerType ?? null,
+        hovered,
+        hovered !== null && canPlaceAt(state, this.map, hovered),
+      );
+    }
 
     if (state.status !== 'playing' && !this.removeEndScreen) {
       const totalWaves = defaultWaveSchedules.length;
@@ -180,6 +222,30 @@ export class Game extends Phaser.Scene {
         },
         () => this.scene.restart(),
       );
+    }
+  }
+
+  /**
+   * Mover (T15): a seleção acompanha a torre que estava selecionada, também
+   * na troca; uma recusa por trava da simulação mostra o mesmo aviso da tentativa.
+   */
+  private handleMoveEvents(events: readonly SimEvent[]): void {
+    for (const event of events) {
+      if (event.type === 'towerMoved') {
+        const selected = this.grid.selectedCell;
+        if (!selected) continue;
+        if (selected.x === event.fromX && selected.y === event.fromY) {
+          this.grid.select({ x: event.x, y: event.y });
+        } else if (
+          event.swappedWithId !== null &&
+          selected.x === event.x &&
+          selected.y === event.y
+        ) {
+          this.grid.select({ x: event.fromX, y: event.fromY });
+        }
+      } else if (event.type === 'moveRefused' && event.reason === 'locked') {
+        this.towerDrag.showLocked(event.towerId);
+      }
     }
   }
 

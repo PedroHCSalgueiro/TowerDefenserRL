@@ -1,4 +1,9 @@
 {
   "tooltip": { "delayMs": 250, "offsetX": 16, "offsetY": 18, "edgeMarginPx": 8 },
-  "texts": { "limitWarning": "limite", "maxLevel": "Máx." }
+  "texts": {
+    "limitWarning": "limite",
+    "maxLevel": "Máx.",
+    "towersLocked": "Torres travadas durante a onda"
+  },
+  "towerDrag": { "thresholdPx": 6, "lockedMessageMs": 1600 }
 }

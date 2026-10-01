@@ -17,6 +17,7 @@ import { evolveNexus } from './nexus/evolve';
 import { nexusData, type NexusData } from './nexus/nexusData';
 import { releaseAllProjectiles } from './projectiles/pool';
 import { buyTower, rerollShop, sellTower } from './shop/shop';
+import { moveTower } from './towers/move';
 import { placeTower } from './towers/placement';
 import type { TowerData } from './towers/towerData';
 import type { WaveSchedule } from './waves/schedule';
@@ -64,6 +65,9 @@ export function createCommandSystem(
           break;
         case 'sellTower':
           sellTower(ctx, economy, command.towerId);
+          break;
+        case 'moveTower':
+          moveTower(ctx, map, command.towerId, { x: command.x, y: command.y });
           break;
         case 'evolveNexus':
           evolveNexus(ctx, nexus);

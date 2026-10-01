@@ -470,3 +470,24 @@ body {
 .paused-banner[hidden] {
   display: none;
 }
+
+/* T15: mensagem ao tentar mover torre com onda ativa. */
+.locked-message {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  border: 1px solid #c05050;
+  border-radius: 8px;
+  background: rgba(20, 21, 23, 0.9);
+  color: #ffd2d2;
+  font:
+    600 15px system-ui,
+    sans-serif;
+  pointer-events: none;
+}
+
+.locked-message[hidden] {
+  display: none;
+}

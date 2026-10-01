@@ -12,6 +12,9 @@
  * (`towersMerged`) tira na hora as imagens das torres absorvidas e faz um
  * flash curto na sobrevivente final: a cascata emite dois eventos, mas o
  * flash sai só no último (o primeiro cairia numa torre que some).
+ *
+ * Mover ou trocar (`towerMoved`, T15) leva a imagem e as estrelas para a casa
+ * nova. Com as torres travadas, `showLocked` treme a torre e mostra um cadeado.
  */
 
 import Phaser from 'phaser';
@@ -61,8 +64,9 @@ export class TowerView {
   private drawnCount = -1;
   /** Uma torre entrou ou saiu neste quadro (cobre vender e comprar no mesmo quadro). */
   private dirty = false;
-  /** Torre cujo alcance está desenhado (`null` = nenhuma). */
+  /** Torre cujo alcance está desenhado (`null` = nenhuma) e a casa em que ela estava. */
   private rangeTower: Tower | null = null;
+  private rangeCell: GridCoord | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -82,12 +86,80 @@ export class TowerView {
     const flashes = fusionFlashes(events);
     for (const event of events) {
       if (event.type === 'towerPlaced' || event.type === 'towerSold') this.dirty = true;
-      else if (event.type === 'towersMerged') {
+      else if (event.type === 'towerMoved') {
+        this.placeAt(event.towerId, { x: event.x, y: event.y });
+        if (event.swappedWithId !== null) {
+          this.placeAt(event.swappedWithId, { x: event.fromX, y: event.fromY });
+        }
+      } else if (event.type === 'towersMerged') {
         this.dirty = true;
         for (const id of event.absorbedIds) this.removeTower(id);
       }
     }
     for (const f of flashes) this.flash(f.towerId, f.x, f.y);
+  }
+
+  /** Leva a imagem e as estrelas da torre para a casa (depois de mover ou trocar). */
+  private placeAt(id: number, cell: GridCoord): void {
+    const p = this.projection.toScreen(cell);
+    const depth = isoDepth(cell);
+    this.scene.tweens.killTweensOf(this.images.get(id) ?? []);
+    this.images.get(id)?.setPosition(p.x, p.y).setDepth(depth);
+    this.labels
+      .get(id)
+      ?.text.setPosition(p.x, this.labelY(p.y))
+      .setDepth(depth + 0.1);
+  }
+
+  /** Torre travada (onda ativa): tremida curta e um cadeado sobre o bloco. */
+  showLocked(towerId: number, cell: GridCoord): void {
+    const { locked } = style;
+    const p = this.projection.toScreen(cell);
+    const image = this.images.get(towerId);
+    if (image) {
+      this.scene.tweens.killTweensOf(image);
+      image.setPosition(p.x, p.y);
+      this.scene.tweens.add({
+        targets: image,
+        x: { from: p.x - locked.shakePx, to: p.x + locked.shakePx },
+        duration: locked.shakeMs,
+        yoyo: true,
+        repeat: locked.shakeRepeats - 1,
+        onComplete: () => image.setPosition(p.x, p.y),
+      });
+    }
+    // Cadeado: arco (alça) sobre um retângulo (corpo), acima das estrelas.
+    const w = locked.iconWidth;
+    const h = locked.iconHeight;
+    const r = locked.iconShackleRadius;
+    const icon = new Phaser.GameObjects.Graphics(this.scene)
+      .setPosition(p.x, this.labelY(p.y) - locked.iconOffsetY)
+      .setDepth(isoDepth(cell) + 0.6);
+    icon.lineStyle(locked.iconLineWidth + 2, hexColor(locked.iconOutlineColor));
+    icon.beginPath();
+    icon.arc(0, -h, r, Math.PI, 0);
+    icon.strokePath();
+    icon.lineStyle(locked.iconLineWidth, hexColor(locked.iconColor));
+    icon.beginPath();
+    icon.arc(0, -h, r, Math.PI, 0);
+    icon.strokePath();
+    icon.fillStyle(hexColor(locked.iconColor));
+    icon.fillRect(-w / 2, -h, w, h);
+    icon.lineStyle(1, hexColor(locked.iconOutlineColor));
+    icon.strokeRect(-w / 2, -h, w, h);
+    this.layer.add(icon);
+    this.scene.tweens.add({
+      targets: icon,
+      alpha: { from: 1, to: 0 },
+      delay: locked.iconMs / 2,
+      duration: locked.iconMs / 2,
+      onComplete: () => icon.destroy(),
+    });
+  }
+
+  /** Altura (y na tela) do texto de estrelas de uma torre cuja base está em `baseY`. */
+  private labelY(baseY: number): number {
+    return baseY - style.height - style.outlineWidth * 2 - style.stars.offsetY;
   }
 
   private removeTower(id: number): void {
@@ -121,7 +193,12 @@ export class TowerView {
     const tower = selected
       ? (state.towers.find((t) => t.x === selected.x && t.y === selected.y) ?? null)
       : null;
-    if (tower !== this.rangeTower) this.drawRange(tower);
+    if (
+      tower !== this.rangeTower ||
+      (tower && (tower.x !== this.rangeCell?.x || tower.y !== this.rangeCell.y))
+    ) {
+      this.drawRange(tower);
+    }
   }
 
   private syncImages(towers: readonly Tower[]): void {
@@ -162,7 +239,7 @@ export class TowerView {
     const text = new Phaser.GameObjects.Text(
       this.scene,
       p.x,
-      p.y - style.height - style.outlineWidth * 2 - stars.offsetY,
+      this.labelY(p.y),
       starsLabel(tower.star),
       { fontSize: `${stars.fontSize}px`, color: stars.color },
     )
@@ -174,6 +251,7 @@ export class TowerView {
 
   private drawRange(tower: Tower | null): void {
     this.rangeTower = tower;
+    this.rangeCell = tower && { x: tower.x, y: tower.y };
     const g = this.range;
     g.clear();
     if (!tower) return;

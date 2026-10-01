@@ -71,6 +71,23 @@ export interface SimEventPayloads {
   };
   /** `refund`: ouro devolvido. */
   towerSold: { towerId: number; towerType: string; x: number; y: number; refund: number };
+  /**
+   * A torre foi da casa `fromX`/`fromY` para `x`/`y`. `swappedWithId`: a torre
+   * que estava em `x`/`y` e foi para `fromX`/`fromY` (`null` = casa livre).
+   */
+  towerMoved: {
+    towerId: number;
+    fromX: number;
+    fromY: number;
+    x: number;
+    y: number;
+    swappedWithId: number | null;
+  };
+  /**
+   * Mover recusado, nada mudou. `locked`: há onda ativa (torres travadas);
+   * `invalid`: casa fora do mapa, no caminho ou no núcleo.
+   */
+  moveRefused: { towerId: number; reason: 'locked' | 'invalid' };
   /** Os slots da loja mudaram. */
   shopChanged: { reason: 'bought' | 'reroll' | 'newWave' };
   /** No máximo um por tick, com o saldo final; `delta` = saldo menos o último informado. */

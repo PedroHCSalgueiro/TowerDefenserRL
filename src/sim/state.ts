@@ -128,6 +128,18 @@ export interface DebugSkipToWaveCommand {
   wave: number;
 }
 
+/**
+ * Ação do jogador: move a torre para a casa (x, y), de graça. Se houver outra
+ * torre na casa, as duas trocam de lugar. Recusado (`moveRefused`) com
+ * qualquer onda ativa ou numa casa inválida.
+ */
+export interface MoveTowerCommand {
+  type: 'moveTower';
+  towerId: number;
+  x: number;
+  y: number;
+}
+
 /** Ação do jogador: evolui o núcleo pagando o custo do próximo nível. */
 export interface EvolveNexusCommand {
   type: 'evolveNexus';
@@ -140,6 +152,7 @@ export type SimCommand =
   | BuyTowerCommand
   | RerollShopCommand
   | SellTowerCommand
+  | MoveTowerCommand
   | EndWaveCommand
   | CallWaveCommand
   | EvolveNexusCommand

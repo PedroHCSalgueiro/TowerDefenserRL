@@ -91,6 +91,19 @@
       "flashColor": "#ffffff",
       "flashScale": 1.35,
       "flashMs": 280
+    },
+    "locked": {
+      "shakePx": 3,
+      "shakeMs": 50,
+      "shakeRepeats": 3,
+      "iconWidth": 10,
+      "iconHeight": 8,
+      "iconShackleRadius": 3.5,
+      "iconLineWidth": 2,
+      "iconColor": "#ffd24a",
+      "iconOutlineColor": "#1d1f21",
+      "iconOffsetY": 12,
+      "iconMs": 1200
     }
   },
   "projectiles": {
