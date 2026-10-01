@@ -19,7 +19,7 @@ import {
 } from './support/enemySim';
 import { run, testTowers } from './support/towerSim';
 
-const testDebug: SimDebugData = { maxSpawnPerCommand: 50 };
+const testDebug: SimDebugData = { maxSpawnPerCommand: 50, maxGoldPerCommand: 1000 };
 
 function smallSim(state = makeState('debug', blindNexus)): Simulation {
   return new Simulation(

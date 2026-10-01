@@ -9,6 +9,7 @@ import type { TickContext } from '../engine/simulation';
 import { newShop } from '../shop/shop';
 import type { TowerData } from '../towers/towerData';
 import type { EconomyData } from './economyData';
+import { earnGold } from './gold';
 
 /** Juros sobre o ouro guardado: porcentagem arredondada para baixo, com teto. */
 export function interestFor(economy: EconomyData, gold: number): number {
@@ -49,10 +50,10 @@ export function endWave(
   const { state } = ctx;
   state.wave++;
   const interest = interestFor(economy, state.gold);
-  state.gold += interest;
+  earnGold(state, interest);
   const bonus = waveBonusFor(economy, state.wave);
-  state.gold += bonus;
-  state.gold += earlyBonus;
+  earnGold(state, bonus);
+  earnGold(state, earlyBonus);
   state.shop = newShop(ctx.rng, economy, towers, state.nexus.level, false);
   ctx.emit({
     type: 'waveEnded',
@@ -86,7 +87,7 @@ export function createGoldSystem(enemies: EnemyData) {
       // Mesma conta em qualquer máquina (e exata com multiplicadores de 0,5 em 0,5).
       const total = killGold * state.waves.goldMultiplier + state.waves.goldFraction;
       const whole = Math.floor(total);
-      state.gold += whole;
+      earnGold(state, whole);
       state.waves.goldFraction = total - whole;
     }
     if (state.gold !== state.reportedGold) {

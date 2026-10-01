@@ -10,7 +10,7 @@ import { FixedStepClock } from '../src/sim/engine/clock';
 import type { SimEvent } from '../src/sim/engine/events';
 import { Simulation, SimulationRunner, type System } from '../src/sim/engine/simulation';
 import type { Enemy } from '../src/sim/enemies/pool';
-import type { RunState } from '../src/sim/state';
+import { RUN_STATE_VERSION, type RunState } from '../src/sim/state';
 import { createGameSystems } from '../src/sim/systems';
 import { loadWaveData, type WaveData } from '../src/sim/waves/waveData';
 import { buildWaveHudModel, formatMultiplier } from '../src/ui/waveHudModel';
@@ -373,7 +373,7 @@ describe('save com ondas empilhadas', () => {
     const sim = shopSim('save-pilha-ruim');
     call(sim, 3);
     const good = JSON.parse(sim.serialize()) as RunState;
-    expect(good.version).toBe(11);
+    expect(good.version).toBe(RUN_STATE_VERSION);
     const swapped = structuredClone(good);
     swapped.waves.active.reverse();
     expect(() => Simulation.restore(JSON.stringify(swapped))).toThrow(/inválido/);

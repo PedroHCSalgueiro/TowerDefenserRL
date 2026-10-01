@@ -8,6 +8,10 @@
  * cenário "Cadeia", com os 4 tipos misturados), o núcleo invulnerável, a
  * velocidade e a gravação de desempenho. Toda ação que muda o jogo passa pela
  * fila de comandos da simulação.
+ *
+ * T17: trapaças de ouro ("+500 ouro" e "ouro infinito") e velocidades 5x e
+ * 10x. Na build de playtest o painel e o F2 só existem depois de liberar o
+ * debug (Ctrl+Shift+D ou `?debug=1`, ver `unlock.ts`).
  */
 
 import Phaser from 'phaser';
@@ -21,9 +25,10 @@ import { evaluateGate, type PerfSummary } from './metrics';
 import type { PerfMonitor, RecordingResult } from './PerfMonitor';
 import { addReport, allReports, clearReports, formatReport, reportTitle } from './perfReport';
 import { linkWithSeed } from './seed';
+import type { DebugGate } from './unlock';
 import './debugPanel.css';
 
-const { defaults, chainScenario, fullScenario, perf, panel: panelConfig } = debugConfig;
+const { defaults, chainScenario, fullScenario, perf, cheats, panel: panelConfig } = debugConfig;
 
 /** Valor da opção "Cadeia" na seleção de torre (não é um id de torre). */
 const CHAIN_OPTION = '__chain__';
@@ -40,6 +45,8 @@ export interface DebugPanelDeps {
   towerTypes: readonly { id: string; name: string }[];
   hoveredCell: () => GridCoord | null;
   selectedCell: () => GridCoord | null;
+  /** Liberação do debug (sempre liberado no `npm run dev`). */
+  gate: DebugGate;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -148,11 +155,14 @@ export class DebugPanel {
   private readonly results: HTMLElement;
   private readonly speedButtons: HTMLButtonElement[] = [];
   private readonly invulnerable: HTMLInputElement;
+  private readonly infiniteGold: HTMLInputElement;
+  private readonly speeds: readonly number[];
+  private readonly removeUnlock: () => void;
   private readonly placeNote: HTMLElement;
   private readonly towerNames: ReadonlyMap<string, string>;
   private nextRefresh = 0;
   private readonly onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== panelConfig.toggleKey) return;
+    if (event.key !== panelConfig.toggleKey || !this.deps.gate.unlocked) return;
     event.preventDefault();
     panelVisible = !panelVisible;
     this.root.hidden = !panelVisible;
@@ -165,9 +175,10 @@ export class DebugPanel {
     this.recordStatus = el('div', { className: 'debug-note' });
     this.results = el('div', { className: 'debug-results' });
 
-    // Velocidade
+    // Velocidade: as do Q (1x a 3x) e as do debug (5x e 10x), fora da fila.
     const speedRow = row('Velocidade');
-    for (const speed of engineConfig.speeds) {
+    this.speeds = [...engineConfig.speeds, ...engineConfig.debugSpeeds];
+    for (const speed of this.speeds) {
       const b = button(`${speed}x`, () => {
         deps.runner.clock.setSpeed(speed);
         this.refreshSpeed();
@@ -180,6 +191,15 @@ export class DebugPanel {
     this.invulnerable = el('input', { type: 'checkbox' });
     this.invulnerable.addEventListener('change', () =>
       this.send({ type: 'debugSetNexusInvulnerable', value: this.invulnerable.checked }),
+    );
+
+    // Trapaças de ouro (pela fila de comandos; marcam a run como trapaceada).
+    const addGold = button(`+${cheats.addGold} ouro`, () =>
+      this.send({ type: 'debugAddGold', amount: cheats.addGold }),
+    );
+    this.infiniteGold = el('input', { type: 'checkbox' });
+    this.infiniteGold.addEventListener('change', () =>
+      this.send({ type: 'debugSetInfiniteGold', value: this.infiniteGold.checked }),
     );
 
     // Torre: tipo usado para posicionar e no spawn em massa (o estresse tem o seu).
@@ -292,6 +312,7 @@ export class DebugPanel {
       this.stats,
       speedRow,
       row('Núcleo', el('label', {}, [this.invulnerable, ' invulnerável'])),
+      row('Ouro', addGold, el('label', {}, [this.infiniteGold, ' ouro infinito'])),
       el('div', { className: 'debug-section', textContent: 'Ondas e economia' }),
       row('', endWave),
       row('', skipToWave, skipWave),
@@ -312,7 +333,12 @@ export class DebugPanel {
       this.results,
       row('', copyLink),
     ]);
-    this.root.hidden = !panelVisible;
+    this.root.hidden = !(deps.gate.unlocked && panelVisible);
+    // O atalho secreto mostra o painel na hora.
+    this.removeUnlock = deps.gate.onUnlock(() => {
+      panelVisible = true;
+      this.root.hidden = false;
+    });
     // O teclado digitado no painel não chega ao jogo.
     this.root.addEventListener('keydown', (event) => event.stopPropagation());
     window.addEventListener('keydown', this.onKeyDown);
@@ -324,6 +350,7 @@ export class DebugPanel {
 
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    this.removeUnlock();
     this.root.remove();
   }
 
@@ -339,13 +366,14 @@ export class DebugPanel {
     const { state } = sim;
     const stress = state.debug.stress;
     this.invulnerable.checked = state.debug.nexusInvulnerable;
+    this.infiniteGold.checked = state.debug.infiniteGold;
     this.stats.textContent = [
       formatLive(this.deps.monitor.liveSummary),
       `Inimigos ${state.enemies.activeCount}  Projéteis ${state.projectiles.activeCount}  Torres ${state.towers.length}`,
       `Fila de gatilhos ${state.triggers.queue.length}  descartados (run) ${state.triggers.droppedTotal}`,
       `Estresse ${stress ? `${stress.count} (${stress.layout})` : 'desligado'}`,
       `Núcleo ${Math.ceil(state.nexus.hp)}/${state.nexus.maxHp}`,
-      `Semente ${state.seed}`,
+      `Semente ${state.seed}  Trapaça ${state.cheated ? 'sim' : 'não'}`,
       `Mouse ${formatCell(this.deps.hoveredCell())}  Seleção ${formatCell(this.deps.selectedCell())}`,
     ].join('\n');
 
@@ -363,7 +391,7 @@ export class DebugPanel {
   private refreshSpeed(): void {
     const current = this.deps.runner.clock.speed;
     this.speedButtons.forEach((b, i) => {
-      b.classList.toggle('active', engineConfig.speeds[i] === current);
+      b.classList.toggle('active', this.speeds[i] === current);
     });
   }
 

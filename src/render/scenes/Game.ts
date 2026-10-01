@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import debugConfig from '../../data/debug.json';
 import engineConfig from '../../data/engine.json';
 import renderConfig from '../../data/render.json';
 import uiConfig from '../../data/ui.json';
@@ -6,7 +7,8 @@ import mapData from '../../data/map.json';
 import { DebugPanel } from '../../debug/DebugPanel';
 import { PerfMonitor } from '../../debug/PerfMonitor';
 import { triggerFxDisabled } from '../../debug/flags';
-import { resolveSeed } from '../../debug/seed';
+import { resolveSeed, runLink } from '../../debug/seed';
+import { DebugGate } from '../../debug/unlock';
 import { enemyData } from '../../sim/enemies/enemyData';
 import type { SimEvent } from '../../sim/engine/events';
 import { Simulation, SimulationRunner } from '../../sim/engine/simulation';
@@ -27,6 +29,9 @@ import { canDropAt } from '../../ui/towerDragModel';
 import { describeTower } from '../../ui/towerInfo';
 import { TowerTooltip } from '../../ui/towerTooltip';
 import { showEndScreen } from '../../ui/endScreen';
+import { HelpScreen } from '../../ui/helpScreen';
+import { summarizeRun } from '../../ui/runReport';
+import { showVersionLabel } from '../../ui/versionLabel';
 import { WaveHud } from '../../ui/waveHud';
 import { defaultWaveSchedules } from '../../ui/waveHudModel';
 import { CarryView } from '../views/CarryView';
@@ -51,6 +56,8 @@ export class Game extends Phaser.Scene {
   private hoverView!: HoverView;
   private monitor!: PerfMonitor;
   private panel!: DebugPanel;
+  private gate!: DebugGate;
+  private help!: HelpScreen;
   private classPanel!: ClassPanel;
   private nexusPanel!: NexusPanel;
   private shop!: ShopController;
@@ -99,6 +106,8 @@ export class Game extends Phaser.Scene {
       () => this.runner.sim.state.triggers.lastTick,
     );
     this.runner.profiler = this.monitor;
+    // Build de playtest: painel e trapaças só com Ctrl+Shift+D ou `?debug=1` (T17).
+    this.gate = new DebugGate(import.meta.env.DEV, window.location.search);
     this.panel = new DebugPanel(this.game.canvas.parentElement ?? document.body, {
       game: this.game,
       runner: this.runner,
@@ -107,6 +116,7 @@ export class Game extends Phaser.Scene {
       towerTypes: Object.entries(towerData.types).map(([id, type]) => ({ id, name: type.name })),
       hoveredCell: () => grid.hoveredCell,
       selectedCell: () => grid.selectedCell,
+      gate: this.gate,
     });
 
     const overlayParent = this.game.canvas.parentElement ?? document.body;
@@ -127,6 +137,16 @@ export class Game extends Phaser.Scene {
         this.runner.paused = !this.runner.paused;
       },
     });
+    this.help = new HelpScreen({
+      parent: overlayParent,
+      paused,
+      setPaused: (value) => {
+        this.runner.paused = value;
+      },
+      debugUnlocked: () => this.gate.unlocked,
+    });
+    this.waveHud.appendControl(this.help.toggleButton);
+    const removeVersion = showVersionLabel(overlayParent, __APP_VERSION__);
     this.carryView = new CarryView(this, grid.projection, towerData);
     this.shop = new ShopController({
       parent: overlayParent,
@@ -181,7 +201,10 @@ export class Game extends Phaser.Scene {
       this.triggerFx.destroy();
       this.hoverView.destroy();
       this.waveHud.destroy();
+      this.help.destroy();
+      removeVersion();
       this.panel.destroy();
+      this.gate.destroy();
       this.classPanel.destroy();
       this.nexusPanel.destroy();
       this.shop.destroy();
@@ -233,22 +256,16 @@ export class Game extends Phaser.Scene {
     }
 
     if (state.status !== 'playing' && !this.removeEndScreen) {
-      const totalWaves = defaultWaveSchedules.length;
+      this.help.close();
       this.removeEndScreen = showEndScreen(
         this.game.canvas.parentElement ?? document.body,
-        {
-          won: state.status === 'won',
-          // A derrota mostra a onda mais nova em andamento.
-          wave: Math.min(
-            state.waves.active[state.waves.active.length - 1]?.wave ?? state.wave,
-            totalWaves,
-          ),
-          totalWaves,
-          seconds: state.tick / engineConfig.ticksPerSecond,
-          kills: state.stats.kills,
-          longestChain: state.stats.longestChain,
-          seed: state.seed,
-        },
+        summarizeRun(state, {
+          version: __APP_VERSION__,
+          totalWaves: defaultWaveSchedules.length,
+          ticksPerSecond: engineConfig.ticksPerSecond,
+          towerName: (type) => getTowerType(towerData, type).name,
+          link: runLink(window.location.href, state.seed, debugConfig.panel.unlockParam),
+        }),
         () => this.scene.restart(),
       );
     }

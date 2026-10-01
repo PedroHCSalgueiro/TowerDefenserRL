@@ -1,8 +1,10 @@
 name: Deploy to GitHub Pages
 
+# Publica só o branch `playtest` (T17). Commits na `main` não mudam a URL dos
+# testadores; para promover a build: `git push origin main:playtest`.
 on:
   push:
-    branches: [main]
+    branches: [playtest]
   workflow_dispatch:
 
 permissions:

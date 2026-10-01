@@ -47,4 +47,9 @@ export interface RunStats {
   kills: number;
   /** Maior cadeia da run, em gatilhos com efeito visível (T16). */
   longestChain: number;
+  /**
+   * Ouro ganho na run (T17): juros, bônus, bônus antecipado e ouro de abate.
+   * Fica fora a devolução da venda e o "+500 ouro" do debug.
+   */
+  goldEarned: number;
 }

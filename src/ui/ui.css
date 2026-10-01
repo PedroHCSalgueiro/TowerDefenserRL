@@ -56,9 +56,52 @@ body {
 }
 
 .end-panel .end-seed {
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   font-size: 12px;
   color: #888888;
+}
+
+/* T17: trapaça, copiar link e relatório. */
+.end-panel .end-cheated {
+  color: #ffb347;
+  font-weight: 700;
+}
+
+.end-panel [hidden] {
+  display: none;
+}
+
+.end-copies {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.end-panel button.end-secondary {
+  padding: 6px 14px;
+  border: 1px solid #55595e;
+  background: #2a2c2f;
+  font-size: 13px;
+}
+
+.end-panel button.end-secondary:hover,
+.end-panel button.end-secondary:focus-visible {
+  background: #3a3d40;
+}
+
+.end-panel .end-note {
+  min-height: 1.2em;
+  font-size: 12px;
+  color: #9be37a;
+}
+
+.end-fallback {
+  display: block;
+  width: 420px;
+  height: 140px;
+  margin: 0 auto 12px;
+  font: 11px monospace;
 }
 
 .end-won {
@@ -494,4 +537,66 @@ body {
 
 .locked-message[hidden] {
   display: none;
+}
+
+/* T17: versão da build no canto, para os relatos de bug. */
+.version-label {
+  position: absolute;
+  left: 8px;
+  bottom: 4px;
+  font: 11px monospace;
+  color: #5d6166;
+  pointer-events: none;
+  user-select: text;
+}
+
+/* T17: tela de ajuda (H). */
+.help-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 12, 0.72);
+  font-family: system-ui, sans-serif;
+  color: #eeeeee;
+}
+
+.help-screen[hidden] {
+  display: none;
+}
+
+.help-panel {
+  min-width: 420px;
+  padding: 20px 28px;
+  border: 1px solid #3a3d40;
+  border-radius: 8px;
+  background: #1d1f21;
+}
+
+.help-panel h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.help-table {
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.help-table td {
+  padding: 3px 10px 3px 0;
+  vertical-align: top;
+}
+
+.help-keys {
+  font-family: monospace;
+  font-weight: 700;
+  color: #ffd84a;
+  white-space: nowrap;
+}
+
+.help-debug .help-keys {
+  color: #9fb3c8;
 }

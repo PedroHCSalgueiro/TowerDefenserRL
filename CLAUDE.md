@@ -46,3 +46,17 @@ em "Contexto", apresente um plano e só então implemente.
 - npm test       — testes
 - npm run build  — build de produção
 - npm run lint   — padrão de código
+
+## Build de playtest (T17)
+- O GitHub Pages publica o branch `playtest`, não a `main`. Commits na
+  `main` só rodam o CI (lint, testes e build) e não mudam a URL.
+- **Promover a build** (só quando o Pedro mandar): apontar o `playtest`
+  para um commit da `main` e empurrar. O workflow "Deploy to GitHub Pages"
+  publica sozinho em 1 a 2 minutos.
+  - Último commit da `main`: `git fetch origin && git push origin origin/main:playtest`
+  - Um commit específico: `git push origin <hash>:playtest`
+    (voltar para um commit mais antigo pede `--force-with-lease`).
+- Conferir: a versão no canto da tela (hash curto) tem que ser a do commit.
+- Na build publicada, o painel F2 e as trapaças ficam escondidos; aparecem
+  com Ctrl+Shift+D (vale para a sessão) ou com `?debug=1`. No `npm run dev`
+  tudo fica visível.

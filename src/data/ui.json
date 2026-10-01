@@ -1,10 +1,91 @@
 {
-  "tooltip": { "delayMs": 250, "offsetX": 16, "offsetY": 18, "edgeMarginPx": 8 },
+  "tooltip": {
+    "delayMs": 250,
+    "offsetX": 16,
+    "offsetY": 18,
+    "edgeMarginPx": 8
+  },
   "texts": {
     "limitWarning": "limite",
     "maxLevel": "Máx.",
     "towersLocked": "Torres travadas durante a onda"
   },
-  "towerDrag": { "thresholdPx": 6, "lockedMessageMs": 1600 },
-  "triggerFx": { "numbersToggleKey": "n" }
+  "towerDrag": {
+    "thresholdPx": 6,
+    "lockedMessageMs": 1600
+  },
+  "triggerFx": {
+    "numbersToggleKey": "n"
+  },
+  "help": {
+    "key": "h",
+    "title": "Controles",
+    "buttonLabel": "? (H)",
+    "closeLabel": "Fechar (H ou Esc)",
+    "pausedNote": "O jogo fica pausado enquanto a ajuda está aberta.",
+    "controls": [
+      {
+        "keys": "1 a 5",
+        "action": "Pegar a torre do slot da loja; clique numa casa para comprar e posicionar"
+      },
+      {
+        "keys": "Arrastar slot",
+        "action": "Comprar arrastando a torre da loja até a casa"
+      },
+      {
+        "keys": "Arrastar torre",
+        "action": "Mover (casa livre) ou trocar (outra torre), fora da onda"
+      },
+      {
+        "keys": "Clique",
+        "action": "Selecionar torre (alcance e informações)"
+      },
+      {
+        "keys": "R",
+        "action": "Rerolar a loja"
+      },
+      {
+        "keys": "S",
+        "action": "Vender a torre selecionada"
+      },
+      {
+        "keys": "E",
+        "action": "Evoluir o núcleo"
+      },
+      {
+        "keys": "Espaço",
+        "action": "Chamar a próxima onda (antecipada com outra ativa)"
+      },
+      {
+        "keys": "Q",
+        "action": "Velocidade 1x → 2x → 3x"
+      },
+      {
+        "keys": "P",
+        "action": "Pausar e continuar"
+      },
+      {
+        "keys": "N",
+        "action": "Mostrar ou esconder os números de dano"
+      },
+      {
+        "keys": "Esc",
+        "action": "Cancelar a torre presa ao mouse ou o arrasto"
+      },
+      {
+        "keys": "H",
+        "action": "Abrir e fechar esta ajuda"
+      }
+    ],
+    "debugControls": [
+      {
+        "keys": "F2",
+        "action": "Mostrar ou esconder o painel de debug e trapaças"
+      },
+      {
+        "keys": "Ctrl+Shift+D",
+        "action": "Liberar o debug nesta sessão (build de playtest)"
+      }
+    ]
+  }
 }

@@ -5,7 +5,12 @@ import type { SimEvent } from '../src/sim/engine/events';
 import { Simulation } from '../src/sim/engine/simulation';
 import { patternTowerType } from '../src/sim/debug/towerCells';
 import { loadMap } from '../src/sim/grid/map';
-import { deserializeRunState, type DebugLayout, type RunState } from '../src/sim/state';
+import {
+  RUN_STATE_VERSION,
+  deserializeRunState,
+  type DebugLayout,
+  type RunState,
+} from '../src/sim/state';
 import { createGameSystems } from '../src/sim/systems';
 
 const map = loadMap(mapData);
@@ -101,12 +106,12 @@ describe('cadeia real (Morteiro, Ceifador, Relé, Obelisco)', () => {
   });
 });
 
-describe('save versão 11', () => {
+describe('save', () => {
   it('recusa um save sem o estado dos gatilhos, sem o das classes ou com torre sem os campos novos', () => {
     const sim = chainSim('clustered', 10);
     steps(sim, 5);
     const good = JSON.parse(sim.serialize()) as RunState;
-    expect(good.version).toBe(11);
+    expect(good.version).toBe(RUN_STATE_VERSION);
     expect(() => deserializeRunState(JSON.stringify(good))).not.toThrow();
 
     const noTriggers = { ...good, triggers: undefined };

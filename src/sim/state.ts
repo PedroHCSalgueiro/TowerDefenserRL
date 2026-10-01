@@ -17,7 +17,7 @@ import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 import { createWaveState, type ActiveWave, type RunStats, type WaveState } from './waves/waveState';
 
-export const RUN_STATE_VERSION = 11;
+export const RUN_STATE_VERSION = 12;
 
 /**
  * Disposição usada pelo debug:
@@ -133,6 +133,18 @@ export interface DebugSkipToWaveCommand {
  * torre na casa, as duas trocam de lugar. Recusado (`moveRefused`) com
  * qualquer onda ativa ou numa casa inválida.
  */
+/** Trapaça (T17): soma ouro sem contar como ouro ganho na run. */
+export interface DebugAddGoldCommand {
+  type: 'debugAddGold';
+  amount: number;
+}
+
+/** Trapaça (T17): com a chave ligada, gastar não diminui o ouro. */
+export interface DebugSetInfiniteGoldCommand {
+  type: 'debugSetInfiniteGold';
+  value: boolean;
+}
+
 export interface MoveTowerCommand {
   type: 'moveTower';
   towerId: number;
@@ -161,7 +173,27 @@ export type SimCommand =
   | DebugClearCommand
   | DebugSetStressCommand
   | DebugSetNexusInvulnerableCommand
-  | DebugSkipToWaveCommand;
+  | DebugSkipToWaveCommand
+  | DebugAddGoldCommand
+  | DebugSetInfiniteGoldCommand;
+
+/**
+ * Comandos de debug (trapaças): qualquer um que chegue à fila liga
+ * `RunState.cheated`, mesmo se a simulação o recusar (T17).
+ */
+export const CHEAT_COMMAND_TYPES: ReadonlySet<SimCommand['type']> = new Set<SimCommand['type']>([
+  'spawnEnemy',
+  'placeTower',
+  'endWave',
+  'debugSpawnEnemies',
+  'debugSpawnTowers',
+  'debugClear',
+  'debugSetStress',
+  'debugSetNexusInvulnerable',
+  'debugSkipToWave',
+  'debugAddGold',
+  'debugSetInfiniteGold',
+]);
 
 /** Modo estresse: mantém `count` inimigos ativos, repondo quem morre ou chega. */
 export interface StressConfig {
@@ -172,6 +204,8 @@ export interface StressConfig {
 export interface DebugState {
   /** O núcleo não perde vida (e a run não termina). */
   nexusInvulnerable: boolean;
+  /** Trapaça "ouro infinito" (T17): a compra continua exigindo o preço, mas o ouro não diminui. */
+  infiniteGold: boolean;
   stress: StressConfig | null;
 }
 
@@ -193,6 +227,8 @@ export interface RunState {
   rngState: number;
   nextEntityId: number;
   status: RunStatus;
+  /** Alguma trapaça (comando de debug) chegou nesta run; nunca volta a `false`. */
+  cheated: boolean;
   nexus: NexusState;
   enemies: EnemyPool;
   projectiles: ProjectilePool;
@@ -225,6 +261,7 @@ export function createRunState(seed: string): RunState {
     rngState: hashSeed(seed),
     nextEntityId: 1,
     status: 'playing',
+    cheated: false,
     nexus: {
       hp: nexusLevel(nexusData, economyData.nexusStartLevel).maxHp,
       maxHp: nexusLevel(nexusData, economyData.nexusStartLevel).maxHp,
@@ -240,9 +277,9 @@ export function createRunState(seed: string): RunState {
     reportedGold: economyData.startingGold,
     wave: 0,
     waves: createWaveState(),
-    stats: { kills: 0, longestChain: 0 },
+    stats: { kills: 0, longestChain: 0, goldEarned: 0 },
     shop: { slots: [] },
-    debug: { nexusInvulnerable: false, stress: null },
+    debug: { nexusInvulnerable: false, infiniteGold: false, stress: null },
     commandQueue: [],
   };
   // A primeira loja da run sai do RNG da própria semente e garante uma comum.
@@ -332,6 +369,7 @@ export function deserializeRunState(json: string): RunState {
     !Number.isInteger(state.rngState) ||
     !Number.isInteger(state.nextEntityId) ||
     (state.status !== 'playing' && state.status !== 'lost' && state.status !== 'won') ||
+    typeof state.cheated !== 'boolean' ||
     typeof nexus?.hp !== 'number' ||
     typeof nexus.maxHp !== 'number' ||
     !Number.isInteger(nexus.attackCooldownTicks) ||
@@ -346,6 +384,7 @@ export function deserializeRunState(json: string): RunState {
     !isWaveState(waves, state.wave as number) ||
     !Number.isInteger(stats?.kills) ||
     !Number.isInteger(stats?.longestChain) ||
+    !Number.isInteger(stats?.goldEarned) ||
     !Array.isArray(shop?.slots) ||
     !shop.slots.every((slot) => slot === null || typeof slot === 'string') ||
     !Array.isArray(enemies?.slots) ||
@@ -367,6 +406,7 @@ export function deserializeRunState(json: string): RunState {
     !triggers.queue.every((entry) => Number.isInteger(entry.chainId)) ||
     !isClassState(classes) ||
     typeof debug?.nexusInvulnerable !== 'boolean' ||
+    typeof debug.infiniteGold !== 'boolean' ||
     (debug.stress !== null && typeof debug.stress !== 'object') ||
     !Array.isArray(state.commandQueue)
   ) {

@@ -1,11 +1,13 @@
 /**
  * Aplica as ações da fila, na ordem em que foram enfileiradas, no início do
  * tick. É o único lugar em que ações do jogador e do debug mudam o estado.
+ * Qualquer comando de debug liga `cheated` (T17), mesmo se for recusado.
  */
 
 import type { SimDebugData } from './debug/debugData';
 import { economyData, type EconomyData } from './economy/economyData';
 import { spawnDebugEnemy } from './debug/stress';
+import { CHEAT_COMMAND_TYPES } from './state';
 import { patternTowerType, pickTowerCells } from './debug/towerCells';
 import type { EnemyData } from './enemies/enemyData';
 import { releaseAllEnemies } from './enemies/pool';
@@ -37,9 +39,16 @@ export function createCommandSystem(
   const clampCount = (count: number): number =>
     Number.isFinite(count) ? Math.min(Math.max(0, Math.floor(count)), debug.maxSpawnPerCommand) : 0;
 
+  /** Ouro da trapaça: inteiro, entre 0 e `maxGoldPerCommand`. */
+  const clampGold = (amount: number): number =>
+    Number.isFinite(amount)
+      ? Math.min(Math.max(0, Math.floor(amount)), debug.maxGoldPerCommand)
+      : 0;
+
   return (ctx) => {
     const { state } = ctx;
     for (const command of ctx.commands) {
+      if (CHEAT_COMMAND_TYPES.has(command.type)) state.cheated = true;
       switch (command.type) {
         case 'spawnEnemy':
           spawnEnemy(ctx, routes, enemies, command.enemyType);
@@ -112,6 +121,13 @@ export function createCommandSystem(
           break;
         case 'debugSetNexusInvulnerable':
           state.debug.nexusInvulnerable = command.value;
+          break;
+        case 'debugAddGold':
+          // Fora do ouro ganho da run (`stats.goldEarned`).
+          state.gold += clampGold(command.amount);
+          break;
+        case 'debugSetInfiniteGold':
+          state.debug.infiniteGold = command.value;
           break;
       }
     }

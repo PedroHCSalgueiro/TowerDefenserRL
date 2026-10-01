@@ -19,6 +19,7 @@ import {
   type Rarity,
   type TowerData,
 } from '../towers/towerData';
+import { spendGold } from '../economy/gold';
 
 export interface ShopState {
   /** Id da torre em cada slot; `null` = comprado. */
@@ -125,7 +126,7 @@ export function buyTower(
     if (!tower) return false;
     tower.invested = price;
   }
-  state.gold -= price;
+  spendGold(state, price);
   state.shop.slots[slot] = null;
   ctx.emit({
     type: 'towerBought',
@@ -144,7 +145,7 @@ export function buyTower(
 export function rerollShop(ctx: TickContext, towers: TowerData, economy: EconomyData): boolean {
   const { state } = ctx;
   if (state.gold < economy.shop.rerollCost) return false;
-  state.gold -= economy.shop.rerollCost;
+  spendGold(state, economy.shop.rerollCost);
   state.shop = newShop(ctx.rng, economy, towers, state.nexus.level, false);
   ctx.emit({ type: 'shopChanged', tick: state.tick, reason: 'reroll' });
   return true;

@@ -9,6 +9,8 @@
 export interface EngineConfig {
   ticksPerSecond: number;
   speeds: readonly number[];
+  /** Velocidades extras só do painel de debug (T17); o Q não passa por elas. */
+  debugSpeeds?: readonly number[];
   maxTicksPerFrame: number;
 }
 
@@ -38,13 +40,16 @@ export class FixedStepClock {
   }
 
   setSpeed(speed: number): void {
-    if (!this.config.speeds.includes(speed)) {
+    if (!this.config.speeds.includes(speed) && !this.config.debugSpeeds?.includes(speed)) {
       throw new RangeError(`Velocidade inválida: ${speed}`);
     }
     this.currentSpeed = speed;
   }
 
-  /** Passa para a próxima velocidade da lista (depois da última, volta à primeira). */
+  /**
+   * Passa para a próxima velocidade da lista (depois da última, volta à
+   * primeira). Numa velocidade do debug (5x, 10x), volta à primeira.
+   */
   cycleSpeed(): number {
     const { speeds } = this.config;
     const next = speeds[(speeds.indexOf(this.currentSpeed) + 1) % speeds.length]!;

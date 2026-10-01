@@ -22,3 +22,13 @@ export function linkWithSeed(href: string, seed: string): string {
   url.searchParams.set(SEED_PARAM, seed);
   return url.toString();
 }
+
+/**
+ * Link da run para a tela de fim (T17): o endereço com `?seed=`, sem o
+ * `?debug=1`, para quem receber o link não abrir o debug sem querer.
+ */
+export function runLink(href: string, seed: string, debugParam = 'debug'): string {
+  const url = new URL(linkWithSeed(href, seed));
+  url.searchParams.delete(debugParam);
+  return url.toString();
+}

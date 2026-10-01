@@ -7,6 +7,7 @@
 
 import type { TickContext } from '../engine/simulation';
 import { maxNexusLevel, nexusLevel, type NexusData } from './nexusData';
+import { spendGold } from '../economy/gold';
 
 /** Custo para chegar ao próximo nível (`null` = já está no máximo). */
 export function nextLevelCost(data: NexusData, level: number): number | null {
@@ -21,7 +22,7 @@ export function evolveNexus(ctx: TickContext, data: NexusData): boolean {
   if (cost === null || state.gold < cost) return false;
   const current = nexusLevel(data, state.nexus.level);
   const next = nexusLevel(data, state.nexus.level + 1);
-  state.gold -= cost;
+  spendGold(state, cost);
   state.nexus.level += 1;
   state.nexus.maxHp = next.maxHp;
   state.nexus.hp = Math.min(next.maxHp, state.nexus.hp + (next.maxHp - current.maxHp));

@@ -115,6 +115,11 @@ export class WaveHud {
     this.pausedBanner.hidden = !clock.paused;
   }
 
+  /** Põe mais um controle no fim do HUD (o botão "?" da ajuda, T17). */
+  appendControl(control: HTMLElement): void {
+    this.root.append(control);
+  }
+
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     this.root.remove();
