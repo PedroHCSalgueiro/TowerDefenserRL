@@ -9,7 +9,7 @@ describe('run completa jogada pelo bot', () => {
       Array.from({ length: TOTAL_WAVES }, (_, i) => i + 1),
     );
     expect(sim.state.wave).toBe(TOTAL_WAVES);
-    expect(sim.state.waves.active).toBe(false);
+    expect(sim.state.waves.active).toEqual([]);
     expect(sim.state.enemies.activeCount).toBe(0);
     // Toda onda termina dentro do teto do bot (nenhuma ficou presa).
     for (const report of reports) expect(report.ticks).toBeLessThan(30 * 60 * 5);

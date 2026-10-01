@@ -136,7 +136,7 @@ export function playWave(sim: Simulation): WaveReport {
     peakTriggers = Math.max(peakTriggers, last.fired);
   };
   observe();
-  for (let i = 0; i < MAX_WAVE_TICKS && sim.state.waves.active; i++) {
+  for (let i = 0; i < MAX_WAVE_TICKS && sim.state.waves.active.length > 0; i++) {
     if (sim.state.status !== 'playing') break;
     sim.step();
     observe();

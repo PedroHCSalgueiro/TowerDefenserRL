@@ -331,6 +331,8 @@ export class DebugPanel {
   update(): void {
     const t = performance.now();
     if (t < this.nextRefresh || this.root.hidden) return;
+    // A velocidade também muda pela tecla Q e pelo botão do HUD.
+    this.refreshSpeed();
     this.nextRefresh = t + panelConfig.refreshMs;
 
     const { sim } = this.deps.runner;

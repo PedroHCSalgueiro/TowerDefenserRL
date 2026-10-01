@@ -29,6 +29,11 @@ export interface WaveTiming {
 }
 
 export interface WaveData {
+  /**
+   * Trava de segurança: com tantos inimigos ativos, os próximos esperam na
+   * entrada, na ordem, e nascem quando abrir espaço (fila invisível).
+   */
+  readonly maxActiveEnemies: number;
   readonly timing: WaveTiming;
   readonly waves: readonly WaveDef[];
 }
@@ -73,6 +78,10 @@ export function loadWaveData(raw: unknown, enemies: EnemyData): WaveData {
   ) {
     throw new Error('Ondas inválidas: "timing" tem campos ausentes ou fora do intervalo');
   }
+  const { maxActiveEnemies } = raw;
+  if (!Number.isInteger(maxActiveEnemies) || (maxActiveEnemies as number) < 1) {
+    throw new Error('Ondas inválidas: "maxActiveEnemies" precisa ser inteiro >= 1');
+  }
   if (raw.waves.length === 0) throw new Error('Ondas inválidas: nenhuma onda definida');
   const waves = raw.waves.map((wave: unknown, i): WaveDef => {
     const where = `a onda ${i + 1}`;
@@ -87,7 +96,11 @@ export function loadWaveData(raw: unknown, enemies: EnemyData): WaveData {
       mass: parseGroups(`a massa d${where}`, wave.mass, enemies),
     };
   });
-  return { timing: { pulseSpawnSeconds, pulsePauseSeconds, massSpawnSeconds }, waves };
+  return {
+    maxActiveEnemies: maxActiveEnemies as number,
+    timing: { pulseSpawnSeconds, pulsePauseSeconds, massSpawnSeconds },
+    waves,
+  };
 }
 
 export const waveData: WaveData = loadWaveData(wavesJson, enemyData);

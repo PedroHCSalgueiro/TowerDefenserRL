@@ -86,17 +86,32 @@ export class Game extends Phaser.Scene {
 
     const overlayParent = this.game.canvas.parentElement ?? document.body;
     this.classPanel = new ClassPanel(overlayParent);
-    const evolveNexus = () => this.runner.sim.enqueue({ type: 'evolveNexus' });
+    // A pausa congela tudo, inclusive compras: as ações do jogador são ignoradas.
+    const paused = () => this.runner.paused;
+    const evolveNexus = () => {
+      if (!paused()) this.runner.sim.enqueue({ type: 'evolveNexus' });
+    };
     this.nexusPanel = new NexusPanel(overlayParent, evolveNexus);
     this.tooltip = new TowerTooltip(overlayParent);
-    this.waveHud = new WaveHud(overlayParent, () => this.runner.sim.enqueue({ type: 'callWave' }));
+    this.waveHud = new WaveHud(overlayParent, {
+      onCall: () => {
+        if (!paused()) this.runner.sim.enqueue({ type: 'callWave' });
+      },
+      onCycleSpeed: () => this.runner.clock.cycleSpeed(),
+      onTogglePause: () => {
+        this.runner.paused = !this.runner.paused;
+      },
+    });
     this.carryView = new CarryView(this, grid.projection, towerData);
     this.shop = new ShopController({
       parent: overlayParent,
       map,
       state: () => this.runner.sim.state,
-      enqueue: (command) => this.runner.sim.enqueue(command),
+      enqueue: (command) => {
+        if (!paused()) this.runner.sim.enqueue(command);
+      },
       evolveNexus,
+      paused,
       selectedCell: () => grid.selectedCell,
       cellAtClient: (x, y) => grid.cellAtClient(x, y),
     });
@@ -122,19 +137,21 @@ export class Game extends Phaser.Scene {
   update(_time: number, delta: number): void {
     const events = this.runner.update(delta);
     const state = this.runner.sim.state;
+    // Pausado, as animações da renderização também param.
+    const frameDelta = this.runner.paused ? 0 : delta;
 
     this.nexusView.handleEvents(events);
     this.projectileView.handleEvents(events);
     this.towerView.handleEvents(events);
     this.towerView.draw(state, this.grid.selectedCell);
-    this.nexusView.draw(state, delta);
+    this.nexusView.draw(state, frameDelta);
     this.enemyView.draw(state, this.interpolationAlpha);
-    this.projectileView.draw(state, this.interpolationAlpha, delta);
+    this.projectileView.draw(state, this.interpolationAlpha, frameDelta);
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
     this.classPanel.update(state.classes);
     this.nexusPanel.update(state);
-    this.waveHud.update(state);
+    this.waveHud.update(state, { speed: this.runner.clock.speed, paused: this.runner.paused });
     this.shop.update();
     const carrying = this.shop.carrying;
     const hovered = this.grid.hoveredCell;
@@ -151,7 +168,11 @@ export class Game extends Phaser.Scene {
         this.game.canvas.parentElement ?? document.body,
         {
           won: state.status === 'won',
-          wave: Math.min(state.waves.active ? state.wave + 1 : state.wave, totalWaves),
+          // A derrota mostra a onda mais nova em andamento.
+          wave: Math.min(
+            state.waves.active[state.waves.active.length - 1]?.wave ?? state.wave,
+            totalWaves,
+          ),
           totalWaves,
           seconds: state.tick / engineConfig.ticksPerSecond,
           kills: state.stats.kills,

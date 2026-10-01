@@ -44,6 +44,14 @@ export class FixedStepClock {
     this.currentSpeed = speed;
   }
 
+  /** Passa para a próxima velocidade da lista (depois da última, volta à primeira). */
+  cycleSpeed(): number {
+    const { speeds } = this.config;
+    const next = speeds[(speeds.indexOf(this.currentSpeed) + 1) % speeds.length]!;
+    this.currentSpeed = next;
+    return next;
+  }
+
   /** Total de ticks descartados pelo teto `maxTicksPerFrame` desde a criação. */
   get droppedTicks(): number {
     return this.dropped;

@@ -15,9 +15,9 @@ import { newShop, type ShopState } from './shop/shop';
 import type { Tower } from './towers/placement';
 import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
-import { createWaveState, type RunStats, type WaveState } from './waves/waveState';
+import { createWaveState, type ActiveWave, type RunStats, type WaveState } from './waves/waveState';
 
-export const RUN_STATE_VERSION = 9;
+export const RUN_STATE_VERSION = 10;
 
 /**
  * Disposição usada pelo debug:
@@ -105,15 +105,19 @@ export interface SellTowerCommand {
 }
 
 /**
- * Debug ("Encerrar onda"): fecha a onda atual pelo mesmo `endWave` do fim
- * automático (juros, bônus e loja nova). Com onda em andamento, tira do mapa
- * os inimigos que restam, sem ouro de abate.
+ * Debug ("Encerrar onda"): fecha as ondas em andamento, em ordem, pelo mesmo
+ * `endWave` do fim automático (juros, bônus, bônus antecipado e loja nova),
+ * ou a próxima, se não houver nenhuma. Tira do mapa os inimigos que restam,
+ * sem ouro de abate.
  */
 export interface EndWaveCommand {
   type: 'endWave';
 }
 
-/** Ação do jogador: chama a próxima onda (só com o mapa limpo, por enquanto). */
+/**
+ * Ação do jogador: chama a próxima onda. Com outra onda ativa é chamada
+ * antecipada; a onda com chefão só com o mapa limpo.
+ */
 export interface CallWaveCommand {
   type: 'callWave';
 }
@@ -191,7 +195,7 @@ export interface RunState {
   reportedGold: number;
   /** Ondas encerradas até agora (a primeira a fechar é a 1). */
   wave: number;
-  /** Onda em andamento (a de número `wave + 1`), se houver. */
+  /** Ondas em andamento (a mais antiga é a de número `wave + 1`) e o ouro de abate. */
   waves: WaveState;
   stats: RunStats;
   shop: ShopState;
@@ -254,6 +258,37 @@ function isTowerState(value: unknown): boolean {
   );
 }
 
+function isActiveWave(value: unknown): boolean {
+  const w = value as Partial<ActiveWave> | null;
+  return (
+    typeof w === 'object' &&
+    w !== null &&
+    Number.isInteger(w.wave) &&
+    Number.isInteger(w.startTick) &&
+    Number.isInteger(w.spawned) &&
+    (w.spawned as number) >= 0 &&
+    Number.isInteger(w.bossesKilled) &&
+    Number.isInteger(w.earlyBonus) &&
+    (w.earlyBonus as number) >= 0
+  );
+}
+
+/** Ondas ativas em ordem, sem buraco, começando na `wave + 1`. */
+function isWaveState(value: unknown, wave: number): boolean {
+  const w = value as Partial<WaveState> | null;
+  return (
+    typeof w === 'object' &&
+    w !== null &&
+    Array.isArray(w.active) &&
+    w.active.every((a, i) => isActiveWave(a) && a.wave === wave + 1 + i) &&
+    typeof w.goldMultiplier === 'number' &&
+    w.goldMultiplier >= 1 &&
+    typeof w.goldFraction === 'number' &&
+    w.goldFraction >= 0 &&
+    w.goldFraction < 1
+  );
+}
+
 function isClassState(value: unknown): value is ClassState {
   if (typeof value !== 'object' || value === null) return false;
   return classData.ids.every((id) => {
@@ -295,11 +330,7 @@ export function deserializeRunState(json: string): RunState {
     !Number.isInteger(state.gold) ||
     !Number.isInteger(state.reportedGold) ||
     !Number.isInteger(state.wave) ||
-    typeof waves?.active !== 'boolean' ||
-    !Number.isInteger(waves.startTick) ||
-    !Number.isInteger(waves.spawned) ||
-    waves.spawned < 0 ||
-    !Number.isInteger(waves.bossesKilled) ||
+    !isWaveState(waves, state.wave as number) ||
     !Number.isInteger(stats?.kills) ||
     !Array.isArray(shop?.slots) ||
     !shop.slots.every((slot) => slot === null || typeof slot === 'string') ||

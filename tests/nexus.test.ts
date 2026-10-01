@@ -146,6 +146,7 @@ describe('ataque do núcleo', () => {
         tick: 1,
         enemyId: weak.id,
         enemyType: 'walker',
+        wave: 0,
         towerId: null,
         x: 1,
         y: 2,

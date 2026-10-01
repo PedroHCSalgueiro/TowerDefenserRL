@@ -39,6 +39,7 @@ export function damageEnemy(
       tick: ctx.state.tick,
       enemyId: enemy.id,
       enemyType: enemy.type,
+      wave: enemy.wave,
       towerId,
       x: enemy.x,
       y: enemy.y,

@@ -115,6 +115,11 @@ export class SimulationRunner {
   readonly sim: Simulation;
   readonly clock: FixedStepClock;
   profiler: TickProfiler | null = null;
+  /**
+   * Pausa: nenhum tick roda e o tempo real não acumula. Fica fora do estado
+   * (não vai para o save) e não muda o resultado da simulação.
+   */
+  paused = false;
 
   constructor(sim: Simulation, config: EngineConfig = engineConfig) {
     this.sim = sim;
@@ -123,7 +128,7 @@ export class SimulationRunner {
 
   /** Roda os ticks devidos neste quadro e devolve os eventos emitidos. */
   update(deltaMs: number): SimEvent[] {
-    const ticks = this.clock.advance(deltaMs);
+    const ticks = this.paused ? 0 : this.clock.advance(deltaMs);
     const profiler = this.profiler;
     for (let i = 0; i < ticks; i++) {
       if (profiler) {

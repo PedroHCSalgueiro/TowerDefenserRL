@@ -16,10 +16,12 @@ export interface SimEventPayloads {
   /**
    * `towerId` é `null` quando quem matou foi o núcleo. `x`/`y`: onde morreu.
    * `weight`: quanto vale nos contadores de abate (2 = abate duplo da execução).
+   * `wave`: onda dona do inimigo (0 = sem onda).
    */
   enemyKilled: {
     enemyId: number;
     enemyType: string;
+    wave: number;
     towerId: number | null;
     x: number;
     y: number;
@@ -73,8 +75,11 @@ export interface SimEventPayloads {
   shopChanged: { reason: 'bought' | 'reroll' | 'newWave' };
   /** No máximo um por tick, com o saldo final; `delta` = saldo menos o último informado. */
   goldChanged: { gold: number; delta: number };
-  /** Onda fechada: `interest` e `bonus` já somados a `gold` (juros primeiro). */
-  waveEnded: { wave: number; interest: number; bonus: number; gold: number };
+  /**
+   * Onda fechada: `interest`, `bonus` e `earlyBonus` (chamada antecipada; 0 se
+   * não houve) já somados a `gold`, nessa ordem.
+   */
+  waveEnded: { wave: number; interest: number; bonus: number; earlyBonus: number; gold: number };
   /**
    * Uma fusão: `towerId` (que fica, com `stars`) na casa `x`/`y`; `absorbedIds`
    * saíram do mapa. A cascata emite um por fusão, na ordem em que acontecem.
@@ -97,11 +102,16 @@ export interface SimEventPayloads {
    * nova e o mapa já está no limite do núcleo.
    */
   buyRefused: { slot: number; reason: 'limit' };
-  /** A onda `wave` (a primeira é a 1) foi chamada; os inimigos dela começam a nascer. */
-  waveStarted: { wave: number };
   /**
-   * "Chamar onda" recusado: `over` = run encerrada ou sem ondas restantes;
-   * `active` = onda em andamento; `enemies` = ainda há inimigo vivo no mapa.
+   * A onda `wave` (a primeira é a 1) foi chamada; os inimigos dela começam a
+   * nascer. `early`: chamada com outra onda ativa; `earlyBonus` é pago quando
+   * ela fechar.
+   */
+  waveStarted: { wave: number; early: boolean; earlyBonus: number };
+  /**
+   * "Chamar onda" recusado: `over` = run encerrada ou sem ondas restantes. Só
+   * para a onda com chefão: `active` = há onda em andamento; `enemies` = ainda
+   * há inimigo vivo no mapa.
    */
   callWaveRefused: { reason: 'over' | 'active' | 'enemies' };
   /** A última onda terminou com o chefão morto (`waveEnded` vem antes). */

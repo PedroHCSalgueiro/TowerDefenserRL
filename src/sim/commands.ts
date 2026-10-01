@@ -69,7 +69,7 @@ export function createCommandSystem(
           evolveNexus(ctx, nexus);
           break;
         case 'callWave':
-          callWave(ctx, schedules);
+          callWave(ctx, schedules, enemies, economy);
           break;
         case 'endWave':
           forceEndWave(ctx, schedules, economy, towers);

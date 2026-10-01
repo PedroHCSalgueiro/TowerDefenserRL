@@ -1,4 +1,5 @@
 {
+  "maxActiveEnemies": 1000,
   "timing": {
     "pulseSpawnSeconds": 0.5,
     "pulsePauseSeconds": 4,

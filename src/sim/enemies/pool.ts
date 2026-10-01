@@ -14,6 +14,8 @@ export interface Enemy {
   /** Id único na run (eventos e alvos). Muda a cada reaproveitamento. */
   id: number;
   type: string;
+  /** Onda a que o inimigo pertence (a primeira é a 1); 0 = sem onda (debug e estresse). */
+  wave: number;
   hp: number;
   maxHp: number;
   /** Distância percorrida na rota, em casas. */
@@ -38,6 +40,7 @@ function blankEnemy(slot: number): Enemy {
     active: false,
     id: 0,
     type: '',
+    wave: 0,
     hp: 0,
     maxHp: 0,
     distance: 0,

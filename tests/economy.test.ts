@@ -69,6 +69,7 @@ describe('fim de onda (comando endWave)', () => {
       wave: 1,
       interest: 10,
       bonus: 11,
+      earlyBonus: 0,
       gold: 121,
     });
   });

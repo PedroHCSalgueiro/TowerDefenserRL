@@ -101,12 +101,12 @@ describe('cadeia real (Morteiro, Ceifador, Relé, Obelisco)', () => {
   });
 });
 
-describe('save versão 9', () => {
+describe('save versão 10', () => {
   it('recusa um save sem o estado dos gatilhos, sem o das classes ou com torre sem os campos novos', () => {
     const sim = chainSim('clustered', 10);
     steps(sim, 5);
     const good = JSON.parse(sim.serialize()) as RunState;
-    expect(good.version).toBe(9);
+    expect(good.version).toBe(10);
     expect(() => deserializeRunState(JSON.stringify(good))).not.toThrow();
 
     const noTriggers = { ...good, triggers: undefined };

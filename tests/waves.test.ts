@@ -157,6 +157,7 @@ describe('lista de nascimentos', () => {
 
 /** Ondas pequenas para o mapa de teste: 2 caminhantes; depois o chefão de teste. */
 const smallWaves: WaveData = {
+  maxActiveEnemies: 1000,
   timing: { pulseSpawnSeconds: 0.5, pulsePauseSeconds: 1, massSpawnSeconds: 0.25 },
   waves: [
     { hpMultiplier: 1, pulses: [], mass: [{ type: 'walker', count: 2 }] },
@@ -210,7 +211,9 @@ describe('chamar onda e fim automático', () => {
     expect(ofType(events, 'waveStarted')).toEqual([
       expect.objectContaining({ wave: 1, tick: sim.state.tick }),
     ]);
-    expect(sim.state.waves).toMatchObject({ active: true, startTick: 1, spawned: 1 });
+    expect(sim.state.waves.active).toEqual([
+      { wave: 1, startTick: 1, spawned: 1, bossesKilled: 0, earlyBonus: 0 },
+    ]);
     expect(activeEnemies(sim.state)).toHaveLength(1);
   });
 
@@ -218,7 +221,7 @@ describe('chamar onda e fim automático', () => {
     const sim = smallWaveSim();
     const goldBefore = sim.state.gold;
     sim.enqueue({ type: 'callWave' });
-    const events = runUntil(sim, () => !sim.state.waves.active && sim.state.tick > 1);
+    const events = runUntil(sim, () => sim.state.waves.active.length === 0 && sim.state.tick > 1);
     const ended = ofType(events, 'waveEnded');
     expect(ended).toHaveLength(1);
     expect(ended[0]).toMatchObject({ wave: 1 });
@@ -233,20 +236,21 @@ describe('chamar onda e fim automático', () => {
     const sim = killerSim();
     sim.state.gold = 48; // + 2 abates de 1 ouro = 50 → juros 5 (sem o último, 49 → 4)
     sim.enqueue({ type: 'callWave' });
-    const events = runUntil(sim, () => !sim.state.waves.active && sim.state.tick > 1);
+    const events = runUntil(sim, () => sim.state.waves.active.length === 0 && sim.state.tick > 1);
     expect(sim.state.stats.kills).toBe(2);
     expect(ofType(events, 'waveEnded')[0]!.interest).toBe(5);
   });
 
-  it('só chama com o mapa limpo: onda ativa ou inimigo vivo recusam', () => {
+  it('a onda com chefão só é chamada com o mapa limpo: onda ativa ou inimigo vivo recusam', () => {
     const sim = smallWaveSim();
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
+    // A próxima (2) tem chefão: com a onda 1 ativa, é recusada.
     sim.enqueue({ type: 'callWave' });
     expect(ofType(stepOnce(sim), 'callWaveRefused')).toEqual([
       expect.objectContaining({ reason: 'active' }),
     ]);
-    runUntil(sim, () => !sim.state.waves.active);
+    runUntil(sim, () => sim.state.waves.active.length === 0);
     sim.enqueue({ type: 'spawnEnemy', enemyType: 'walker' });
     stepOnce(sim);
     sim.enqueue({ type: 'callWave' });
@@ -260,7 +264,7 @@ describe('chamar onda e fim automático', () => {
     const sim = smallWaveSim();
     sim.state.wave = 1; // a próxima é a 2 (multiplicador 2)
     sim.enqueue({ type: 'callWave' });
-    runUntil(sim, () => sim.state.waves.spawned === 2);
+    runUntil(sim, () => sim.state.waves.active[0]?.spawned === 2);
     const [walker, titan] = activeEnemies(sim.state).sort((a, b) => a.id - b.id);
     expect(walker!.maxHp).toBe(testEnemies.types.walker!.hp * 2);
     expect(titan!.maxHp).toBe(testEnemies.types.titan!.hp);
@@ -294,7 +298,7 @@ describe('chefão, vitória e derrota', () => {
     sim.state.wave = 1;
     sim.enqueue({ type: 'debugSetNexusInvulnerable', value: true });
     sim.enqueue({ type: 'callWave' });
-    const events = runUntil(sim, () => !sim.state.waves.active && sim.state.tick > 1);
+    const events = runUntil(sim, () => sim.state.waves.active.length === 0 && sim.state.tick > 1);
     expect(sim.state.status).toBe('playing');
     expect(ofType(events, 'bossReachedNexus')).toHaveLength(0);
     expect(ofType(events, 'waveEnded')).toHaveLength(1);
@@ -341,7 +345,7 @@ describe('debug: encerrar e pular ondas', () => {
     sim.enqueue({ type: 'endWave' });
     const events = stepOnce(sim);
     const ended = ofType(events, 'waveEnded')[0]!;
-    expect(sim.state.waves.active).toBe(false);
+    expect(sim.state.waves.active).toEqual([]);
     expect(sim.state.wave).toBe(1);
     expect(sim.state.enemies.activeCount).toBe(0);
     expect(sim.state.gold).toBe(gold + ended.interest + ended.bonus);
@@ -360,7 +364,7 @@ describe('debug: encerrar e pular ondas', () => {
     expect(buildWaveHudModel(sim.state).label).toBe('Onda 10/10');
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
-    expect(sim.state.waves.active).toBe(true);
+    expect(sim.state.waves.active.length).toBeGreaterThan(0);
     // Com onda ativa, pular não faz nada.
     sim.enqueue({ type: 'debugSkipToWave', wave: 10 });
     stepOnce(sim);
@@ -395,28 +399,38 @@ describe('HUD das ondas', () => {
     expect(buildWaveHudModel(sim.state)).toEqual({
       label: 'Onda 1/10',
       detail: 'Pronta para chamar',
+      multiplier: '',
+      pendingBonus: '',
+      callLabel: 'Chamar onda (Espaço)',
       canCall: true,
     });
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
-    // 1 nasceu e está vivo, 9 faltam nascer.
-    expect(buildWaveHudModel(sim.state)).toEqual({
+    // 1 nasceu e está vivo, 9 faltam nascer; a onda 2 pode vir antecipada (bônus 12 → +6).
+    expect(buildWaveHudModel(sim.state)).toMatchObject({
       label: 'Onda 1/10',
       detail: 'Restam 10',
-      canCall: false,
+      callLabel: 'Chamar antecipada (+6)',
+      canCall: true,
     });
-    sim.enqueue({ type: 'endWave' });
+    // Pausado, não chama.
+    expect(buildWaveHudModel(sim.state, true).canCall).toBe(false);
+  });
+
+  it('chefão: com inimigo vivo no mapa, pede para limpar', () => {
+    const sim = shopSim('hud-chefao');
+    sim.enqueue({ type: 'debugSkipToWave', wave: 10 });
     sim.enqueue({ type: 'debugSpawnEnemies', count: 2, enemyType: 'common', layout: 'spread' });
     stepOnce(sim);
-    expect(buildWaveHudModel(sim.state)).toEqual({
-      label: 'Onda 2/10',
+    expect(buildWaveHudModel(sim.state)).toMatchObject({
+      label: 'Onda 10/10',
       detail: 'Limpe o mapa (2)',
       canCall: false,
     });
   });
 });
 
-describe('save versão 9 com ondas', () => {
+describe('save versão 10 com ondas', () => {
   function midWave(): Simulation {
     const sim = Simulation.create('save', createGameSystems(realMap));
     sim.enqueue({
@@ -433,7 +447,7 @@ describe('save versão 9 com ondas', () => {
 
   it('no meio da onda: retomar dá o mesmo estado que seguir jogando', () => {
     const a = midWave();
-    expect(a.state.waves.active).toBe(true);
+    expect(a.state.waves.active.length).toBeGreaterThan(0);
     const b = Simulation.restore(a.serialize(), createGameSystems(realMap));
     for (let i = 0; i < 900; i++) {
       a.step();
@@ -445,8 +459,8 @@ describe('save versão 9 com ondas', () => {
 
   it('entre ondas: retomar e chamar a próxima dá o mesmo estado', () => {
     const a = midWave();
-    for (let i = 0; i < 3000 && a.state.waves.active; i++) a.step();
-    expect(a.state.waves.active).toBe(false);
+    for (let i = 0; i < 3000 && a.state.waves.active.length > 0; i++) a.step();
+    expect(a.state.waves.active).toEqual([]);
     const b = Simulation.restore(a.serialize(), createGameSystems(realMap));
     for (const sim of [a, b]) {
       sim.enqueue({ type: 'callWave' });
@@ -457,11 +471,14 @@ describe('save versão 9 com ondas', () => {
 
   it('recusa save sem as ondas ou sem as estatísticas, e aceita a vitória', () => {
     const good = JSON.parse(midWave().serialize()) as RunState;
-    expect(good.version).toBe(9);
+    expect(good.version).toBe(10);
     expect(() => deserializeRunState(JSON.stringify(good))).not.toThrow();
     const noWaves = { ...good, waves: undefined };
     expect(() => deserializeRunState(JSON.stringify(noWaves))).toThrow(/inválido/);
-    const badSpawned = { ...good, waves: { ...good.waves, spawned: -1 } };
+    const badSpawned = {
+      ...good,
+      waves: { ...good.waves, active: [{ ...good.waves.active[0]!, spawned: -1 }] },
+    };
     expect(() => deserializeRunState(JSON.stringify(badSpawned))).toThrow(/inválido/);
     const noStats = { ...good, stats: undefined };
     expect(() => deserializeRunState(JSON.stringify(noStats))).toThrow(/inválido/);

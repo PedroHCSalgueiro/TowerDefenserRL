@@ -415,6 +415,10 @@ body {
   color: #dddddd;
 }
 
+.wave-hud > * {
+  white-space: nowrap;
+}
+
 .wave-label {
   font-size: 16px;
   font-weight: 700;
@@ -423,4 +427,46 @@ body {
 .wave-detail {
   min-width: 120px;
   color: #aaaaaa;
+}
+
+.wave-multiplier {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffd84a;
+  text-shadow: 0 0 8px rgba(255, 200, 40, 0.6);
+}
+
+.wave-pending {
+  color: #9be37a;
+  font-weight: 600;
+}
+
+.wave-speed {
+  min-width: 56px;
+  text-align: center;
+}
+
+.wave-pause.active {
+  background: #6a4a1a;
+  border-color: #c08a30;
+}
+
+.paused-banner {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 24px;
+  border: 1px solid #c08a30;
+  border-radius: 8px;
+  background: rgba(20, 21, 23, 0.85);
+  font:
+    700 28px system-ui,
+    sans-serif;
+  color: #ffd84a;
+  pointer-events: none;
+}
+
+.paused-banner[hidden] {
+  display: none;
 }

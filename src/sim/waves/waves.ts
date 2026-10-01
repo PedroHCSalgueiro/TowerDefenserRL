@@ -1,12 +1,14 @@
 /**
- * Ondas: chamar a próxima, fazer nascer os inimigos na hora certa, fechar a
- * onda quando ela acaba e declarar a vitória no fim da última.
+ * Ondas: chamar a próxima (inclusive antecipada, com outras em andamento),
+ * fazer nascer os inimigos na hora certa, fechar as ondas em ordem quando
+ * acabam e declarar a vitória no fim da última.
  *
- * O fim da onda chama o mesmo `endWave` da economia (juros, bônus e loja
- * nova) que o botão "Encerrar onda" do debug.
+ * Cada inimigo pertence à sua onda (`Enemy.wave`). Cada onda fecha pelo
+ * mesmo `endWave` da economia (juros, bônus, bônus antecipado e loja nova)
+ * que o botão "Encerrar onda" do debug.
  */
 
-import { endWave } from '../economy/economy';
+import { earlyBonusFor, endWave, killGoldMultiplierFor } from '../economy/economy';
 import type { EconomyData } from '../economy/economyData';
 import { getEnemyType, type EnemyData } from '../enemies/enemyData';
 import { releaseAllEnemies } from '../enemies/pool';
@@ -17,51 +19,102 @@ import { releaseAllProjectiles } from '../projectiles/pool';
 import type { RunState } from '../state';
 import type { TowerData } from '../towers/towerData';
 import type { WaveSchedule } from './schedule';
+import { nextWaveNumber, type ActiveWave } from './waveState';
 
 /**
  * Por que a onda não pode ser chamada agora: `over` = run encerrada ou sem
- * ondas restantes; `active` = há uma onda em andamento; `enemies` = ainda há
- * inimigo vivo no mapa (o empilhamento é da T14).
+ * ondas restantes. Só a onda com chefão exige o mapa limpo: `active` = há
+ * onda em andamento; `enemies` = ainda há inimigo vivo no mapa.
  */
 export type CallWaveRefusal = 'over' | 'active' | 'enemies';
 
+const bossCountCache = new WeakMap<WaveSchedule, number>();
+
+/**
+ * Chefões na lista da onda. Calculado só quando é preciso: partidas de teste
+ * com outros tipos de inimigo e sem ondas nunca consultam a lista padrão.
+ */
+export function bossCountOf(schedule: WaveSchedule, enemies: EnemyData): number {
+  let count = bossCountCache.get(schedule);
+  if (count === undefined) {
+    count = schedule.entries.filter((e) => getEnemyType(enemies, e.type).boss).length;
+    bossCountCache.set(schedule, count);
+  }
+  return count;
+}
+
 export function callWaveRefusal(
   state: Readonly<RunState>,
-  totalWaves: number,
+  schedules: readonly WaveSchedule[],
+  enemies: EnemyData,
 ): CallWaveRefusal | null {
-  if (state.status !== 'playing' || state.wave >= totalWaves) return 'over';
-  if (state.waves.active) return 'active';
-  if (state.enemies.activeCount > 0) return 'enemies';
+  const next = nextWaveNumber(state);
+  const schedule = schedules[next - 1];
+  if (state.status !== 'playing' || !schedule) return 'over';
+  if (bossCountOf(schedule, enemies) > 0) {
+    if (state.waves.active.length > 0) return 'active';
+    if (state.enemies.activeCount > 0) return 'enemies';
+  }
   return null;
 }
 
-/** Inimigos da onda em andamento que ainda não nasceram ou ainda estão vivos (0 sem onda). */
+/** Inimigos das ondas em andamento que ainda não nasceram ou ainda estão vivos (0 sem onda). */
 export function waveRemaining(
   state: Readonly<RunState>,
   schedules: readonly WaveSchedule[],
 ): number {
-  if (!state.waves.active) return 0;
-  const schedule = schedules[state.wave];
-  const unspawned = schedule ? schedule.entries.length - state.waves.spawned : 0;
-  return unspawned + state.enemies.activeCount;
+  let remaining = 0;
+  for (const wave of state.waves.active) {
+    remaining += (schedules[wave.wave - 1]?.entries.length ?? 0) - wave.spawned;
+  }
+  // Inimigo com onda está numa onda ativa: a onda só fecha sem nenhum vivo.
+  for (const enemy of state.enemies.slots) {
+    if (enemy.active && enemy.wave !== 0) remaining++;
+  }
+  return remaining;
 }
 
-/** Ação do jogador: começa a próxima onda, se o mapa estiver limpo. */
-export function callWave(ctx: TickContext, schedules: readonly WaveSchedule[]): void {
+/** Vivos por onda: `alive[n]` = inimigos vivos da onda `n` (índice 0 = sem onda). */
+function countAliveByWave(state: Readonly<RunState>, waveCount: number): number[] {
+  const alive = new Array<number>(waveCount + 1).fill(0);
+  for (const enemy of state.enemies.slots) {
+    if (enemy.active && enemy.wave < alive.length) alive[enemy.wave]!++;
+  }
+  return alive;
+}
+
+function hasUnspawned(wave: ActiveWave, schedules: readonly WaveSchedule[]): boolean {
+  return wave.spawned < (schedules[wave.wave - 1]?.entries.length ?? 0);
+}
+
+/**
+ * Ação do jogador: chama a próxima onda. Com outra onda ativa é chamada
+ * antecipada: o bônus fica guardado na onda e só é pago quando ela fechar.
+ */
+export function callWave(
+  ctx: TickContext,
+  schedules: readonly WaveSchedule[],
+  enemies: EnemyData,
+  economy: EconomyData,
+): void {
   const { state } = ctx;
-  const reason = callWaveRefusal(state, schedules.length);
+  const reason = callWaveRefusal(state, schedules, enemies);
   if (reason !== null) {
     ctx.emit({ type: 'callWaveRefused', tick: state.tick, reason });
     return;
   }
-  state.waves = { active: true, startTick: state.tick, spawned: 0, bossesKilled: 0 };
-  ctx.emit({ type: 'waveStarted', tick: state.tick, wave: state.wave + 1 });
+  const wave = nextWaveNumber(state);
+  const early = state.waves.active.length > 0;
+  const earlyBonus = early ? earlyBonusFor(economy, wave) : 0;
+  state.waves.active.push({ wave, startTick: state.tick, spawned: 0, bossesKilled: 0, earlyBonus });
+  ctx.emit({ type: 'waveStarted', tick: state.tick, wave, early, earlyBonus });
 }
 
 /**
- * Debug ("Encerrar onda"): com onda em andamento, tira do mapa os inimigos e
- * projéteis (sem ouro de abate) e esquece os nascimentos que faltam; depois
- * fecha a onda pelo `endWave`. Depois da última onda, não faz nada.
+ * Debug ("Encerrar onda"): com ondas em andamento, tira do mapa os inimigos
+ * e projéteis (sem ouro de abate), esquece os nascimentos que faltam e fecha
+ * todas pelo `endWave`, em ordem, pagando os bônus antecipados. Sem onda,
+ * fecha a próxima. Depois da última onda, não faz nada (e nunca é vitória).
  */
 export function forceEndWave(
   ctx: TickContext,
@@ -70,18 +123,21 @@ export function forceEndWave(
   towers: TowerData,
 ): void {
   const { state } = ctx;
-  if (state.wave >= schedules.length) return;
-  if (state.waves.active) {
-    releaseAllEnemies(state.enemies);
-    releaseAllProjectiles(state.projectiles);
-    state.waves.active = false;
+  const active = state.waves.active;
+  if (active.length === 0) {
+    if (state.wave < schedules.length) endWave(ctx, economy, towers);
+    return;
   }
-  endWave(ctx, economy, towers);
+  releaseAllEnemies(state.enemies);
+  releaseAllProjectiles(state.projectiles);
+  state.waves.active = [];
+  for (const wave of active) endWave(ctx, economy, towers, wave.earlyBonus);
 }
 
 /**
- * Debug ("Pular para onda"): entre ondas, fecha ondas pelo `endWave` (com
- * juros, bônus e loja nova de cada uma) até a próxima a chamar ser `target`.
+ * Debug ("Pular para onda"): sem ondas em andamento, fecha ondas pelo
+ * `endWave` (com juros, bônus e loja nova de cada uma) até a próxima a
+ * chamar ser `target`.
  */
 export function skipToWave(
   ctx: TickContext,
@@ -91,42 +147,71 @@ export function skipToWave(
   target: number,
 ): void {
   const { state } = ctx;
-  if (state.waves.active || !Number.isFinite(target)) return;
+  if (state.waves.active.length > 0 || !Number.isFinite(target)) return;
   const last = Math.min(Math.floor(target), schedules.length) - 1;
   while (state.wave < last) endWave(ctx, economy, towers);
 }
 
 /**
- * Nascimentos da onda em andamento, logo depois das ações: todo inimigo cujo
- * tick já chegou nasce na entrada, com a vida multiplicada pelo
- * `hpMultiplier` da onda (o chefão fica com a vida dos dados).
+ * Nascimentos das ondas em andamento, logo depois das ações: todo inimigo
+ * cujo tick já chegou nasce na entrada, com a vida multiplicada pelo
+ * `hpMultiplier` da onda (o chefão fica com a vida dos dados). Entre ondas
+ * diferentes, nasce primeiro quem venceu antes; no empate, a onda mais antiga.
+ *
+ * Fila invisível: com `maxActiveEnemies` ativos, os próximos esperam na
+ * entrada, nessa mesma ordem, e nascem quando abrir espaço.
+ *
+ * Depois dos nascimentos, calcula o multiplicador do ouro de abate do tick
+ * pelas ondas com inimigo vivo ou por nascer.
  */
 export function createWaveSpawnSystem(
   routes: Routes,
   enemies: EnemyData,
   schedules: readonly WaveSchedule[],
+  maxActiveEnemies: number,
+  economy: EconomyData,
 ): System {
   return (ctx) => {
     const { state } = ctx;
-    const waves = state.waves;
-    if (!waves.active || state.status !== 'playing') return;
-    const schedule = schedules[state.wave];
-    if (!schedule) return;
-    const elapsed = state.tick - waves.startTick;
-    const { entries } = schedule;
-    while (waves.spawned < entries.length && entries[waves.spawned]!.tick <= elapsed) {
-      const { type } = entries[waves.spawned]!;
+    if (state.status !== 'playing') return;
+    const active = state.waves.active;
+    while (state.enemies.activeCount < maxActiveEnemies) {
+      let next: ActiveWave | null = null;
+      let nextTick = Infinity;
+      for (const wave of active) {
+        const entry = schedules[wave.wave - 1]?.entries[wave.spawned];
+        if (!entry) continue;
+        const due = wave.startTick + entry.tick;
+        if (due <= state.tick && due < nextTick) {
+          next = wave;
+          nextTick = due;
+        }
+      }
+      if (!next) break;
+      const schedule = schedules[next.wave - 1]!;
+      const { type } = schedule.entries[next.spawned]!;
       const multiplier = getEnemyType(enemies, type).boss ? 1 : schedule.hpMultiplier;
-      spawnEnemy(ctx, routes, enemies, type, 0, multiplier);
-      waves.spawned++;
+      spawnEnemy(ctx, routes, enemies, type, 0, multiplier, next.wave);
+      next.spawned++;
     }
+
+    let liveWaves = 0;
+    if (active.length > 0) {
+      const alive = countAliveByWave(state, schedules.length);
+      for (const wave of active) {
+        if (hasUnspawned(wave, schedules) || (alive[wave.wave] ?? 0) > 0) liveWaves++;
+      }
+    }
+    state.waves.goldMultiplier = killGoldMultiplierFor(economy, liveWaves);
   };
 }
 
 /**
- * Depois do ouro: conta os abates do tick e fecha a onda quando todos os
- * inimigos dela já nasceram e nenhum está vivo. No fim da última onda, com
- * os chefões mortos, a run é vencida (depois do `endWave`).
+ * Depois do ouro: conta os abates do tick e fecha as ondas em ordem. A mais
+ * antiga fecha quando todos os inimigos dela já nasceram e nenhum está vivo;
+ * uma onda só fecha depois da anterior (várias podem fechar no mesmo tick).
+ * No fim da última onda, com os chefões mortos, a run é vencida (depois do
+ * `endWave`).
  */
 export function createWaveProgressSystem(
   enemies: EnemyData,
@@ -134,29 +219,30 @@ export function createWaveProgressSystem(
   economy: EconomyData,
   towers: TowerData,
 ): System {
-  // Calculado só quando uma onda fecha: partidas de teste com outros tipos de
-  // inimigo e sem ondas nunca consultam a lista padrão.
-  const countBosses = (schedule: WaveSchedule | undefined): number =>
-    schedule?.entries.filter((e) => getEnemyType(enemies, e.type).boss).length ?? 0;
   return (ctx) => {
     const { state } = ctx;
-    const waves = state.waves;
+    const active = state.waves.active;
     for (const event of ctx.tickEvents) {
       if (event.type !== 'enemyKilled') continue;
       state.stats.kills++;
-      if (waves.active && getEnemyType(enemies, event.enemyType).boss) waves.bossesKilled++;
+      if (event.wave === 0 || !getEnemyType(enemies, event.enemyType).boss) continue;
+      const owner = active.find((w) => w.wave === event.wave);
+      if (owner) owner.bossesKilled++;
     }
-    if (!waves.active || state.status !== 'playing') return;
-    const schedule = schedules[state.wave];
-    if (schedule && waves.spawned < schedule.entries.length) return;
-    if (state.enemies.activeCount > 0) return;
-    waves.active = false;
-    const bossesKilled = waves.bossesKilled;
-    const bossCount = countBosses(schedule);
-    endWave(ctx, economy, towers);
-    if (state.wave === schedules.length && bossesKilled >= bossCount) {
-      state.status = 'won';
-      ctx.emit({ type: 'runWon', tick: state.tick, wave: state.wave });
+    if (active.length === 0 || state.status !== 'playing') return;
+    const alive = countAliveByWave(state, schedules.length);
+    while (active.length > 0) {
+      const wave = active[0]!;
+      if (hasUnspawned(wave, schedules) || (alive[wave.wave] ?? 0) > 0) return;
+      active.shift();
+      endWave(ctx, economy, towers, wave.earlyBonus);
+      const schedule = schedules[wave.wave - 1];
+      const bossCount = schedule ? bossCountOf(schedule, enemies) : 0;
+      if (state.wave === schedules.length && wave.bossesKilled >= bossCount) {
+        state.status = 'won';
+        ctx.emit({ type: 'runWon', tick: state.tick, wave: state.wave });
+        return;
+      }
     }
   };
 }

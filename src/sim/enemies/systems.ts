@@ -10,7 +10,7 @@ import type { Routes } from './route';
 /**
  * Coloca um inimigo do tipo pedido a `distance` casas do início da sua rota
  * (0 = na entrada) e emite `enemySpawned`. `hpMultiplier` multiplica a vida
- * dos dados (o multiplicador da onda).
+ * dos dados (o multiplicador da onda); `wave` é a onda dona do inimigo (0 = sem onda).
  */
 export function spawnEnemy(
   ctx: TickContext,
@@ -19,11 +19,13 @@ export function spawnEnemy(
   enemyType: string,
   distance = 0,
   hpMultiplier = 1,
+  wave = 0,
 ): Enemy {
   const type = getEnemyType(data, enemyType);
   const enemy = acquireEnemy(ctx.state.enemies);
   enemy.id = ctx.allocateId();
   enemy.type = enemyType;
+  enemy.wave = wave;
   enemy.hp = type.hp * hpMultiplier;
   enemy.maxHp = enemy.hp;
   enemy.distance = distance;

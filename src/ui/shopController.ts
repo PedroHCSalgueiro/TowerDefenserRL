@@ -10,6 +10,7 @@
  * ou a tecla compram na hora, sem pegar a torre.
  * Slot que precisaria de casa nova com o mapa no limite de torres (T12): não
  * pega a torre, e a torre já presa é cancelada se o limite encher.
+ * Com o jogo pausado (T14), nada disso funciona e a torre presa é cancelada.
  */
 
 import { classData } from '../sim/classes/classData';
@@ -30,6 +31,8 @@ export interface ShopControllerDeps {
   enqueue: (command: SimCommand) => void;
   /** Tecla E: pede a evolução do núcleo (o painel do núcleo faz o mesmo pelo botão). */
   evolveNexus: () => void;
+  /** Jogo pausado: nada de comprar, rerolar ou vender, e a torre presa ao mouse é cancelada. */
+  paused: () => boolean;
   selectedCell: () => GridCoord | null;
   /** Casa sob um ponto da tela (coordenadas do navegador); `null` fora do mapa. */
   cellAtClient: (clientX: number, clientY: number) => GridCoord | null;
@@ -118,6 +121,7 @@ export class ShopController {
   }
 
   private pickUp(slot: number, dragging: boolean, event?: PointerEvent): void {
+    if (this.deps.paused()) return;
     const model = this.model();
     const entry = model.slots[slot];
     if (!entry || entry.towerType === null || !entry.affordable || entry.blockedByLimit) {
@@ -149,12 +153,13 @@ export class ShopController {
   }
 
   private reroll(): void {
-    if (this.model().canReroll) this.deps.enqueue({ type: 'rerollShop' });
+    if (!this.deps.paused() && this.model().canReroll) this.deps.enqueue({ type: 'rerollShop' });
   }
 
   private sell(): void {
     const target = this.model().sell;
-    if (target) this.deps.enqueue({ type: 'sellTower', towerId: target.towerId });
+    if (target && !this.deps.paused())
+      this.deps.enqueue({ type: 'sellTower', towerId: target.towerId });
   }
 
   private model(): ShopModel {
@@ -169,8 +174,8 @@ export class ShopController {
 
   /** Chame a cada quadro: só refaz o DOM quando algo mudou. */
   update(): void {
-    // A torre presa some se o slot foi trocado ou o ouro acabou.
-    if (this.carry && !this.carrying) this.carry = null;
+    // A torre presa some se o slot foi trocado, o ouro acabou ou o jogo pausou.
+    if (this.carry && (!this.carrying || this.deps.paused())) this.carry = null;
     const carryingEntry = this.carry ? this.model().slots[this.carry.slot] : null;
     if (
       this.carry &&
