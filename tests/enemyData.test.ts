@@ -24,8 +24,15 @@ describe('applyArmor', () => {
 });
 
 describe('dados de inimigos', () => {
-  it('enemies.json tem os 4 tipos do protótipo e o chefão', () => {
-    expect(Object.keys(enemyData.types)).toEqual(['common', 'fast', 'armored', 'flying', 'boss']);
+  it('enemies.json tem os 4 tipos do protótipo e os dois chefões', () => {
+    expect(Object.keys(enemyData.types)).toEqual([
+      'common',
+      'fast',
+      'armored',
+      'flying',
+      'boss',
+      'bossFinal',
+    ]);
     expect(getEnemyType(enemyData, 'flying').movement).toBe('air');
     expect(getEnemyType(enemyData, 'armored').armor).toBe(50);
     expect(enemyData.armor.scale).toBe(100);
@@ -43,14 +50,24 @@ describe('dados de inimigos', () => {
 
   it('rejeita dados inválidos', () => {
     const common = enemiesJson.types.common;
-    const withType = (type: unknown) => ({ armor: { scale: 100 }, types: { x: type } });
+    const elite = enemiesJson.elite;
+    const withType = (type: unknown) => ({ armor: { scale: 100 }, elite, types: { x: type } });
     expect(() => loadEnemyData(withType({ ...common, speed: 0 }))).toThrow(/"x"/);
     expect(() => loadEnemyData(withType({ ...common, armor: -1 }))).toThrow(/"x"/);
     expect(() => loadEnemyData(withType({ ...common, movement: 'swim' }))).toThrow(/"x"/);
     expect(() => loadEnemyData(withType({ ...common, hp: undefined }))).toThrow(/"x"/);
-    expect(() => loadEnemyData({ armor: { scale: 100 }, types: {} })).toThrow(/nenhum tipo/);
-    expect(() => loadEnemyData({ armor: { scale: 0 }, types: {} })).toThrow(/scale/);
-    expect(() => loadEnemyData({ types: {} })).toThrow(/armor/);
+    expect(() => loadEnemyData({ armor: { scale: 100 }, elite, types: {} })).toThrow(/nenhum tipo/);
+    expect(() => loadEnemyData({ armor: { scale: 0 }, elite, types: {} })).toThrow(/scale/);
+    expect(() => loadEnemyData({ elite, types: {} })).toThrow(/armor/);
+    expect(() => loadEnemyData({ armor: { scale: 100 }, types: {} })).toThrow(/elite/);
+    const badElite = (patch: Record<string, unknown>) => ({
+      armor: { scale: 100 },
+      elite: { ...elite, ...patch },
+      types: { x: common },
+    });
+    expect(() => loadEnemyData(badElite({ hpMultiplier: 0 }))).toThrow(/elite/);
+    expect(() => loadEnemyData(badElite({ speedMultiplier: -1 }))).toThrow(/elite/);
+    expect(() => loadEnemyData(badElite({ nexusDamage: undefined }))).toThrow(/elite/);
   });
 });
 

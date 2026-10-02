@@ -17,7 +17,7 @@ import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 import { createWaveState, type ActiveWave, type RunStats, type WaveState } from './waves/waveState';
 
-export const RUN_STATE_VERSION = 13;
+export const RUN_STATE_VERSION = 14;
 
 /**
  * Disposição usada pelo debug:

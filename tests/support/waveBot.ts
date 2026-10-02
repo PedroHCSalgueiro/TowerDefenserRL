@@ -2,7 +2,7 @@
  * Bot simples para jogar uma run inteira no mapa real: entre as ondas compra
  * o que dá (fusão primeiro, depois a torre mais cara que couber), evolui o
  * núcleo quando o limite enche, rerola um pouco, e chama a próxima onda.
- * Não é para jogar bem: é para garantir que as 10 ondas terminam sem erro e
+ * Não é para jogar bem: é para garantir que as 40 ondas terminam sem erro e
  * para medir as ondas com torres de verdade matando.
  */
 
@@ -25,8 +25,8 @@ export const TOTAL_WAVES = waveData.waves.length;
 const REROLLS_PER_BREAK = 2;
 /** Ouro que o bot guarda além do reroll (para os juros e a próxima compra). */
 const REROLL_RESERVE = 10;
-/** Teto de ticks de uma onda (a do chefão leva mais de 68 s só de caminho). */
-const MAX_WAVE_TICKS = 30 * 60 * 5;
+/** Teto de ticks de uma onda (as últimas passam de 100 s; o chefão final leva 76 s só de caminho). */
+const MAX_WAVE_TICKS = 30 * 60 * 8;
 
 /** Casas de torre, das que veem mais casas do caminho (alcance 3) para as que veem menos. */
 export function botCells(map: GridMap): GridCoord[] {
@@ -111,6 +111,10 @@ export interface WaveReport {
   peakTriggersPerTick: number;
   towers: number;
   nexusHp: number;
+  /** Maior número de inimigos vivos ao mesmo tempo durante a onda. */
+  peakEnemies: number;
+  /** Ouro ganho na run até o fim da onda (juros, renda e antecipado). */
+  goldEarned: number;
 }
 
 /**
@@ -127,7 +131,9 @@ export function playWave(sim: Simulation): WaveReport {
   let peak = 0;
   let maxDepth = 0;
   let peakTriggers = 0;
+  let peakEnemies = 0;
   const observe = () => {
+    peakEnemies = Math.max(peakEnemies, sim.state.enemies.activeCount);
     let kills = 0;
     for (const event of sim.drainEvents()) if (event.type === 'enemyKilled') kills++;
     peak = Math.max(peak, kills);
@@ -151,6 +157,8 @@ export function playWave(sim: Simulation): WaveReport {
     peakTriggersPerTick: peakTriggers,
     towers: sim.state.towers.length,
     nexusHp: sim.state.nexus.hp,
+    peakEnemies,
+    goldEarned: sim.state.stats.goldEarned,
   };
 }
 

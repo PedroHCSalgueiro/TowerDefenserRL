@@ -3,6 +3,10 @@
  *
  * `speed` é em casas por segundo. Inimigos `ground` seguem o caminho; `air`
  * vão em linha reta da entrada até o núcleo.
+ *
+ * `elite` vale para qualquer tipo marcado como elite numa onda: o inimigo
+ * mantém o tipo (armadura, movimento), com a vida multiplicada, a velocidade
+ * multiplicada e um dano próprio no núcleo.
  */
 
 import enemiesJson from '../../data/enemies.json';
@@ -21,8 +25,17 @@ export interface EnemyType {
   readonly boss: boolean;
 }
 
+export interface EliteParams {
+  /** Multiplica a vida (por cima do multiplicador da onda). */
+  readonly hpMultiplier: number;
+  readonly speedMultiplier: number;
+  /** Dano no núcleo do elite, no lugar do `nexusDamage` do tipo. */
+  readonly nexusDamage: number;
+}
+
 export interface EnemyData {
   readonly armor: ArmorParams;
+  readonly elite: EliteParams;
   readonly types: Readonly<Record<string, EnemyType>>;
 }
 
@@ -63,8 +76,18 @@ function parseType(id: string, raw: unknown): EnemyType {
 
 /** Valida os dados de inimigos. Erro claro em vez de NaN no meio da run. */
 export function loadEnemyData(raw: unknown): EnemyData {
-  if (!isRecord(raw) || !isRecord(raw.armor) || !isRecord(raw.types)) {
-    throw new Error('Dados de inimigos inválidos: faltam "armor" ou "types"');
+  if (!isRecord(raw) || !isRecord(raw.armor) || !isRecord(raw.elite) || !isRecord(raw.types)) {
+    throw new Error('Dados de inimigos inválidos: faltam "armor", "elite" ou "types"');
+  }
+  const { hpMultiplier, speedMultiplier, nexusDamage } = raw.elite;
+  if (
+    !isNumber(hpMultiplier, 0, false) ||
+    !isNumber(speedMultiplier, 0, false) ||
+    !isNumber(nexusDamage, 0)
+  ) {
+    throw new Error(
+      'Dados de inimigos inválidos: "elite" tem campos ausentes ou fora do intervalo',
+    );
   }
   const { scale } = raw.armor;
   if (!isNumber(scale, 0, false)) {
@@ -78,7 +101,7 @@ export function loadEnemyData(raw: unknown): EnemyData {
   for (const [id, type] of entries) {
     types[id] = parseType(id, type);
   }
-  return { armor: { scale }, types };
+  return { armor: { scale }, elite: { hpMultiplier, speedMultiplier, nexusDamage }, types };
 }
 
 export const enemyData: EnemyData = loadEnemyData(enemiesJson);
@@ -90,4 +113,14 @@ export function getEnemyType(data: EnemyData, id: string): EnemyType {
     throw new Error(`Tipo de inimigo desconhecido: "${id}"`);
   }
   return type;
+}
+
+/** Velocidade do inimigo em casas por segundo (a do tipo, ou reduzida no elite). */
+export function enemySpeed(data: EnemyData, type: EnemyType, elite: boolean): number {
+  return elite ? type.speed * data.elite.speedMultiplier : type.speed;
+}
+
+/** Dano no núcleo de quem chega (o do tipo, ou o do elite). */
+export function enemyNexusDamage(data: EnemyData, type: EnemyType, elite: boolean): number {
+  return elite ? data.elite.nexusDamage : type.nexusDamage;
 }

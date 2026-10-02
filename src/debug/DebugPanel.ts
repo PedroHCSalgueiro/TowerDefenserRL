@@ -284,7 +284,7 @@ export class DebugPanel {
     // tira do mapa os inimigos que restam.
     const endWave = button('Encerrar onda', () => this.send({ type: 'endWave' }));
     // Entre ondas: fecha ondas (com juros e bônus) até a próxima ser a escolhida.
-    const skipWave = numberInput(10);
+    const skipWave = numberInput(20);
     skipWave.min = '1';
     const skipToWave = button('Pular para onda', () =>
       this.send({ type: 'debugSkipToWave', wave: skipWave.valueAsNumber }),

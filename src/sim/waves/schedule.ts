@@ -4,12 +4,13 @@
  * sempre a mesma lista, e o save só precisa guardar quantos já nasceram.
  */
 
-import type { WaveData, WaveDef, WaveGroup, WaveTiming } from './waveData';
+import type { WaveData, WaveDef } from './waveData';
 
 export interface SpawnEntry {
   /** Ticks desde o início da onda (0 = o tick em que ela foi chamada). */
   readonly tick: number;
   readonly type: string;
+  readonly elite: boolean;
 }
 
 export interface WaveSchedule {
@@ -17,38 +18,28 @@ export interface WaveSchedule {
   readonly entries: readonly SpawnEntry[];
 }
 
-function expand(groups: readonly WaveGroup[]): string[] {
-  return groups.flatMap((group) => Array<string>(group.count).fill(group.type));
-}
-
 /**
- * Pulsos em sequência, um inimigo a cada `pulseSpawnSeconds`; entre o último
- * de um pulso e o primeiro do próximo (e antes da massa), `pulsePauseSeconds`;
- * na massa, um a cada `massSpawnSeconds`. Os segundos são acumulados e só
- * convertidos para ticks no fim, para o arredondamento não acumular erro.
+ * Fila única: o primeiro nasce no tick da chamada e cada um dos seguintes
+ * `spawnSeconds` depois do anterior, na ordem dos grupos. Os segundos são
+ * convertidos para ticks a partir da posição na fila, para o arredondamento
+ * não acumular erro.
  */
-export function buildWaveSchedule(
-  wave: WaveDef,
-  timing: WaveTiming,
-  ticksPerSecond: number,
-): WaveSchedule {
+export function buildWaveSchedule(wave: WaveDef, ticksPerSecond: number): WaveSchedule {
   const entries: SpawnEntry[] = [];
-  let seconds = 0;
-  const parts = [
-    ...wave.pulses.map((pulse) => ({ types: expand(pulse), step: timing.pulseSpawnSeconds })),
-    { types: expand(wave.mass), step: timing.massSpawnSeconds },
-  ];
-  parts.forEach((part, p) => {
-    if (p > 0) seconds += timing.pulsePauseSeconds;
-    part.types.forEach((type, i) => {
-      if (i > 0) seconds += part.step;
+  for (const group of wave.enemies) {
+    for (let i = 0; i < group.count; i++) {
+      const seconds = entries.length * wave.spawnSeconds;
       // O epsilon evita que 0,15 × 3 = 0,44999... arredonde para baixo.
-      entries.push({ tick: Math.round(seconds * ticksPerSecond + 1e-9), type });
-    });
-  });
+      entries.push({
+        tick: Math.round(seconds * ticksPerSecond + 1e-9),
+        type: group.type,
+        elite: group.elite,
+      });
+    }
+  }
   return { hpMultiplier: wave.hpMultiplier, entries };
 }
 
 export function buildWaveSchedules(data: WaveData, ticksPerSecond: number): WaveSchedule[] {
-  return data.waves.map((wave) => buildWaveSchedule(wave, data.timing, ticksPerSecond));
+  return data.waves.map((wave) => buildWaveSchedule(wave, ticksPerSecond));
 }

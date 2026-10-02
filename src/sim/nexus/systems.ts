@@ -4,7 +4,7 @@
 
 import engineConfig from '../../data/engine.json';
 import { damageEnemy } from '../enemies/damage';
-import { getEnemyType, type EnemyData } from '../enemies/enemyData';
+import { enemyNexusDamage, getEnemyType, type EnemyData } from '../enemies/enemyData';
 import { releaseEnemy } from '../enemies/pool';
 import type { Routes } from '../enemies/route';
 import type { System } from '../engine/simulation';
@@ -13,7 +13,7 @@ import { SpatialIndex } from '../spatial/spatialIndex';
 import type { NexusData } from './nexusData';
 
 /**
- * Inimigo que chegou ao fim da rota causa `nexusDamage` e sai do mapa. Se a
+ * Inimigo que chegou ao fim da rota causa `nexusDamage` (o do elite, se for) e sai do mapa. Se a
  * vida do núcleo zerar, a run termina (`runLost` é emitido uma vez). O
  * chefão que chega é derrota imediata, qualquer que seja a vida: o núcleo
  * vai a 0. Com o núcleo invulnerável (debug), o inimigo (chefão inclusive)
@@ -27,7 +27,11 @@ export function createNexusContactSystem(routes: Routes, data: EnemyData): Syste
       const type = getEnemyType(data, enemy.type);
       if (enemy.distance < routes[type.movement].length) continue;
       const invulnerable = state.debug.nexusInvulnerable;
-      const damage = invulnerable ? 0 : type.boss ? state.nexus.hp : type.nexusDamage;
+      const damage = invulnerable
+        ? 0
+        : type.boss
+          ? state.nexus.hp
+          : enemyNexusDamage(data, type, enemy.elite);
       state.nexus.hp = Math.max(0, state.nexus.hp - damage);
       releaseEnemy(state.enemies, enemy);
       ctx.emit({ type: 'enemyReachedNexus', tick: state.tick, enemyId: enemy.id, damage });

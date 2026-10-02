@@ -751,6 +751,7 @@ describe('Espelho: powerPercent, copies e sem ataque', () => {
 describe('marcador boss nos dados de inimigo', () => {
   const raw = (boss: unknown) => ({
     armor: { scale: 100 },
+    elite: { hpMultiplier: 6, speedMultiplier: 0.8, nexusDamage: 5 },
     types: {
       big: { hp: 100, speed: 1, armor: 0, nexusDamage: 1, gold: 1, movement: 'ground', boss },
     },

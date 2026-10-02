@@ -3,7 +3,7 @@
  */
 
 import type { System, TickContext } from '../engine/simulation';
-import { getEnemyType, type EnemyData } from './enemyData';
+import { enemySpeed, getEnemyType, type EnemyData } from './enemyData';
 import { acquireEnemy, type Enemy } from './pool';
 import type { Routes } from './route';
 
@@ -11,6 +11,7 @@ import type { Routes } from './route';
  * Coloca um inimigo do tipo pedido a `distance` casas do início da sua rota
  * (0 = na entrada) e emite `enemySpawned`. `hpMultiplier` multiplica a vida
  * dos dados (o multiplicador da onda); `wave` é a onda dona do inimigo (0 = sem onda).
+ * O elite tem ainda a vida multiplicada por `EnemyData.elite.hpMultiplier`.
  */
 export function spawnEnemy(
   ctx: TickContext,
@@ -20,13 +21,15 @@ export function spawnEnemy(
   distance = 0,
   hpMultiplier = 1,
   wave = 0,
+  elite = false,
 ): Enemy {
   const type = getEnemyType(data, enemyType);
   const enemy = acquireEnemy(ctx.state.enemies);
   enemy.id = ctx.allocateId();
   enemy.type = enemyType;
   enemy.wave = wave;
-  enemy.hp = type.hp * hpMultiplier;
+  enemy.elite = elite;
+  enemy.hp = type.hp * hpMultiplier * (elite ? data.elite.hpMultiplier : 1);
   enemy.maxHp = enemy.hp;
   enemy.distance = distance;
   routes[type.movement].sampleInto(distance, enemy);
@@ -43,7 +46,7 @@ export function spawnEnemy(
 }
 
 /**
- * Anda `speed / ticksPerSecond` casas por tick, guardando a posição anterior
+ * Anda `speed / ticksPerSecond` casas por tick (o elite, mais devagar), guardando a posição anterior
  * para a renderização interpolar.
  */
 export function createMovementSystem(
@@ -57,7 +60,7 @@ export function createMovementSystem(
       const type = getEnemyType(data, enemy.type);
       enemy.prevX = enemy.x;
       enemy.prevY = enemy.y;
-      enemy.distance += type.speed / ticksPerSecond;
+      enemy.distance += enemySpeed(data, type, enemy.elite) / ticksPerSecond;
       routes[type.movement].sampleInto(enemy.distance, enemy);
     }
   };

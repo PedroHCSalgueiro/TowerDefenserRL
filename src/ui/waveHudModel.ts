@@ -1,6 +1,6 @@
 /**
- * Modelo do HUD das ondas (sem DOM, para testar): "Onda 3/10" ou
- * "Ondas 5–7 de 10", o que falta, o bônus antecipado pendente e o botão de
+ * Modelo do HUD das ondas (sem DOM, para testar): "Onda 3/40" ou
+ * "Ondas 5–7 de 40", o que falta, o bônus antecipado pendente e o botão de
  * chamar (que vira "Chamar antecipada (+10)").
  */
 

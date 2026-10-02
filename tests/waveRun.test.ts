@@ -4,7 +4,7 @@ import { economyData } from '../src/sim/economy/economyData';
 import { botSim, playRun, TOTAL_WAVES } from './support/waveBot';
 
 describe('run completa jogada pelo bot', () => {
-  it('as 10 ondas terminam sem erro (núcleo invulnerável, para chegar ao fim)', () => {
+  it('as 40 ondas terminam sem erro (núcleo invulnerável, para chegar ao fim)', () => {
     const sim = botSim('bot-invulneravel', true);
     const reports = playRun(sim);
     expect(reports.map((r) => r.wave)).toEqual(
@@ -14,7 +14,7 @@ describe('run completa jogada pelo bot', () => {
     expect(sim.state.waves.active).toEqual([]);
     expect(sim.state.enemies.activeCount).toBe(0);
     // Toda onda termina dentro do teto do bot (nenhuma ficou presa).
-    for (const report of reports) expect(report.ticks).toBeLessThan(30 * 60 * 5);
+    for (const report of reports) expect(report.ticks).toBeLessThan(30 * 60 * 8);
   });
 
   it('a mesma semente dá a mesma run inteira (determinismo)', () => {
@@ -44,13 +44,13 @@ describe('run completa jogada pelo bot', () => {
     expect(killed).toBeGreaterThan(0);
     expect(ended.map((e) => e.wave)).toEqual(Array.from({ length: TOTAL_WAVES }, (_, i) => i + 1));
     for (const e of ended) {
-      expect(e.bonus).toBe(15 + 2 * e.wave);
+      expect(e.bonus).toBe(15 + e.wave);
       expect(e.interest).toBeLessThanOrEqual(economyData.interest.cap);
     }
     const fromWaves = ended.reduce((s, e) => s + e.interest + e.bonus + e.earlyBonus, 0);
     expect(sim.state.stats.goldEarned).toBe(fromWaves);
-    // Renda das 10 ondas: 15 × 10 + 2 × (1 + … + 10) = 260; juros somam no máximo 100.
-    expect(ended.reduce((s, e) => s + e.bonus, 0)).toBe(260);
-    expect(sim.state.stats.goldEarned).toBeLessThanOrEqual(260 + 100);
+    // Renda das 40 ondas: 15 × 40 + (1 + … + 40) = 1.420; juros somam no máximo 400.
+    expect(ended.reduce((s, e) => s + e.bonus, 0)).toBe(1420);
+    expect(sim.state.stats.goldEarned).toBeLessThanOrEqual(1420 + 400);
   });
 });

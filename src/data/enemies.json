@@ -2,6 +2,11 @@
   "armor": {
     "scale": 100
   },
+  "elite": {
+    "hpMultiplier": 6,
+    "speedMultiplier": 0.8,
+    "nexusDamage": 5
+  },
   "types": {
     "common": {
       "hp": 30,
@@ -36,9 +41,18 @@
       "movement": "air"
     },
     "boss": {
-      "hp": 1500,
+      "hp": 2500,
       "speed": 0.5,
       "armor": 30,
+      "nexusDamage": 0,
+      "gold": 0,
+      "movement": "ground",
+      "boss": true
+    },
+    "bossFinal": {
+      "hp": 12000,
+      "speed": 0.45,
+      "armor": 40,
       "nexusDamage": 0,
       "gold": 0,
       "movement": "ground",

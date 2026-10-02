@@ -31,6 +31,7 @@ export const smallMap = loadMap({
 
 export const testEnemies: EnemyData = {
   armor: { scale: 100 },
+  elite: { hpMultiplier: 6, speedMultiplier: 0.8, nexusDamage: 5 },
   types: {
     walker: {
       hp: 10,

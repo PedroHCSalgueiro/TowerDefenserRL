@@ -1,6 +1,7 @@
 /**
  * Greybox dos inimigos: círculo com a cor do tipo e barra de vida. Voadores
- * são desenhados acima de uma sombra no chão.
+ * são desenhados acima de uma sombra no chão. Chefões têm tamanho próprio
+ * (`scales`) e o elite é desenhado `eliteScale` vezes maior.
  *
  * Cada slot do pool de inimigos tem suas imagens (corpo, sombra, fundo e
  * preenchimento da barra), criadas uma vez e reaproveitadas; o slot inativo
@@ -23,6 +24,7 @@ import { hexColor } from './color';
 
 const style = renderConfig.enemies;
 const colors: Readonly<Record<string, string>> = style.colors;
+const scales: Readonly<Record<string, number>> = style.scales;
 
 const TEXTURE_BODY = 'enemy-body';
 const TEXTURE_SHADOW = 'enemy-shadow';
@@ -36,8 +38,9 @@ interface SlotImages {
   barBack: Phaser.GameObjects.Image;
   barFill: Phaser.GameObjects.Image;
   visible: boolean;
-  /** Tipo desenhado por último (a cor só muda quando o tipo muda). */
+  /** Tipo e elite desenhados por último (cor e tamanho só mudam quando eles mudam). */
   type: string;
+  elite: boolean;
 }
 
 function createTextures(scene: Phaser.Scene): void {
@@ -109,9 +112,11 @@ export class EnemyView {
       const depth = isoDepth(at);
       const y = flying ? p.y - style.flyingHeight : p.y;
 
-      if (images.type !== enemy.type) {
+      if (images.type !== enemy.type || images.elite !== enemy.elite) {
         images.type = enemy.type;
+        images.elite = enemy.elite;
         images.body.setTint(this.colorOf(enemy.type));
+        images.body.setScale((scales[enemy.type] ?? 1) * (enemy.elite ? style.eliteScale : 1));
       }
       images.shadow.setVisible(flying);
       if (flying) images.shadow.setPosition(p.x, p.y).setDepth(depth - DEPTH_STEP);
@@ -144,6 +149,7 @@ export class EnemyView {
       barFill: add(TEXTURE_PIXEL).setOrigin(0, 0).setTint(this.barFillColor),
       visible: false,
       type: '',
+      elite: false,
     };
   }
 

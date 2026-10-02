@@ -1,390 +1,5111 @@
 {
   "maxActiveEnemies": 1000,
-  "timing": {
-    "pulseSpawnSeconds": 0.5,
-    "pulsePauseSeconds": 4,
-    "massSpawnSeconds": 0.15
-  },
   "waves": [
     {
-      "hpMultiplier": 1.0,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 3
-          }
-        ],
-        [
-          {
-            "type": "common",
-            "count": 3
-          }
-        ]
-      ],
-      "mass": [
+      "hpMultiplier": 0.7,
+      "spawnSeconds": 2.5,
+      "enemies": [
         {
           "type": "common",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "hpMultiplier": 1.12,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 3
-          }
-        ],
-        [
-          {
-            "type": "common",
-            "count": 4
-          }
-        ]
-      ],
-      "mass": [
-        {
-          "type": "common",
-          "count": 9
-        }
-      ]
-    },
-    {
-      "hpMultiplier": 1.25,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 4
-          }
-        ],
-        [
-          {
-            "type": "common",
-            "count": 3
-          },
-          {
-            "type": "fast",
-            "count": 2
-          }
-        ]
-      ],
-      "mass": [
-        {
-          "type": "common",
-          "count": 10
-        },
-        {
-          "type": "fast",
-          "count": 5
-        }
-      ]
-    },
-    {
-      "hpMultiplier": 1.4,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 5
-          }
-        ],
-        [
-          {
-            "type": "armored",
-            "count": 3
-          },
-          {
-            "type": "common",
-            "count": 2
-          }
-        ]
-      ],
-      "mass": [
-        {
-          "type": "common",
-          "count": 14
-        },
-        {
-          "type": "fast",
-          "count": 4
-        },
-        {
-          "type": "armored",
-          "count": 4
-        }
-      ]
-    },
-    {
-      "hpMultiplier": 1.57,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 6
-          }
-        ],
-        [
-          {
-            "type": "flying",
-            "count": 4
-          }
-        ],
-        [
-          {
-            "type": "armored",
-            "count": 3
-          },
-          {
-            "type": "fast",
-            "count": 3
-          }
-        ]
-      ],
-      "mass": [
-        {
-          "type": "common",
-          "count": 14
-        },
-        {
-          "type": "fast",
-          "count": 5
-        },
-        {
-          "type": "armored",
-          "count": 4
-        },
-        {
-          "type": "flying",
-          "count": 3
-        }
-      ]
-    },
-    {
-      "hpMultiplier": 1.76,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 6
-          }
-        ],
-        [
-          {
-            "type": "armored",
-            "count": 4
-          },
-          {
-            "type": "fast",
-            "count": 2
-          }
-        ],
-        [
-          {
-            "type": "flying",
-            "count": 6
-          }
-        ]
-      ],
-      "mass": [
-        {
-          "type": "common",
-          "count": 18
-        },
-        {
-          "type": "fast",
-          "count": 8
-        },
-        {
-          "type": "armored",
           "count": 6
-        },
-        {
-          "type": "flying",
-          "count": 5
         }
       ]
     },
     {
-      "hpMultiplier": 1.97,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 7
-          }
-        ],
-        [
-          {
-            "type": "armored",
-            "count": 5
-          },
-          {
-            "type": "fast",
-            "count": 2
-          }
-        ],
-        [
-          {
-            "type": "flying",
-            "count": 7
-          }
-        ]
-      ],
-      "mass": [
+      "hpMultiplier": 0.78,
+      "spawnSeconds": 2.35,
+      "enemies": [
         {
           "type": "common",
-          "count": 24
-        },
+          "count": 6
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 0.86,
+      "spawnSeconds": 2.21,
+      "enemies": [
         {
-          "type": "fast",
-          "count": 10
-        },
-        {
-          "type": "armored",
-          "count": 8
-        },
-        {
-          "type": "flying",
+          "type": "common",
           "count": 7
         }
       ]
     },
     {
+      "hpMultiplier": 0.96,
+      "spawnSeconds": 2.08,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.06,
+      "spawnSeconds": 1.95,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.18,
+      "spawnSeconds": 1.83,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.31,
+      "spawnSeconds": 1.72,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 4
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.45,
+      "spawnSeconds": 1.62,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.61,
+      "spawnSeconds": 1.52,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.79,
+      "spawnSeconds": 1.43,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1,
+          "elite": true
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 1.99,
+      "spawnSeconds": 1.35,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
       "hpMultiplier": 2.21,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 8
-          }
-        ],
-        [
-          {
-            "type": "armored",
-            "count": 6
-          },
-          {
-            "type": "fast",
-            "count": 2
-          }
-        ],
-        [
-          {
-            "type": "flying",
-            "count": 8
-          }
-        ]
-      ],
-      "mass": [
+      "spawnSeconds": 1.27,
+      "enemies": [
         {
           "type": "common",
-          "count": 32
+          "count": 1
         },
         {
           "type": "fast",
-          "count": 14
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
         },
         {
           "type": "armored",
-          "count": 10
+          "count": 1
         },
         {
           "type": "flying",
-          "count": 10
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
         }
       ]
     },
     {
-      "hpMultiplier": 2.48,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 8
-          }
-        ],
-        [
-          {
-            "type": "fast",
-            "count": 8
-          }
-        ],
-        [
-          {
-            "type": "armored",
-            "count": 8
-          }
-        ]
-      ],
-      "mass": [
+      "hpMultiplier": 2.45,
+      "spawnSeconds": 1.19,
+      "enemies": [
         {
           "type": "common",
-          "count": 50
+          "count": 1
         },
         {
           "type": "fast",
-          "count": 20
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
         },
         {
           "type": "armored",
-          "count": 18
+          "count": 1
         },
         {
           "type": "flying",
-          "count": 18
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
         }
       ]
     },
     {
-      "hpMultiplier": 2.77,
-      "pulses": [
-        [
-          {
-            "type": "common",
-            "count": 8
-          }
-        ],
-        [
-          {
-            "type": "armored",
-            "count": 6
-          },
-          {
-            "type": "fast",
-            "count": 2
-          }
-        ],
-        [
-          {
-            "type": "flying",
-            "count": 8
-          }
-        ]
-      ],
-      "mass": [
+      "hpMultiplier": 2.72,
+      "spawnSeconds": 1.12,
+      "enemies": [
         {
           "type": "common",
-          "count": 9
+          "count": 2
         },
         {
           "type": "fast",
-          "count": 9
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 3.02,
+      "spawnSeconds": 1.05,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1,
+          "elite": true
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 3.35,
+      "spawnSeconds": 0.99,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 3.72,
+      "spawnSeconds": 0.93,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 4.13,
+      "spawnSeconds": 0.87,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 4.58,
+      "spawnSeconds": 0.82,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 5.08,
+      "spawnSeconds": 0.77,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
         },
         {
           "type": "boss",
           "count": 1
         },
         {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
           "type": "armored",
-          "count": 9
+          "count": 1
         },
         {
           "type": "flying",
-          "count": 9
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 5.64,
+      "spawnSeconds": 0.73,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 6.26,
+      "spawnSeconds": 0.68,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 6.95,
+      "spawnSeconds": 0.64,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 7.72,
+      "spawnSeconds": 0.6,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 8.57,
+      "spawnSeconds": 0.57,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "flying",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 9.51,
+      "spawnSeconds": 0.53,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 10.56,
+      "spawnSeconds": 0.5,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 11.72,
+      "spawnSeconds": 0.47,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 13.01,
+      "spawnSeconds": 0.44,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 14.44,
+      "spawnSeconds": 0.42,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 16.02,
+      "spawnSeconds": 0.39,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 17.79,
+      "spawnSeconds": 0.37,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 19.74,
+      "spawnSeconds": 0.35,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 21.92,
+      "spawnSeconds": 0.32,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 24.33,
+      "spawnSeconds": 0.3,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1,
+          "elite": true
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 27.0,
+      "spawnSeconds": 0.29,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 29.97,
+      "spawnSeconds": 0.27,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 33.27,
+      "spawnSeconds": 0.25,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 36.93,
+      "spawnSeconds": 0.25,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "hpMultiplier": 40.99,
+      "spawnSeconds": 0.25,
+      "enemies": [
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "bossFinal",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 3
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1,
+          "elite": true
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 2
+        },
+        {
+          "type": "armored",
+          "count": 1
+        },
+        {
+          "type": "flying",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
+        },
+        {
+          "type": "fast",
+          "count": 1
+        },
+        {
+          "type": "common",
+          "count": 1
         }
       ]
     }

@@ -16,6 +16,8 @@ export interface Enemy {
   type: string;
   /** Onda a que o inimigo pertence (a primeira é a 1); 0 = sem onda (debug e estresse). */
   wave: number;
+  /** Versão forte do tipo (onda de elite): vida, velocidade e dano no núcleo de `EnemyData.elite`. */
+  elite: boolean;
   hp: number;
   maxHp: number;
   /** Distância percorrida na rota, em casas. */
@@ -41,6 +43,7 @@ function blankEnemy(slot: number): Enemy {
     id: 0,
     type: '',
     wave: 0,
+    elite: false,
     hp: 0,
     maxHp: 0,
     distance: 0,

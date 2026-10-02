@@ -22,6 +22,7 @@ import { ofType, triggerSim } from './support/triggerSim';
 /** Inimigo lento e quase imortal: só o "matador" do teste derruba (as torres reais não). */
 const moveEnemies: EnemyData = {
   armor: testEnemies.armor,
+  elite: testEnemies.elite,
   types: {
     ...testEnemies.types,
     slow: {
@@ -36,11 +37,14 @@ const moveEnemies: EnemyData = {
   },
 };
 
-const slow = (count: number) => ({ hpMultiplier: 1, pulses: [], mass: [{ type: 'slow', count }] });
+const slow = (count: number) => ({
+  hpMultiplier: 1,
+  spawnSeconds: 0.25,
+  enemies: [{ type: 'slow', count, elite: false }],
+});
 
 const moveWaves: WaveData = {
   maxActiveEnemies: 1000,
-  timing: { pulseSpawnSeconds: 0.5, pulsePauseSeconds: 1, massSpawnSeconds: 0.25 },
   waves: [slow(2), slow(1), slow(1), slow(1)],
 };
 

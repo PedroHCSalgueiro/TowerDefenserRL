@@ -32,6 +32,7 @@ function ofType<K extends SimEvent['type']>(events: SimEvent[], type: K) {
 /** Inimigos de teste: `slow` (1 ouro, 28 s para atravessar o mapa pequeno) e o chefão `titan`. */
 const stackEnemies: EnemyData = {
   armor: testEnemies.armor,
+  elite: testEnemies.elite,
   types: {
     ...testEnemies.types,
     slow: {
@@ -48,15 +49,14 @@ const stackEnemies: EnemyData = {
 
 const slow = (count: number) => ({
   hpMultiplier: 1,
-  pulses: [],
-  mass: [{ type: 'slow', count }],
+  spawnSeconds: 0.25,
+  enemies: [{ type: 'slow', count, elite: false }],
 });
 
 /** Ondas 1 a 6 de inimigos lentos (um a cada 2 ticks) e a 7 com o chefão. */
 function stackWaves(maxActiveEnemies = 1000): WaveData {
   return {
     maxActiveEnemies,
-    timing: { pulseSpawnSeconds: 0.5, pulsePauseSeconds: 1, massSpawnSeconds: 0.25 },
     waves: [
       slow(3),
       slow(2),
@@ -64,7 +64,7 @@ function stackWaves(maxActiveEnemies = 1000): WaveData {
       slow(1),
       slow(1),
       slow(1),
-      { hpMultiplier: 1, pulses: [], mass: [{ type: 'titan', count: 1 }] },
+      { hpMultiplier: 1, spawnSeconds: 0.25, enemies: [{ type: 'titan', count: 1, elite: false }] },
     ],
   };
 }
@@ -171,8 +171,8 @@ describe('chamada antecipada', () => {
     events = run(sim, 1);
     const ended = ofType(events, 'waveEnded');
     expect(ended.map((e) => [e.wave, e.bonus, e.earlyBonus])).toEqual([
-      [1, 17, 0],
-      [2, 19, 5],
+      [1, 16, 0],
+      [2, 17, 5],
     ]);
     expect(ofType(events, 'shopChanged').filter((e) => e.reason === 'newWave')).toHaveLength(2);
     expect(sim.state.wave).toBe(2);
@@ -180,7 +180,7 @@ describe('chamada antecipada', () => {
     // Ordem dentro do fechamento: juros sobre o ouro guardado, renda, bônus antecipado.
     const second = ended[1]!;
     expect(second.interest).toBe(Math.min(10, Math.floor(ended[0]!.gold / 10)));
-    expect(second.gold - ended[0]!.gold).toBe(second.interest + 19 + 5);
+    expect(second.gold - ended[0]!.gold).toBe(second.interest + 17 + 5);
   });
 
   it('o bônus antecipado se perde na derrota', () => {
@@ -211,18 +211,18 @@ describe('chamada antecipada', () => {
     expect(ofType(call(sim), 'waveStarted')[0]).toMatchObject({ wave: 7, early: false });
   });
 
-  it('no jogo real: as ondas 1 a 9 juntas num tick só; a 10 é recusada; antecipado soma 180', () => {
+  it('no jogo real: as ondas 1 a 19 juntas num tick só; a 20 (chefão) é recusada; antecipado soma 855', () => {
     const sim = shopSim('pilha-real');
-    const events = call(sim, 10);
+    const events = call(sim, 20);
     const started = ofType(events, 'waveStarted');
-    expect(started.map((e) => e.wave)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    // 5 × (0 + 1 + 2 + … + 8) = 180.
-    expect(started.map((e) => e.earlyBonus)).toEqual([0, 5, 10, 15, 20, 25, 30, 35, 40]);
+    expect(started.map((e) => e.wave)).toEqual(Array.from({ length: 19 }, (_, i) => i + 1));
+    // 5 × (0 + 1 + 2 + … + 18) = 855.
+    expect(started.map((e) => e.earlyBonus)).toEqual(Array.from({ length: 19 }, (_, i) => 5 * i));
     expect(ofType(events, 'callWaveRefused')[0]!.reason).toBe('active');
     expect(buildWaveHudModel(sim.state)).toEqual({
-      label: 'Ondas 1–9 de 10',
+      label: 'Ondas 1–19 de 40',
       detail: expect.stringMatching(/^Restam /) as unknown as string,
-      pendingBonus: '+180 ao limpar',
+      pendingBonus: '+855 ao limpar',
       callLabel: 'Chefão: limpe o mapa',
       canCall: false,
     });

@@ -1,5 +1,5 @@
 /**
- * HUD das ondas, em HTML sobre o canvas: "Onda 3/10" ou "Ondas 5–7 de 10",
+ * HUD das ondas, em HTML sobre o canvas: "Onda 3/40" ou "Ondas 5–7 de 40",
  * os inimigos restantes, o bônus antecipado pendente, o botão de chamar e os controles de velocidade e pausa.
  * Atalhos: Espaço chama (uma onda por toque), Q alterna 1x → 2x → 3x e P
  * pausa e despausa.

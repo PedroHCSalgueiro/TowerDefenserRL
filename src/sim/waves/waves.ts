@@ -155,7 +155,8 @@ export function skipToWave(
 /**
  * Nascimentos das ondas em andamento, logo depois das ações: todo inimigo
  * cujo tick já chegou nasce na entrada, com a vida multiplicada pelo
- * `hpMultiplier` da onda (o chefão fica com a vida dos dados). Entre ondas
+ * `hpMultiplier` da onda (o chefão fica com a vida dos dados) e, no elite,
+ * pelo multiplicador do elite. Entre ondas
  * diferentes, nasce primeiro quem venceu antes; no empate, a onda mais antiga.
  *
  * Fila invisível: com `maxActiveEnemies` ativos, os próximos esperam na
@@ -185,9 +186,9 @@ export function createWaveSpawnSystem(
       }
       if (!next) break;
       const schedule = schedules[next.wave - 1]!;
-      const { type } = schedule.entries[next.spawned]!;
+      const { type, elite } = schedule.entries[next.spawned]!;
       const multiplier = getEnemyType(enemies, type).boss ? 1 : schedule.hpMultiplier;
-      spawnEnemy(ctx, routes, enemies, type, 0, multiplier, next.wave);
+      spawnEnemy(ctx, routes, enemies, type, 0, multiplier, next.wave, elite);
       next.spawned++;
     }
   };

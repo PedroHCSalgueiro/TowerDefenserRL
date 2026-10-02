@@ -21,7 +21,7 @@ describe('dados da economia', () => {
   it('carrega os números aprovados', () => {
     expect(economyData.startingGold).toBe(10);
     expect(economyData.interest).toEqual({ percent: 10, cap: 10 });
-    expect(economyData.waveBonus).toEqual({ base: 15, perWave: 2 });
+    expect(economyData.waveBonus).toEqual({ base: 15, perWave: 1 });
     expect(economyData.earlyCall).toEqual({ perActiveWave: 5 });
     expect('killGoldMultiplier' in economyData).toBe(false);
     expect(economyData.shop.slots).toBe(5);
@@ -59,10 +59,11 @@ describe('juros e bônus', () => {
     expect(interestFor(economyData, 100000)).toBe(10);
   });
 
-  it('renda de fim de onda: 15 + 2 × número da onda (onda 1 = 17, onda 10 = 35)', () => {
-    expect(waveBonusFor(economyData, 1)).toBe(17);
-    expect(waveBonusFor(economyData, 5)).toBe(25);
-    expect(waveBonusFor(economyData, 10)).toBe(35);
+  it('renda de fim de onda: 15 + 1 × número da onda (onda 1 = 16, onda 20 = 35, onda 40 = 55)', () => {
+    expect(waveBonusFor(economyData, 1)).toBe(16);
+    expect(waveBonusFor(economyData, 5)).toBe(20);
+    expect(waveBonusFor(economyData, 20)).toBe(35);
+    expect(waveBonusFor(economyData, 40)).toBe(55);
   });
 });
 
@@ -73,32 +74,32 @@ describe('fim de onda (comando endWave)', () => {
     sim.state.reportedGold = 50;
     sim.enqueue({ type: 'endWave' });
     const events = stepOnce(sim);
-    // 50 + 5 de juros + 17 de renda. Se a renda viesse antes, os juros seriam 6.
-    expect(sim.state.gold).toBe(72);
+    // 50 + 5 de juros + 16 de renda. Se a renda viesse antes, os juros seriam 6.
+    expect(sim.state.gold).toBe(71);
     expect(sim.state.wave).toBe(1);
     expect(events.find((e) => e.type === 'waveEnded')).toEqual({
       type: 'waveEnded',
       tick: 1,
       wave: 1,
       interest: 5,
-      bonus: 17,
+      bonus: 16,
       earlyBonus: 0,
-      gold: 72,
+      gold: 71,
     });
   });
 
-  it('o contador começa em 0: a primeira onda paga 17 e a segunda, 19', () => {
+  it('o contador começa em 0: a primeira onda paga 16 e a segunda, 17', () => {
     const sim = shopSim();
     expect(sim.state.wave).toBe(0);
     sim.state.gold = 0;
     sim.state.reportedGold = 0;
     sim.enqueue({ type: 'endWave' });
     stepOnce(sim);
-    expect(sim.state.gold).toBe(17);
+    expect(sim.state.gold).toBe(16);
     sim.enqueue({ type: 'endWave' });
     stepOnce(sim);
-    // 17 de juros = 1, mais a renda de 19.
-    expect(sim.state.gold).toBe(17 + 1 + 19);
+    // 16 de juros = 1, mais a renda de 17.
+    expect(sim.state.gold).toBe(16 + 1 + 17);
     expect(sim.state.wave).toBe(2);
   });
 
@@ -108,7 +109,7 @@ describe('fim de onda (comando endWave)', () => {
     sim.state.reportedGold = 1000;
     sim.enqueue({ type: 'endWave' });
     stepOnce(sim);
-    expect(sim.state.gold).toBe(1000 + 10 + 17);
+    expect(sim.state.gold).toBe(1000 + 10 + 16);
   });
 });
 

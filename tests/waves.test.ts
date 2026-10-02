@@ -22,149 +22,216 @@ import { botCells, botMap } from './support/waveBot';
 import { buildRoutes } from '../src/sim/enemies/route';
 
 const TICKS = engineConfig.ticksPerSecond;
-const SPEC_TOTALS = [10, 16, 24, 32, 42, 55, 70, 90, 130, 61];
+const ELITE_WAVES = [5, 10, 15, 25, 30, 35];
+const BOSS_WAVES: Record<number, string> = { 20: 'boss', 40: 'bossFinal' };
+const TYPE_ORDER = ['common', 'fast', 'armored', 'flying'];
 
-function totalOf(wave: WaveData['waves'][number]): number {
-  return [...wave.pulses.flat(), ...wave.mass].reduce((sum, g) => sum + g.count, 0);
+type Wave = WaveData['waves'][number];
+
+function totalOf(wave: Wave): number {
+  return wave.enemies.reduce((sum, g) => sum + g.count, 0);
 }
 
-function typesOf(wave: WaveData['waves'][number]): Set<string> {
-  return new Set([...wave.pulses.flat(), ...wave.mass].map((g) => g.type));
+function normalOf(wave: Wave): number {
+  return wave.enemies
+    .filter((g) => !g.elite && !getEnemyType(enemyData, g.type).boss)
+    .reduce((sum, g) => sum + g.count, 0);
+}
+
+function elitesOf(wave: Wave): number {
+  return wave.enemies.filter((g) => g.elite).reduce((sum, g) => sum + g.count, 0);
+}
+
+function typesOf(wave: Wave): Set<string> {
+  return new Set(wave.enemies.filter((g) => !g.elite).map((g) => g.type));
 }
 
 function ofType<K extends SimEvent['type']>(events: SimEvent[], type: K) {
   return events.filter((e): e is Extract<SimEvent, { type: K }> => e.type === type);
 }
 
-describe('dados das ondas (especificação aprovada em 30/09)', () => {
-  it('10 ondas com os totais da tabela (a 10 é chefão + 60)', () => {
-    expect(waveData.waves.map(totalOf)).toEqual(SPEC_TOTALS);
+describe('dados das ondas (T21: 40 ondas em fila única)', () => {
+  it('40 ondas; a onda 1 tem 6 comuns, 0,7× de vida e um inimigo a cada 2,5 s', () => {
+    expect(waveData.waves).toHaveLength(40);
+    expect(waveData.waves[0]).toEqual({
+      hpMultiplier: 0.7,
+      spawnSeconds: 2.5,
+      enemies: [{ type: 'common', count: 6, elite: false }],
+    });
   });
 
-  it('2 ou 3 pulsos de 3 a 8 inimigos e uma massa final', () => {
-    for (const wave of waveData.waves) {
-      expect(wave.pulses.length).toBeGreaterThanOrEqual(2);
-      expect(wave.pulses.length).toBeLessThanOrEqual(3);
-      for (const pulse of wave.pulses) {
-        const size = pulse.reduce((sum, g) => sum + g.count, 0);
-        expect(size).toBeGreaterThanOrEqual(3);
-        expect(size).toBeLessThanOrEqual(8);
+  it('sem pulsos: cada onda é só a fila (vida, intervalo e grupos)', () => {
+    for (const wave of wavesJson.waves) {
+      expect(Object.keys(wave).sort()).toEqual(['enemies', 'hpMultiplier', 'spawnSeconds']);
+    }
+    expect('timing' in wavesJson).toBe(false);
+  });
+
+  it('a vida cresce a cada onda (curva composta) e o intervalo nunca cresce, com piso de 0,25 s', () => {
+    for (let i = 1; i < waveData.waves.length; i++) {
+      const [prev, wave] = [waveData.waves[i - 1]!, waveData.waves[i]!];
+      expect(wave.hpMultiplier).toBeGreaterThan(prev.hpMultiplier);
+      expect(wave.spawnSeconds).toBeLessThanOrEqual(prev.spawnSeconds);
+      expect(wave.spawnSeconds).toBeGreaterThanOrEqual(0.25);
+    }
+    // Devagar no começo, rápido no fim.
+    const h = waveData.waves.map((w) => w.hpMultiplier);
+    expect(h[9]! - h[0]!).toBeLessThan(h[39]! - h[30]!);
+  });
+
+  it('a quantidade cresce nas ondas normais (as de elite e de chefão têm escolta menor)', () => {
+    const normal = waveData.waves
+      .map((w, i) => ({ n: i + 1, total: totalOf(w) }))
+      .filter(({ n }) => !ELITE_WAVES.includes(n) && !(n in BOSS_WAVES));
+    for (let i = 1; i < normal.length; i++) {
+      expect(normal[i]!.total).toBeGreaterThanOrEqual(normal[i - 1]!.total);
+    }
+    expect(totalOf(waveData.waves[39]!)).toBeGreaterThan(100);
+  });
+
+  it('entrada dos tipos: rápido na 4, blindado na 8, voador na 12', () => {
+    const first = (type: string) =>
+      waveData.waves.findIndex((w) => w.enemies.some((g) => g.type === type)) + 1;
+    expect(first('common')).toBe(1);
+    expect(first('fast')).toBe(4);
+    expect(first('armored')).toBe(8);
+    expect(first('flying')).toBe(12);
+    for (const [i, wave] of waveData.waves.entries()) {
+      for (const type of typesOf(wave)) {
+        if (getEnemyType(enemyData, type).boss) continue;
+        expect(TYPE_ORDER).toContain(type);
+        expect(i + 1).toBeGreaterThanOrEqual(first(type));
       }
-      expect(wave.mass.length).toBeGreaterThan(0);
     }
   });
 
-  it('intervalos: 0,5 s nos pulsos, 4 s de pausa e 0,15 s na massa', () => {
-    expect(waveData.timing).toEqual({
-      pulseSpawnSeconds: 0.5,
-      pulsePauseSeconds: 4,
-      massSpawnSeconds: 0.15,
-    });
+  it('elites só nas ondas 5, 10, 15, 25, 30 e 35 (e na 40), poucos, com tipos já liberados', () => {
+    const withElites = waveData.waves.map((w, i) => (elitesOf(w) > 0 ? i + 1 : 0)).filter(Boolean);
+    expect(withElites).toEqual([...ELITE_WAVES, 40]);
+    for (const n of ELITE_WAVES) {
+      const wave = waveData.waves[n - 1]!;
+      expect(elitesOf(wave)).toBeGreaterThanOrEqual(2);
+      expect(elitesOf(wave)).toBeLessThanOrEqual(8);
+      // Escolta pequena: metade dos inimigos de uma onda normal vizinha.
+      expect(normalOf(wave)).toBeLessThan(normalOf(waveData.waves[n]!));
+      const unlocked = new Set(waveData.waves.slice(0, n).flatMap((w) => [...typesOf(w)]));
+      for (const g of wave.enemies.filter((e) => e.elite)) expect(unlocked).toContain(g.type);
+    }
   });
 
-  it('vida composta: 1,12^(n−1), com a onda 1 em 1,0', () => {
-    waveData.waves.forEach((wave, i) => {
-      expect(wave.hpMultiplier).toBeCloseTo(1.12 ** i, 2);
-    });
-    expect(waveData.waves[0]!.hpMultiplier).toBe(1);
+  it('chefões: boss só na 20 e bossFinal só na 40, um de cada, no meio da fila', () => {
+    for (const [i, wave] of waveData.waves.entries()) {
+      const bosses = wave.enemies.filter((g) => getEnemyType(enemyData, g.type).boss);
+      const expected = BOSS_WAVES[i + 1];
+      if (!expected) {
+        expect(bosses).toEqual([]);
+        continue;
+      }
+      expect(bosses).toEqual([{ type: expected, count: 1, elite: false }]);
+      const queue = buildWaveSchedule(wave, TICKS).entries.map((e) => e.type);
+      const at = queue.indexOf(expected);
+      expect(at).toBeGreaterThan(queue.length / 4);
+      expect(at).toBeLessThan((queue.length * 3) / 4);
+    }
   });
 
-  it('arco dos tipos: comuns, rápidos na 3, blindados na 4, voadores na 5, todos na 9', () => {
-    const types = waveData.waves.map(typesOf);
-    expect([...types[0]!]).toEqual(['common']);
-    expect([...types[1]!]).toEqual(['common']);
-    expect(types[2]).toEqual(new Set(['common', 'fast']));
-    expect(types[3]!.has('armored')).toBe(true);
-    expect(types.slice(0, 3).some((t) => t.has('armored'))).toBe(false);
-    expect(types[4]!.has('flying')).toBe(true);
-    expect(types.slice(0, 4).some((t) => t.has('flying'))).toBe(false);
-    expect(types[8]).toEqual(new Set(['common', 'fast', 'armored', 'flying']));
-  });
-
-  it('o chefão só aparece na onda 10, uma vez, no meio da massa', () => {
-    waveData.waves.slice(0, 9).forEach((wave) => expect(typesOf(wave).has('boss')).toBe(false));
-    const last = waveData.waves[9]!;
-    expect(last.pulses.flat().some((g) => g.type === 'boss')).toBe(false);
-    const mass = last.mass.flatMap((g) => Array<string>(g.count).fill(g.type));
-    expect(mass.filter((t) => t === 'boss')).toHaveLength(1);
-    const at = mass.indexOf('boss');
-    expect(at).toBe(Math.floor(mass.length / 2));
-  });
-
-  it('chefão em enemies.json: vida 1.500, velocidade 0,5, armadura 30, ouro 0 (T19), boss', () => {
-    expect(getEnemyType(enemyData, 'boss')).toMatchObject({
-      hp: 1500,
+  it('chefões em enemies.json: boss (2.500) e bossFinal (12.000), ouro 0, boss', () => {
+    expect(getEnemyType(enemyData, 'boss')).toEqual({
+      hp: 2500,
       speed: 0.5,
       armor: 30,
+      nexusDamage: 0,
       gold: 0,
+      movement: 'ground',
+      boss: true,
+    });
+    expect(getEnemyType(enemyData, 'bossFinal')).toEqual({
+      hp: 12000,
+      speed: 0.45,
+      armor: 40,
+      nexusDamage: 0,
+      gold: 0,
+      movement: 'ground',
       boss: true,
     });
   });
 
-  it('recusa dados ruins com erro claro', () => {
-    interface RawWaves {
-      timing?: Record<string, number>;
-      waves: { hpMultiplier: number; mass: { type: string; count: number }[] }[];
-    }
-    const bad = (change: (raw: RawWaves) => void) => {
-      const raw = structuredClone(wavesJson) as unknown as RawWaves;
-      change(raw);
+  it('elite em enemies.json: vida ×6, velocidade ×0,8 e 5 de dano no núcleo', () => {
+    expect(enemyData.elite).toEqual({ hpMultiplier: 6, speedMultiplier: 0.8, nexusDamage: 5 });
+  });
+
+  it('recusa dados ruins com erro claro, inclusive o formato antigo com pulsos', () => {
+    const bad = (mutate: (raw: Record<string, unknown> & typeof wavesJson) => void) => {
+      const raw = JSON.parse(JSON.stringify(wavesJson)) as Record<string, unknown> &
+        typeof wavesJson;
+      mutate(raw);
       return () => loadWaveData(raw, enemyData);
     };
-    expect(bad(() => {})).not.toThrow();
-    expect(bad((r) => (r.waves[0]!.mass[0]!.type = 'dragão'))).toThrow(/desconhecido/);
-    expect(bad((r) => (r.waves[0]!.mass[0]!.count = 0))).toThrow(/inteiro positivo/);
-    expect(bad((r) => (r.waves[0]!.mass = []))).toThrow(/não vazia/);
-    expect(bad((r) => delete r.timing)).toThrow(/timing/);
-    expect(bad((r) => (r.timing!.massSpawnSeconds = 0))).toThrow(/timing/);
-    expect(bad((r) => (r.waves[0]!.hpMultiplier = 0))).toThrow(/hpMultiplier/);
+    expect(bad(() => undefined)).not.toThrow();
+    expect(bad((r) => (r.waves[0]!.enemies[0]!.type = 'dragão'))).toThrow(/desconhecido/);
+    expect(bad((r) => (r.waves[0]!.enemies[0]!.count = 0))).toThrow(/inteiro positivo/);
+    expect(bad((r) => (r.waves[0]!.enemies = []))).toThrow(/enemies/);
+    expect(bad((r) => (r.waves[0]!.spawnSeconds = 0))).toThrow(/spawnSeconds/);
+    expect(bad((r) => (r.waves[0]!.hpMultiplier = -1))).toThrow(/hpMultiplier/);
+    expect(bad((r) => ((r.waves[0]!.enemies[0] as Record<string, unknown>).elite = 'sim'))).toThrow(
+      /elite/,
+    );
+    expect(
+      bad((r) => (r.waves[0]!.enemies[0] = { type: 'boss', count: 1, elite: true } as never)),
+    ).toThrow(/chefão/);
+    expect(bad((r) => (r.timing = { massSpawnSeconds: 0.15 }))).toThrow(/formato antigo/);
+    expect(bad((r) => ((r.waves[0] as Record<string, unknown>).pulses = []))).toThrow(/pulsos/);
+    expect(bad((r) => (r.maxActiveEnemies = 0))).toThrow(/maxActiveEnemies/);
     expect(bad((r) => (r.waves = []))).toThrow(/nenhuma onda/);
   });
 });
 
-describe('lista de nascimentos', () => {
-  it('onda 1: pulsos a cada 0,5 s, pausas de 4 s e massa a cada 0,15 s', () => {
-    const { entries } = buildWaveSchedule(waveData.waves[0]!, waveData.timing, TICKS);
-    // 3 + 3 nos pulsos, 4 na massa.
-    expect(entries.map((e) => e.tick)).toEqual([0, 15, 30, 150, 165, 180, 300, 305, 309, 314]);
-    expect(entries.every((e) => e.type === 'common')).toBe(true);
+describe('lista de nascimentos (fila única)', () => {
+  it('onda 1: um comum a cada 2,5 s, o primeiro no tick da chamada', () => {
+    const { entries } = buildWaveSchedule(waveData.waves[0]!, TICKS);
+    expect(entries.map((e) => e.tick)).toEqual([0, 75, 150, 225, 300, 375]);
+    expect(entries.every((e) => e.type === 'common' && !e.elite)).toBe(true);
   });
 
-  it('a ordem segue os dados, e os ticks nunca voltam', () => {
-    for (const [i, wave] of waveData.waves.entries()) {
-      const { entries, hpMultiplier } = buildWaveSchedule(wave, waveData.timing, TICKS);
-      expect(entries).toHaveLength(SPEC_TOTALS[i]!);
+  it('a ordem segue os dados, sem pausas: os ticks andam sempre o mesmo intervalo', () => {
+    for (const wave of waveData.waves) {
+      const { entries, hpMultiplier } = buildWaveSchedule(wave, TICKS);
+      expect(entries).toHaveLength(totalOf(wave));
       expect(hpMultiplier).toBe(wave.hpMultiplier);
-      const expected = [...wave.pulses.flat(), ...wave.mass].flatMap((g) =>
-        Array<string>(g.count).fill(g.type),
+      const expected = wave.enemies.flatMap((g) =>
+        Array.from({ length: g.count }, () => `${g.type}${g.elite ? '*' : ''}`),
       );
-      expect(entries.map((e) => e.type)).toEqual(expected);
+      expect(entries.map((e) => `${e.type}${e.elite ? '*' : ''}`)).toEqual(expected);
+      const step = wave.spawnSeconds * TICKS;
       for (let k = 1; k < entries.length; k++) {
-        expect(entries[k]!.tick).toBeGreaterThan(entries[k - 1]!.tick);
+        const gap = entries[k]!.tick - entries[k - 1]!.tick;
+        expect(Math.abs(gap - step)).toBeLessThanOrEqual(1);
       }
     }
   });
 
-  it('a massa não acumula erro de arredondamento (130 inimigos da onda 9)', () => {
-    const wave = waveData.waves[8]!;
-    const { entries } = buildWaveSchedule(wave, waveData.timing, TICKS);
-    const massSize = wave.mass.reduce((sum, g) => sum + g.count, 0);
-    const mass = entries.slice(entries.length - massSize);
-    const span = mass[mass.length - 1]!.tick - mass[0]!.tick;
-    expect(Math.abs(span - (massSize - 1) * 0.15 * TICKS)).toBeLessThanOrEqual(1);
+  it('a fila longa não acumula erro de arredondamento (onda 40)', () => {
+    const wave = waveData.waves[39]!;
+    const { entries } = buildWaveSchedule(wave, TICKS);
+    const span = entries[entries.length - 1]!.tick;
+    expect(Math.abs(span - (entries.length - 1) * wave.spawnSeconds * TICKS)).toBeLessThanOrEqual(
+      1,
+    );
   });
 });
 
 /** Ondas pequenas para o mapa de teste: 2 caminhantes; depois o chefão de teste. */
 const smallWaves: WaveData = {
   maxActiveEnemies: 1000,
-  timing: { pulseSpawnSeconds: 0.5, pulsePauseSeconds: 1, massSpawnSeconds: 0.25 },
   waves: [
-    { hpMultiplier: 1, pulses: [], mass: [{ type: 'walker', count: 2 }] },
+    { hpMultiplier: 1, spawnSeconds: 0.25, enemies: [{ type: 'walker', count: 2, elite: false }] },
     {
       hpMultiplier: 2,
-      pulses: [[{ type: 'walker', count: 1 }]],
-      mass: [{ type: 'titan', count: 1 }],
+      spawnSeconds: 0.25,
+      enemies: [
+        { type: 'walker', count: 1, elite: false },
+        { type: 'titan', count: 1, elite: false },
+      ],
     },
   ],
 };
@@ -270,12 +337,12 @@ describe('chamar onda e fim automático', () => {
     expect(titan!.maxHp).toBe(testEnemies.types.titan!.hp);
   });
 
-  it('o multiplicador composto vale no mapa real (onda 2: comum com 30 × 1,12)', () => {
+  it('o multiplicador da onda vale no mapa real (onda 2: comum com 30 × o da onda 2)', () => {
     const sim = shopSim('vida');
     sim.enqueue({ type: 'endWave' });
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
-    expect(activeEnemies(sim.state)[0]!.maxHp).toBeCloseTo(30 * 1.12, 9);
+    expect(activeEnemies(sim.state)[0]!.maxHp).toBeCloseTo(30 * waveData.waves[1]!.hpMultiplier, 9);
   });
 });
 
@@ -355,41 +422,47 @@ describe('debug: encerrar e pular ondas', () => {
     expect(ofType(stepOnce(sim), 'waveStarted')[0]!.wave).toBe(2);
   });
 
-  it('"Pular para onda 10" fecha as ondas 1 a 9 pelo endWave; depois da última, nada muda', () => {
+  it('"Pular para onda 40" fecha as ondas 1 a 39 pelo endWave; depois da última, nada muda', () => {
     const sim = shopSim('pular');
-    sim.enqueue({ type: 'debugSkipToWave', wave: 10 });
+    sim.enqueue({ type: 'debugSkipToWave', wave: 40 });
     const events = stepOnce(sim);
-    expect(ofType(events, 'waveEnded').map((e) => e.wave)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(sim.state.wave).toBe(9);
-    expect(buildWaveHudModel(sim.state).label).toBe('Onda 10/10');
+    expect(ofType(events, 'waveEnded').map((e) => e.wave)).toEqual(
+      Array.from({ length: 39 }, (_, i) => i + 1),
+    );
+    expect(sim.state.wave).toBe(39);
+    expect(buildWaveHudModel(sim.state).label).toBe('Onda 40/40');
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
     expect(sim.state.waves.active.length).toBeGreaterThan(0);
     // Com onda ativa, pular não faz nada.
-    sim.enqueue({ type: 'debugSkipToWave', wave: 10 });
+    sim.enqueue({ type: 'debugSkipToWave', wave: 40 });
     stepOnce(sim);
-    expect(sim.state.wave).toBe(9);
+    expect(sim.state.wave).toBe(39);
     // Encerrar a última onda pelo debug não é vitória, e depois dela não há mais o que encerrar.
     sim.enqueue({ type: 'endWave' });
     stepOnce(sim);
     expect(sim.state.status).toBe('playing');
     sim.enqueue({ type: 'endWave' });
     expect(ofType(stepOnce(sim), 'waveEnded')).toHaveLength(0);
-    expect(sim.state.wave).toBe(10);
+    expect(sim.state.wave).toBe(40);
   });
 
-  it('o chefão real nasce com a vida dos dados na onda 10', () => {
-    const sim = shopSim('chefao');
-    sim.enqueue({ type: 'debugSkipToWave', wave: 10 });
+  it.each([
+    [20, 'boss', 2500],
+    [40, 'bossFinal', 12000],
+  ])('o chefão real da onda %i (%s) nasce com a vida dos dados', (wave, type, hp) => {
+    const sim = shopSim(`chefao-${wave}`);
+    sim.enqueue({ type: 'debugSkipToWave', wave });
     sim.enqueue({ type: 'debugSetNexusInvulnerable', value: true });
     sim.enqueue({ type: 'callWave' });
-    for (let i = 0; i < 1200 && !activeEnemies(sim.state).some((e) => e.type === 'boss'); i++) {
+    for (let i = 0; i < 3000 && !activeEnemies(sim.state).some((e) => e.type === type); i++) {
       sim.step();
     }
-    const boss = activeEnemies(sim.state).find((e) => e.type === 'boss')!;
-    expect(boss.maxHp).toBe(1500);
-    const escort = activeEnemies(sim.state).find((e) => e.type === 'common')!;
-    expect(escort.maxHp).toBeCloseTo(30 * waveData.waves[9]!.hpMultiplier, 9);
+    const boss = activeEnemies(sim.state).find((e) => e.type === type)!;
+    expect(boss.maxHp).toBe(hp);
+    expect(boss.elite).toBe(false);
+    const escort = activeEnemies(sim.state).find((e) => e.type === 'common' && !e.elite)!;
+    expect(escort.maxHp).toBeCloseTo(30 * waveData.waves[wave - 1]!.hpMultiplier, 9);
   });
 });
 
@@ -397,7 +470,7 @@ describe('HUD das ondas', () => {
   it('mostra a onda, o que falta e se dá para chamar', () => {
     const sim = shopSim('hud');
     expect(buildWaveHudModel(sim.state)).toEqual({
-      label: 'Onda 1/10',
+      label: 'Onda 1/40',
       detail: 'Pronta para chamar',
       pendingBonus: '',
       callLabel: 'Chamar onda (Espaço)',
@@ -405,10 +478,10 @@ describe('HUD das ondas', () => {
     });
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
-    // 1 nasceu e está vivo, 9 faltam nascer; a onda 2 pode vir antecipada (1 ativa → +5).
+    // 1 nasceu e está vivo, 5 faltam nascer; a onda 2 pode vir antecipada (1 ativa → +5).
     expect(buildWaveHudModel(sim.state)).toMatchObject({
-      label: 'Onda 1/10',
-      detail: 'Restam 10',
+      label: 'Onda 1/40',
+      detail: 'Restam 6',
       callLabel: 'Chamar antecipada (+5)',
       canCall: true,
     });
@@ -418,11 +491,11 @@ describe('HUD das ondas', () => {
 
   it('chefão: com inimigo vivo no mapa, pede para limpar', () => {
     const sim = shopSim('hud-chefao');
-    sim.enqueue({ type: 'debugSkipToWave', wave: 10 });
+    sim.enqueue({ type: 'debugSkipToWave', wave: 20 });
     sim.enqueue({ type: 'debugSpawnEnemies', count: 2, enemyType: 'common', layout: 'spread' });
     stepOnce(sim);
     expect(buildWaveHudModel(sim.state)).toMatchObject({
-      label: 'Onda 10/10',
+      label: 'Onda 20/40',
       detail: 'Limpe o mapa (2)',
       canCall: false,
     });
@@ -489,8 +562,9 @@ describe('save com ondas', () => {
 describe('ondas padrão completas', () => {
   it('a soma das listas bate com o total da run', () => {
     const schedules = buildWaveSchedules(waveData, TICKS);
+    expect(schedules).toHaveLength(40);
     expect(schedules.reduce((sum, s) => sum + s.entries.length, 0)).toBe(
-      SPEC_TOTALS.reduce((a, b) => a + b, 0),
+      waveData.waves.reduce((sum, w) => sum + totalOf(w), 0),
     );
   });
 });
@@ -523,7 +597,7 @@ describe('Carrasco contra o chefão real', () => {
     expect(ofType(events, 'triggerFired')[0]).toMatchObject({ effect: 'execute' });
     expect(boss.active).toBe(true);
     expect(boss.hp).toBeGreaterThan(0);
-    expect(boss.hp).toBeLessThan(150);
+    expect(boss.hp).toBeLessThan(boss.maxHp * 0.1);
     expect(ofType(events, 'enemyKilled')).toHaveLength(0);
   });
 });

@@ -2,7 +2,7 @@
   "startingGold": 10,
   "nexusStartLevel": 1,
   "interest": { "percent": 10, "cap": 10 },
-  "waveBonus": { "base": 15, "perWave": 2 },
+  "waveBonus": { "base": 15, "perWave": 1 },
   "earlyCall": { "perActiveWave": 5 },
   "shop": {
     "slots": 5,

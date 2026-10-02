@@ -32,7 +32,9 @@
       "common": "#d9d9d9",
       "fast": "#f2c14e",
       "armored": "#6c8ebf",
-      "flying": "#c77dff"
+      "flying": "#c77dff",
+      "boss": "#e2553f",
+      "bossFinal": "#8b1e3f"
     },
     "flyingHeight": 14,
     "shadow": {
@@ -47,7 +49,12 @@
       "offsetY": 12,
       "backColor": "#3a0d0d",
       "fillColor": "#5ad15a"
-    }
+    },
+    "scales": {
+      "boss": 1.8,
+      "bossFinal": 2.4
+    },
+    "eliteScale": 1.5
   },
   "nexus": {
     "healthBar": {
