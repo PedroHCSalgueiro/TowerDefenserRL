@@ -67,16 +67,22 @@ describe('dados das ondas (T21: 40 ondas em fila única)', () => {
     expect('timing' in wavesJson).toBe(false);
   });
 
-  it('a vida cresce a cada onda (curva composta) e o intervalo nunca cresce, com piso de 0,25 s', () => {
+  it('a vida cresce a cada onda (curva composta) e o intervalo nunca cresce da 6 em diante, com piso de 0,25 s', () => {
     for (let i = 1; i < waveData.waves.length; i++) {
       const [prev, wave] = [waveData.waves[i - 1]!, waveData.waves[i]!];
       expect(wave.hpMultiplier).toBeGreaterThan(prev.hpMultiplier);
-      expect(wave.spawnSeconds).toBeLessThanOrEqual(prev.spawnSeconds);
+      if (i >= 6) expect(wave.spawnSeconds).toBeLessThanOrEqual(prev.spawnSeconds);
       expect(wave.spawnSeconds).toBeGreaterThanOrEqual(0.25);
     }
     // Devagar no começo, rápido no fim.
     const h = waveData.waves.map((w) => w.hpMultiplier);
     expect(h[9]! - h[0]!).toBeLessThan(h[39]! - h[30]!);
+  });
+
+  it('começo: onda 1 com 2,5 s (M1) e ondas 2 a 5 com intervalo fixo de 1,8 s', () => {
+    expect(waveData.waves.slice(0, 5).map((w) => w.spawnSeconds)).toEqual([
+      2.5, 1.8, 1.8, 1.8, 1.8,
+    ]);
   });
 
   it('a quantidade cresce nas ondas normais (as de elite e de chefão têm escolta menor)', () => {

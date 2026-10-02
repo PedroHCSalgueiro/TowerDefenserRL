@@ -13,7 +13,7 @@
     },
     {
       "hpMultiplier": 0.78,
-      "spawnSeconds": 2.35,
+      "spawnSeconds": 1.8,
       "enemies": [
         {
           "type": "common",
@@ -23,7 +23,7 @@
     },
     {
       "hpMultiplier": 0.86,
-      "spawnSeconds": 2.21,
+      "spawnSeconds": 1.8,
       "enemies": [
         {
           "type": "common",
@@ -33,7 +33,7 @@
     },
     {
       "hpMultiplier": 0.96,
-      "spawnSeconds": 2.08,
+      "spawnSeconds": 1.8,
       "enemies": [
         {
           "type": "common",
@@ -59,7 +59,7 @@
     },
     {
       "hpMultiplier": 1.06,
-      "spawnSeconds": 1.95,
+      "spawnSeconds": 1.8,
       "enemies": [
         {
           "type": "common",
