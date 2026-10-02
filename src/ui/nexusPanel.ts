@@ -62,7 +62,13 @@ export class NexusPanel {
       button.blur();
     });
     this.root.replaceChildren(
-      el('div', 'nexus-title', `Núcleo nível ${model.level}/${model.maxLevel}`),
+      el(
+        'div',
+        'nexus-title',
+        Number.isFinite(model.maxLevel)
+          ? `Núcleo nível ${model.level}/${model.maxLevel}`
+          : `Núcleo nível ${model.level}`,
+      ),
       el('div', 'nexus-hp', `Vida ${model.hp}/${model.maxHp}`),
       el(
         'div',

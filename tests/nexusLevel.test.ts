@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { economyData } from '../src/sim/economy/economyData';
 import type { SimEvent } from '../src/sim/engine/events';
 import type { Simulation } from '../src/sim/engine/simulation';
-import { nexusData, towerLimit } from '../src/sim/nexus/nexusData';
+import {
+  loadNexusData,
+  maxNexusLevel,
+  nexusData,
+  nexusLevel,
+  towerLimit,
+} from '../src/sim/nexus/nexusData';
+import nexusJson from '../src/data/nexus.json';
+import { chancesFor } from '../src/sim/shop/shop';
 import { deserializeRunState, serializeRunState } from '../src/sim/state';
 import { newShop } from '../src/sim/shop/shop';
 import { Rng } from '../src/sim/engine/rng';
@@ -175,16 +183,18 @@ describe('evoluir o núcleo', () => {
     expect(events.some((e) => e.type === 'nexusEvolved')).toBe(false);
   });
 
-  it('sobe até o nível 5 pagando cada custo e para no máximo', () => {
+  it('sobe pelos níveis 1 a 5 da tabela pagando cada custo e segue sem teto (experimento)', () => {
     const sim = shopSim('evo');
     sim.state.gold = 1000;
     for (let i = 0; i < 6; i++) {
       sim.enqueue({ type: 'evolveNexus' });
       stepOnce(sim);
     }
-    expect(sim.state.nexus).toMatchObject({ level: 5, maxHp: 40 });
-    expect(sim.state.gold).toBe(1000 - cost(2) - cost(3) - cost(4) - cost(5));
+    // 2 a 5 pela tabela (20 + 30 + 45 + 60), o 6 pela fórmula (81).
+    expect(sim.state.nexus).toMatchObject({ level: 7, maxHp: 50 });
+    expect(sim.state.gold).toBe(1000 - 20 - 30 - 45 - 60 - 81 - 109);
     expect(towerLimit(nexusData, 5)).toBe(8);
+    expect(towerLimit(nexusData, 7)).toBe(10);
   });
 
   it('com a run perdida, não faz nada', () => {
@@ -312,7 +322,7 @@ describe('modelos da interface', () => {
     const model = buildNexusPanelModel(sim.state, economyData);
     expect(model).toMatchObject({
       level: 1,
-      maxLevel: 5,
+      maxLevel: Infinity,
       towers: 1,
       towerLimit: 3,
       nextTowerLimit: 4,
@@ -323,12 +333,32 @@ describe('modelos da interface', () => {
     expect(model.nextChances).toEqual(economyData.shop.rarityChances[1]);
   });
 
-  it('no nível máximo não há próximo nível nem custo', () => {
+  it('sem teto: no nível 5 o painel mostra o nível 6 (custo 81, limite 9) e as chances do 5', () => {
     const sim = shopSim('ui');
     sim.state.nexus.level = 5;
     sim.state.gold = 999;
     const model = buildNexusPanelModel(sim.state, economyData);
-    expect(model).toMatchObject({ cost: null, nextChances: null, nextTowerLimit: null });
+    expect(model).toMatchObject({
+      maxLevel: Infinity,
+      cost: 81,
+      nextTowerLimit: 9,
+      canEvolve: true,
+    });
+    expect(model.nextChances).toEqual(economyData.shop.rarityChances[4]);
+  });
+
+  it('com a tabela como máximo (sem beyondLevels), no último nível não há próximo nem custo', () => {
+    const capped = { ...nexusData, beyondLevels: null };
+    const sim = shopSim('ui');
+    sim.state.nexus.level = 5;
+    sim.state.gold = 999;
+    const model = buildNexusPanelModel(sim.state, economyData, capped);
+    expect(model).toMatchObject({
+      maxLevel: 5,
+      cost: null,
+      nextChances: null,
+      nextTowerLimit: null,
+    });
     expect(model.canEvolve).toBe(false);
   });
 });
@@ -353,5 +383,61 @@ describe('flash da fusão', () => {
     expect(fusionFlashes([merge(1, 2, []), merge(2, 3, [1])])).toEqual([
       { towerId: 2, x: 2, y: 0 },
     ]);
+  });
+});
+
+describe('núcleo com nível infinito (experimento)', () => {
+  it('níveis 1 a 5 iguais à tabela de antes', () => {
+    expect([1, 2, 3, 4, 5].map((n) => nexusLevel(nexusData, n))).toEqual([
+      { cost: 0, towerLimit: 3, maxHp: 20 },
+      { cost: 20, towerLimit: 4, maxHp: 25 },
+      { cost: 30, towerLimit: 5, maxHp: 30 },
+      { cost: 45, towerLimit: 6, maxHp: 35 },
+      { cost: 60, towerLimit: 8, maxHp: 40 },
+    ]);
+  });
+
+  it('do 6 em diante: custo do anterior × 1,35 arredondado, +1 torre e +5 de vida por nível', () => {
+    expect(nexusData.beyondLevels).toEqual({
+      costMultiplier: 1.35,
+      towerLimitPerLevel: 1,
+      maxHpPerLevel: 5,
+    });
+    expect([6, 7, 8, 9, 10].map((n) => nexusLevel(nexusData, n).cost)).toEqual([
+      81, 109, 147, 198, 267,
+    ]);
+    expect(nexusLevel(nexusData, 10)).toMatchObject({ towerLimit: 13, maxHp: 65 });
+    expect(maxNexusLevel(nexusData)).toBe(Infinity);
+  });
+
+  it('as chances de raridade do nível 5 em diante são as do nível 5', () => {
+    for (const level of [5, 6, 10, 30]) {
+      expect(chancesFor(economyData, level)).toEqual(economyData.shop.rarityChances[4]);
+    }
+  });
+
+  it('evoluir além do 5 cura só a diferença de vida e o save aceita o nível alto', () => {
+    const sim = shopSim('evo-alto');
+    sim.state.nexus.level = 5;
+    sim.state.nexus.maxHp = 40;
+    sim.state.nexus.hp = 30;
+    sim.state.gold = 81;
+    sim.enqueue({ type: 'evolveNexus' });
+    stepOnce(sim);
+    expect(sim.state.nexus).toMatchObject({ level: 6, maxHp: 45, hp: 35 });
+    expect(sim.state.gold).toBe(0);
+    expect(deserializeRunState(serializeRunState(sim.state)).nexus.level).toBe(6);
+  });
+
+  it('recusa beyondLevels inválido', () => {
+    const bad = (beyondLevels: unknown) => () => loadNexusData({ ...nexusJson, beyondLevels });
+    expect(bad(null)).not.toThrow();
+    expect(bad({ costMultiplier: 0, towerLimitPerLevel: 1, maxHpPerLevel: 5 })).toThrow(
+      /beyondLevels/,
+    );
+    expect(bad({ costMultiplier: 1.35, towerLimitPerLevel: -1, maxHpPerLevel: 5 })).toThrow(
+      /beyondLevels/,
+    );
+    expect(bad({ costMultiplier: 1.35, towerLimitPerLevel: 1 })).toThrow(/beyondLevels/);
   });
 });

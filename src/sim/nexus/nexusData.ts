@@ -12,9 +12,22 @@ export interface NexusLevel {
   readonly maxHp: number;
 }
 
+/**
+ * Níveis depois da tabela (experimento do núcleo infinito): cada nível custa o
+ * custo do anterior × `costMultiplier` (arredondado) e soma `towerLimitPerLevel`
+ * ao limite de torres e `maxHpPerLevel` à vida máxima. Sem teto.
+ */
+export interface NexusGrowth {
+  readonly costMultiplier: number;
+  readonly towerLimitPerLevel: number;
+  readonly maxHpPerLevel: number;
+}
+
 export interface NexusData {
-  /** `levels[n - 1]` é o nível `n`; o último é o máximo. */
+  /** `levels[n - 1]` é o nível `n`. Sem `beyondLevels`, o último é o máximo. */
   readonly levels: readonly NexusLevel[];
+  /** Níveis depois da tabela, sem teto (`null` = a tabela é o máximo). */
+  readonly beyondLevels: NexusGrowth | null;
   readonly attack: {
     readonly damage: number;
     readonly cooldownSeconds: number;
@@ -55,8 +68,27 @@ export function loadNexusData(raw: unknown): NexusData {
   ) {
     throw new Error('Dados do núcleo inválidos: campos ausentes ou não positivos');
   }
+  const growth = (raw as { beyondLevels?: Partial<NexusGrowth> | null }).beyondLevels ?? null;
+  if (
+    growth !== null &&
+    (!isPositive(growth.costMultiplier) ||
+      !Number.isInteger(growth.towerLimitPerLevel) ||
+      (growth.towerLimitPerLevel as number) < 0 ||
+      !Number.isInteger(growth.maxHpPerLevel) ||
+      (growth.maxHpPerLevel as number) < 0)
+  ) {
+    throw new Error('Dados do núcleo inválidos: "beyondLevels" com campos ausentes ou negativos');
+  }
   return {
     levels: data.levels.map((l) => ({ cost: l.cost, towerLimit: l.towerLimit, maxHp: l.maxHp })),
+    beyondLevels:
+      growth === null
+        ? null
+        : {
+            costMultiplier: growth.costMultiplier as number,
+            towerLimitPerLevel: growth.towerLimitPerLevel as number,
+            maxHpPerLevel: growth.maxHpPerLevel as number,
+          },
     attack: {
       damage: attack.damage,
       cooldownSeconds: attack.cooldownSeconds,
@@ -67,9 +99,22 @@ export function loadNexusData(raw: unknown): NexusData {
 
 export const nexusData: NexusData = loadNexusData(nexusJson);
 
-/** Dados do nível `level`, preso entre o primeiro e o último da tabela. */
+/**
+ * Dados do nível `level` (preso em 1 e no máximo). Depois da tabela, com
+ * `beyondLevels`, cada nível sai do anterior pela fórmula.
+ */
 export function nexusLevel(data: NexusData, level: number): NexusLevel {
-  return data.levels[Math.min(Math.max(1, level), data.levels.length) - 1] as NexusLevel;
+  const table = data.levels;
+  const wanted = Math.min(Math.max(1, Math.floor(level)), maxNexusLevel(data));
+  if (wanted <= table.length) return table[wanted - 1] as NexusLevel;
+  const growth = data.beyondLevels!;
+  let { cost, towerLimit, maxHp } = table[table.length - 1] as NexusLevel;
+  for (let n = table.length + 1; n <= wanted; n++) {
+    cost = Math.round(cost * growth.costMultiplier);
+    towerLimit += growth.towerLimitPerLevel;
+    maxHp += growth.maxHpPerLevel;
+  }
+  return { cost, towerLimit, maxHp };
 }
 
 /** Limite de torres no mapa no nível `level`. */
@@ -77,7 +122,7 @@ export function towerLimit(data: NexusData, level: number): number {
   return nexusLevel(data, level).towerLimit;
 }
 
-/** Nível máximo da tabela. */
+/** Nível máximo: o último da tabela, ou `Infinity` com `beyondLevels`. */
 export function maxNexusLevel(data: NexusData): number {
-  return data.levels.length;
+  return data.beyondLevels ? Infinity : data.levels.length;
 }
