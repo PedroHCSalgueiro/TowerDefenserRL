@@ -12,13 +12,11 @@ export interface EconomyData {
   readonly nexusStartLevel: number;
   readonly interest: { readonly percent: number; readonly cap: number };
   readonly waveBonus: { readonly base: number; readonly perWave: number };
-  /** Chamada antecipada: porcentagem do bônus de fim da onda chamada, paga quando ela fecha. */
-  readonly earlyCall: { readonly bonusPercent: number };
   /**
-   * Ouro de abate: `1 + perExtraWave × (ondas com inimigo vivo ou por nascer − 1)`,
-   * com teto `max`. Não vale para juros nem bônus.
+   * Chamada antecipada: `perActiveWave` × ondas já ativas (chamadas e não
+   * fechadas) no momento da chamada, pago quando a onda chamada fecha.
    */
-  readonly killGoldMultiplier: { readonly perExtraWave: number; readonly max: number };
+  readonly earlyCall: { readonly perActiveWave: number };
   readonly shop: {
     readonly slots: number;
     readonly rerollCost: number;
@@ -38,10 +36,6 @@ function isInt(value: unknown, min: number): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= min;
 }
 
-function isNonNegative(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-}
-
 function fail(message: string): never {
   throw new Error(`Dados de economia inválidos: ${message}`);
 }
@@ -55,15 +49,7 @@ function parseByRarity(name: string, raw: unknown, valid: (v: unknown) => boolea
 
 export function loadEconomyData(raw: unknown): EconomyData {
   if (!isRecord(raw)) fail('não é um objeto');
-  const {
-    startingGold,
-    nexusStartLevel,
-    interest,
-    waveBonus,
-    earlyCall,
-    killGoldMultiplier,
-    shop,
-  } = raw;
+  const { startingGold, nexusStartLevel, interest, waveBonus, earlyCall, shop } = raw;
   if (!isInt(startingGold, 0)) fail('"startingGold" precisa ser inteiro >= 0');
   if (!isInt(nexusStartLevel, 1)) fail('"nexusStartLevel" precisa ser inteiro >= 1');
   if (!isRecord(interest) || !isInt(interest.percent, 0) || !isInt(interest.cap, 0)) {
@@ -72,16 +58,8 @@ export function loadEconomyData(raw: unknown): EconomyData {
   if (!isRecord(waveBonus) || !isInt(waveBonus.base, 0) || !isInt(waveBonus.perWave, 0)) {
     fail('"waveBonus" precisa de base e perWave inteiros >= 0');
   }
-  if (!isRecord(earlyCall) || !isInt(earlyCall.bonusPercent, 0)) {
-    fail('"earlyCall" precisa de bonusPercent inteiro >= 0');
-  }
-  if (
-    !isRecord(killGoldMultiplier) ||
-    !isNonNegative(killGoldMultiplier.perExtraWave) ||
-    !isNonNegative(killGoldMultiplier.max) ||
-    killGoldMultiplier.max < 1
-  ) {
-    fail('"killGoldMultiplier" precisa de perExtraWave >= 0 e max >= 1');
+  if (!isRecord(earlyCall) || !isInt(earlyCall.perActiveWave, 0)) {
+    fail('"earlyCall" precisa de perActiveWave inteiro >= 0');
   }
   if (
     !isRecord(shop) ||
@@ -112,11 +90,7 @@ export function loadEconomyData(raw: unknown): EconomyData {
     nexusStartLevel,
     interest: { percent: interest.percent, cap: interest.cap },
     waveBonus: { base: waveBonus.base, perWave: waveBonus.perWave },
-    earlyCall: { bonusPercent: earlyCall.bonusPercent },
-    killGoldMultiplier: {
-      perExtraWave: killGoldMultiplier.perExtraWave,
-      max: killGoldMultiplier.max,
-    },
+    earlyCall: { perActiveWave: earlyCall.perActiveWave },
     shop: {
       slots: shop.slots,
       rerollCost: shop.rerollCost,

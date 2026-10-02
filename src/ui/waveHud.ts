@@ -1,7 +1,6 @@
 /**
  * HUD das ondas, em HTML sobre o canvas: "Onda 3/10" ou "Ondas 5–7 de 10",
- * os inimigos restantes, o multiplicador de ouro, o bônus antecipado
- * pendente, o botão de chamar e os controles de velocidade e pausa.
+ * os inimigos restantes, o bônus antecipado pendente, o botão de chamar e os controles de velocidade e pausa.
  * Atalhos: Espaço chama (uma onda por toque), Q alterna 1x → 2x → 3x e P
  * pausa e despausa.
  */
@@ -38,7 +37,6 @@ export class WaveHud {
   private readonly root: HTMLElement;
   private readonly label: HTMLElement;
   private readonly detail: HTMLElement;
-  private readonly multiplier: HTMLElement;
   private readonly pending: HTMLElement;
   private readonly callButton: HTMLButtonElement;
   private readonly speedButton: HTMLButtonElement;
@@ -74,7 +72,6 @@ export class WaveHud {
     };
     this.label = div('wave-label');
     this.detail = div('wave-detail');
-    this.multiplier = div('wave-multiplier');
     this.pending = div('wave-pending');
     this.callButton = hudButton('Chamar onda (Espaço)', 'wave-call', actions.onCall);
     this.speedButton = hudButton('1x (Q)', 'wave-speed', actions.onCycleSpeed);
@@ -82,7 +79,6 @@ export class WaveHud {
     this.root.append(
       this.label,
       this.detail,
-      this.multiplier,
       this.pending,
       this.callButton,
       this.speedButton,
@@ -103,8 +99,6 @@ export class WaveHud {
     this.key = key;
     this.label.textContent = model.label;
     this.detail.textContent = model.detail;
-    this.multiplier.textContent = model.multiplier;
-    this.multiplier.hidden = model.multiplier === '';
     this.pending.textContent = model.pendingBonus;
     this.pending.hidden = model.pendingBonus === '';
     this.callButton.textContent = model.callLabel;

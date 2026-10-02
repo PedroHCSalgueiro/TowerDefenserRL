@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import economyJson from '../src/data/economy.json';
 import engineConfig from '../src/data/engine.json';
 import wavesJson from '../src/data/waves.json';
-import { earlyBonusFor, killGoldMultiplierFor, waveBonusFor } from '../src/sim/economy/economy';
+import { earlyBonusFor } from '../src/sim/economy/economy';
 import { economyData, loadEconomyData } from '../src/sim/economy/economyData';
 import { damageEnemy } from '../src/sim/enemies/damage';
 import { enemyData, type EnemyData } from '../src/sim/enemies/enemyData';
@@ -12,8 +12,9 @@ import { Simulation, SimulationRunner, type System } from '../src/sim/engine/sim
 import type { Enemy } from '../src/sim/enemies/pool';
 import { RUN_STATE_VERSION, type RunState } from '../src/sim/state';
 import { createGameSystems } from '../src/sim/systems';
+import { buildWaveSchedules } from '../src/sim/waves/schedule';
 import { loadWaveData, type WaveData } from '../src/sim/waves/waveData';
-import { buildWaveHudModel, formatMultiplier } from '../src/ui/waveHudModel';
+import { buildWaveHudModel } from '../src/ui/waveHudModel';
 import {
   activeEnemies,
   blindNexus,
@@ -113,10 +114,10 @@ function run(sim: Simulation, ticks: number): SimEvent[] {
 
 const activeNumbers = (state: Readonly<RunState>) => state.waves.active.map((w) => w.wave);
 
-describe('dados da T14', () => {
-  it('economy.json: bônus antecipado 50% e multiplicador 0,5 por onda com teto 3', () => {
-    expect(economyData.earlyCall).toEqual({ bonusPercent: 50 });
-    expect(economyData.killGoldMultiplier).toEqual({ perExtraWave: 0.5, max: 3 });
+describe('dados da T14 (bônus antecipado da T19)', () => {
+  it('economy.json: bônus antecipado de 5 por onda ativa, sem multiplicador de abate', () => {
+    expect(economyData.earlyCall).toEqual({ perActiveWave: 5 });
+    expect(economyJson).not.toHaveProperty('killGoldMultiplier');
   });
 
   it('waves.json: até 1.000 inimigos ativos', () => {
@@ -127,25 +128,18 @@ describe('dados da T14', () => {
     const noEarly = structuredClone(economyJson) as Record<string, unknown>;
     delete noEarly.earlyCall;
     expect(() => loadEconomyData(noEarly)).toThrow(/earlyCall/);
-    const badMult = structuredClone(economyJson);
-    badMult.killGoldMultiplier.max = 0.5;
-    expect(() => loadEconomyData(badMult)).toThrow(/killGoldMultiplier/);
+    const oldEarly = structuredClone(economyJson) as Record<string, unknown>;
+    oldEarly.earlyCall = { bonusPercent: 50 };
+    expect(() => loadEconomyData(oldEarly)).toThrow(/perActiveWave/);
+    const negative = structuredClone(economyJson);
+    negative.earlyCall.perActiveWave = -1;
+    expect(() => loadEconomyData(negative)).toThrow(/earlyCall/);
     const badLimit = { ...structuredClone(wavesJson), maxActiveEnemies: 0 };
     expect(() => loadWaveData(badLimit, enemyData)).toThrow(/maxActiveEnemies/);
   });
 
-  it('bônus antecipado: metade do bônus da onda, para baixo (onda 5 → 15 → 7)', () => {
-    expect(waveBonusFor(economyData, 5)).toBe(15);
-    expect(earlyBonusFor(economyData, 5)).toBe(7);
-    expect(earlyBonusFor(economyData, 2)).toBe(6);
-  });
-
-  it('multiplicador: 1 onda ×1; 2 ×1,5; 3 ×2; 4 ×2,5; 5 ou mais ×3', () => {
-    expect([0, 1, 2, 3, 4, 5, 6, 9].map((n) => killGoldMultiplierFor(economyData, n))).toEqual([
-      1, 1, 1.5, 2, 2.5, 3, 3, 3,
-    ]);
-    expect(formatMultiplier(1.5)).toBe('x1,5!');
-    expect(formatMultiplier(2)).toBe('x2!');
+  it('bônus antecipado: 5 × ondas já ativas na chamada (0 sem onda ativa)', () => {
+    expect([0, 1, 2, 3, 8].map((n) => earlyBonusFor(economyData, n))).toEqual([0, 5, 10, 15, 40]);
   });
 });
 
@@ -160,9 +154,9 @@ describe('chamada antecipada', () => {
     expect(ofType(call(sim), 'waveStarted')[0]).toMatchObject({
       wave: 2,
       early: true,
-      earlyBonus: 6,
+      earlyBonus: 5,
     });
-    expect(sim.state.waves.active.map((w) => w.earlyBonus)).toEqual([0, 6]);
+    expect(sim.state.waves.active.map((w) => w.earlyBonus)).toEqual([0, 5]);
     run(sim, 10); // todos nasceram
     const goldBefore = sim.state.gold;
     // Mata a onda 2 inteira: ela está limpa, mas espera a 1 fechar, sem bônus.
@@ -170,22 +164,23 @@ describe('chamada antecipada', () => {
     let events = run(sim, 2);
     expect(ofType(events, 'waveEnded')).toHaveLength(0);
     expect(activeNumbers(sim.state)).toEqual([1, 2]);
-    // Só o ouro dos 2 abates, com as 2 ondas vivas (×1,5).
-    expect(sim.state.gold).toBe(goldBefore + 3);
+    // Só o ouro dos 2 abates (1 cada nos dados de teste), sem multiplicador.
+    expect(sim.state.gold).toBe(goldBefore + 2);
     // Mata a onda 1: as duas fecham no mesmo tick, em ordem, cada uma com o seu endWave.
     control.kill = (e) => e.wave === 1;
     events = run(sim, 1);
     const ended = ofType(events, 'waveEnded');
     expect(ended.map((e) => [e.wave, e.bonus, e.earlyBonus])).toEqual([
-      [1, 11, 0],
-      [2, 12, 6],
+      [1, 17, 0],
+      [2, 19, 5],
     ]);
     expect(ofType(events, 'shopChanged').filter((e) => e.reason === 'newWave')).toHaveLength(2);
     expect(sim.state.wave).toBe(2);
     expect(sim.state.waves.active).toEqual([]);
-    // Ordem dentro do fechamento: juros sobre o ouro guardado, bônus, bônus antecipado.
+    // Ordem dentro do fechamento: juros sobre o ouro guardado, renda, bônus antecipado.
     const second = ended[1]!;
-    expect(second.gold - ended[0]!.gold).toBe(second.interest + 12 + 6);
+    expect(second.interest).toBe(Math.min(10, Math.floor(ended[0]!.gold / 10)));
+    expect(second.gold - ended[0]!.gold).toBe(second.interest + 19 + 5);
   });
 
   it('o bônus antecipado se perde na derrota', () => {
@@ -216,18 +211,47 @@ describe('chamada antecipada', () => {
     expect(ofType(call(sim), 'waveStarted')[0]).toMatchObject({ wave: 7, early: false });
   });
 
-  it('no jogo real: as ondas 1 a 9 juntas num tick só; a 10 é recusada', () => {
+  it('no jogo real: as ondas 1 a 9 juntas num tick só; a 10 é recusada; antecipado soma 180', () => {
     const sim = shopSim('pilha-real');
     const events = call(sim, 10);
-    expect(ofType(events, 'waveStarted').map((e) => e.wave)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const started = ofType(events, 'waveStarted');
+    expect(started.map((e) => e.wave)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    // 5 × (0 + 1 + 2 + … + 8) = 180.
+    expect(started.map((e) => e.earlyBonus)).toEqual([0, 5, 10, 15, 20, 25, 30, 35, 40]);
     expect(ofType(events, 'callWaveRefused')[0]!.reason).toBe('active');
-    expect(buildWaveHudModel(sim.state)).toMatchObject({
+    expect(buildWaveHudModel(sim.state)).toEqual({
       label: 'Ondas 1–9 de 10',
-      multiplier: 'x3!',
-      pendingBonus: `+${[2, 3, 4, 5, 6, 7, 8, 9].reduce((s, w) => s + earlyBonusFor(economyData, w), 0)} ao limpar`,
+      detail: expect.stringMatching(/^Restam /) as unknown as string,
+      pendingBonus: '+180 ao limpar',
       callLabel: 'Chefão: limpe o mapa',
       canCall: false,
     });
+  });
+
+  it('HUD: o botão mostra o bônus da próxima chamada (+5 com 1 ativa, +10 com 2)', () => {
+    const { sim } = stackSim();
+    const schedules = buildWaveSchedules(stackWaves(), TPS);
+    const hud = () => buildWaveHudModel(sim.state, false, schedules, economyData, stackEnemies);
+    expect(hud().callLabel).toBe('Chamar onda (Espaço)');
+    call(sim);
+    expect(hud().callLabel).toBe('Chamar antecipada (+5)');
+    expect(hud().pendingBonus).toBe('');
+    call(sim);
+    expect(hud().callLabel).toBe('Chamar antecipada (+10)');
+    expect(hud().pendingBonus).toBe('+5 ao limpar');
+    call(sim);
+    expect(hud().pendingBonus).toBe('+15 ao limpar');
+  });
+
+  it('onda limpa esperando a anterior fechar ainda conta como ativa', () => {
+    const { sim, control } = stackSim();
+    call(sim, 2);
+    run(sim, 10);
+    control.kill = (e) => e.wave === 2;
+    run(sim, 2);
+    control.kill = () => false;
+    expect(activeNumbers(sim.state)).toEqual([1, 2]);
+    expect(ofType(call(sim), 'waveStarted')[0]).toMatchObject({ wave: 3, earlyBonus: 10 });
   });
 
   it('inimigo do debug não segura o fechamento da onda', () => {
@@ -242,61 +266,16 @@ describe('chamada antecipada', () => {
   });
 });
 
-describe('multiplicador do ouro de abate', () => {
-  it('conta as ondas com inimigo vivo ou por nascer; a onda limpa esperando a anterior não conta', () => {
-    const { sim, control } = stackSim();
-    call(sim);
-    expect(sim.state.waves.goldMultiplier).toBe(1);
-    call(sim);
-    expect(sim.state.waves.goldMultiplier).toBe(1.5);
-    call(sim);
-    expect(sim.state.waves.goldMultiplier).toBe(2);
-    run(sim, 10);
-    control.kill = (e) => e.wave === 2;
-    run(sim, 1);
-    control.kill = () => false;
-    run(sim, 1);
-    expect(activeNumbers(sim.state)).toEqual([1, 2, 3]);
-    expect(sim.state.waves.goldMultiplier).toBe(1.5);
-    expect(buildWaveHudModel(sim.state, false, [], economyData, stackEnemies).multiplier).toBe(
-      'x1,5!',
-    );
-  });
-
-  it('teto ×3 com 5 ou mais ondas', () => {
-    const { sim } = stackSim();
-    call(sim, 5);
-    expect(sim.state.waves.goldMultiplier).toBe(3);
-    call(sim);
-    expect(sim.state.waves.active).toHaveLength(6);
-    expect(sim.state.waves.goldMultiplier).toBe(3);
-  });
-
-  it('a fração acumula: com ×1,5, dois inimigos de 1 ouro rendem 1 e depois 2', () => {
-    const { sim, control } = stackSim();
-    call(sim);
-    call(sim);
-    run(sim, 2);
-    const gold = sim.state.gold;
-    control.limit = 1;
-    control.kill = (e) => e.wave === 1;
-    run(sim, 1);
-    expect(sim.state.gold).toBe(gold + 1);
-    expect(sim.state.waves.goldFraction).toBe(0.5);
-    run(sim, 1);
-    expect(sim.state.gold).toBe(gold + 3);
-    expect(sim.state.waves.goldFraction).toBe(0);
-  });
-
-  it('vale para qualquer abate, inclusive do debug, e só para o ouro de abate', () => {
+describe('ouro de abate sem multiplicador', () => {
+  it('com várias ondas ativas, o abate paga só o gold dos dados (e o estado não guarda multiplicador)', () => {
     const { sim, control } = stackSim();
     sim.enqueue({ type: 'spawnEnemy', enemyType: 'slow' });
-    call(sim, 3);
-    expect(sim.state.waves.goldMultiplier).toBe(2);
+    call(sim, 5);
+    expect(sim.state.waves).toEqual({ active: expect.any(Array) as unknown });
     const gold = sim.state.gold;
     control.kill = (e) => e.wave === 0;
     run(sim, 1);
-    expect(sim.state.gold).toBe(gold + 2);
+    expect(sim.state.gold).toBe(gold + 1);
   });
 });
 
@@ -337,8 +316,8 @@ describe('debug "Encerrar onda" com ondas empilhadas', () => {
     const ended = ofType(events, 'waveEnded');
     expect(ended.map((e) => [e.wave, e.earlyBonus])).toEqual([
       [1, 0],
-      [2, 6],
-      [3, 6],
+      [2, 5],
+      [3, 10],
     ]);
     expect(ofType(events, 'enemyKilled')).toHaveLength(0);
     expect(sim.state.enemies.activeCount).toBe(0);
@@ -369,7 +348,7 @@ describe('save com ondas empilhadas', () => {
     expect(b.serialize()).toBe(a.serialize());
   });
 
-  it('recusa ondas fora de ordem e fração inválida', () => {
+  it('recusa ondas fora de ordem e save de versão antiga (com o multiplicador)', () => {
     const sim = shopSim('save-pilha-ruim');
     call(sim, 3);
     const good = JSON.parse(sim.serialize()) as RunState;
@@ -377,9 +356,12 @@ describe('save com ondas empilhadas', () => {
     const swapped = structuredClone(good);
     swapped.waves.active.reverse();
     expect(() => Simulation.restore(JSON.stringify(swapped))).toThrow(/inválido/);
-    const badFraction = structuredClone(good);
-    badFraction.waves.goldFraction = 1;
-    expect(() => Simulation.restore(JSON.stringify(badFraction))).toThrow(/inválido/);
+    expect(good.waves).not.toHaveProperty('goldMultiplier');
+    expect(good.waves).not.toHaveProperty('goldFraction');
+    const old = structuredClone(good) as unknown as Record<string, unknown>;
+    old.version = 12;
+    old.waves = { ...good.waves, goldMultiplier: 2, goldFraction: 0.5 };
+    expect(() => Simulation.restore(JSON.stringify(old))).toThrow(/Versão/);
   });
 });
 

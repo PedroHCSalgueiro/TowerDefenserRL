@@ -8,7 +8,7 @@
  * que o botão "Encerrar onda" do debug.
  */
 
-import { earlyBonusFor, endWave, killGoldMultiplierFor } from '../economy/economy';
+import { earlyBonusFor, endWave } from '../economy/economy';
 import type { EconomyData } from '../economy/economyData';
 import { getEnemyType, type EnemyData } from '../enemies/enemyData';
 import { releaseAllEnemies } from '../enemies/pool';
@@ -105,7 +105,7 @@ export function callWave(
   }
   const wave = nextWaveNumber(state);
   const early = state.waves.active.length > 0;
-  const earlyBonus = early ? earlyBonusFor(economy, wave) : 0;
+  const earlyBonus = earlyBonusFor(economy, state.waves.active.length);
   state.waves.active.push({ wave, startTick: state.tick, spawned: 0, bossesKilled: 0, earlyBonus });
   ctx.emit({ type: 'waveStarted', tick: state.tick, wave, early, earlyBonus });
 }
@@ -160,16 +160,12 @@ export function skipToWave(
  *
  * Fila invisível: com `maxActiveEnemies` ativos, os próximos esperam na
  * entrada, nessa mesma ordem, e nascem quando abrir espaço.
- *
- * Depois dos nascimentos, calcula o multiplicador do ouro de abate do tick
- * pelas ondas com inimigo vivo ou por nascer.
  */
 export function createWaveSpawnSystem(
   routes: Routes,
   enemies: EnemyData,
   schedules: readonly WaveSchedule[],
   maxActiveEnemies: number,
-  economy: EconomyData,
 ): System {
   return (ctx) => {
     const { state } = ctx;
@@ -194,15 +190,6 @@ export function createWaveSpawnSystem(
       spawnEnemy(ctx, routes, enemies, type, 0, multiplier, next.wave);
       next.spawned++;
     }
-
-    let liveWaves = 0;
-    if (active.length > 0) {
-      const alive = countAliveByWave(state, schedules.length);
-      for (const wave of active) {
-        if (hasUnspawned(wave, schedules) || (alive[wave.wave] ?? 0) > 0) liveWaves++;
-      }
-    }
-    state.waves.goldMultiplier = killGoldMultiplierFor(economy, liveWaves);
   };
 }
 

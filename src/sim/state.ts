@@ -17,7 +17,7 @@ import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 import { createWaveState, type ActiveWave, type RunStats, type WaveState } from './waves/waveState';
 
-export const RUN_STATE_VERSION = 12;
+export const RUN_STATE_VERSION = 13;
 
 /**
  * Disposição usada pelo debug:
@@ -330,12 +330,7 @@ function isWaveState(value: unknown, wave: number): boolean {
     typeof w === 'object' &&
     w !== null &&
     Array.isArray(w.active) &&
-    w.active.every((a, i) => isActiveWave(a) && a.wave === wave + 1 + i) &&
-    typeof w.goldMultiplier === 'number' &&
-    w.goldMultiplier >= 1 &&
-    typeof w.goldFraction === 'number' &&
-    w.goldFraction >= 0 &&
-    w.goldFraction < 1
+    w.active.every((a, i) => isActiveWave(a) && a.wave === wave + 1 + i)
   );
 }
 

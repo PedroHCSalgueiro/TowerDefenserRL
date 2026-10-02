@@ -381,8 +381,8 @@ describe('loja nova grátis no fim da onda', () => {
     sim.enqueue({ type: 'endWave' });
     const events = stepOnce(sim);
     expect(sim.state.shop.slots.every((id) => id !== null)).toBe(true);
-    // Só o bônus entrou: nenhum ouro saiu pela loja nova.
-    expect(sim.state.gold).toBe(11);
+    // Só a renda da onda 1 entrou: nenhum ouro saiu pela loja nova.
+    expect(sim.state.gold).toBe(17);
     expect(events.find((e) => e.type === 'shopChanged')).toMatchObject({ reason: 'newWave' });
   });
 

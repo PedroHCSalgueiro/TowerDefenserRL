@@ -122,8 +122,8 @@ export interface SimEventPayloads {
   /** No máximo um por tick, com o saldo final; `delta` = saldo menos o último informado. */
   goldChanged: { gold: number; delta: number };
   /**
-   * Onda fechada: `interest`, `bonus` e `earlyBonus` (chamada antecipada; 0 se
-   * não houve) já somados a `gold`, nessa ordem.
+   * Onda fechada: `interest`, `bonus` (renda da onda) e `earlyBonus` (chamada
+   * antecipada; 0 se não houve) já somados a `gold`, nessa ordem.
    */
   waveEnded: { wave: number; interest: number; bonus: number; earlyBonus: number; gold: number };
   /**

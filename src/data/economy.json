@@ -1,10 +1,9 @@
 {
   "startingGold": 10,
   "nexusStartLevel": 1,
-  "interest": { "percent": 10, "cap": 15 },
-  "waveBonus": { "base": 10, "perWave": 1 },
-  "earlyCall": { "bonusPercent": 50 },
-  "killGoldMultiplier": { "perExtraWave": 0.5, "max": 3 },
+  "interest": { "percent": 10, "cap": 10 },
+  "waveBonus": { "base": 15, "perWave": 2 },
+  "earlyCall": { "perActiveWave": 5 },
   "shop": {
     "slots": 5,
     "rerollCost": 4,

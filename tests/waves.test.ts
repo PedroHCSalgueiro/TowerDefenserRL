@@ -91,12 +91,12 @@ describe('dados das ondas (especificação aprovada em 30/09)', () => {
     expect(at).toBe(Math.floor(mass.length / 2));
   });
 
-  it('chefão em enemies.json: vida 1.500, velocidade 0,5, armadura 30, ouro 50, boss', () => {
+  it('chefão em enemies.json: vida 1.500, velocidade 0,5, armadura 30, ouro 0 (T19), boss', () => {
     expect(getEnemyType(enemyData, 'boss')).toMatchObject({
       hp: 1500,
       speed: 0.5,
       armor: 30,
-      gold: 50,
+      gold: 0,
       boss: true,
     });
   });
@@ -399,18 +399,17 @@ describe('HUD das ondas', () => {
     expect(buildWaveHudModel(sim.state)).toEqual({
       label: 'Onda 1/10',
       detail: 'Pronta para chamar',
-      multiplier: '',
       pendingBonus: '',
       callLabel: 'Chamar onda (Espaço)',
       canCall: true,
     });
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
-    // 1 nasceu e está vivo, 9 faltam nascer; a onda 2 pode vir antecipada (bônus 12 → +6).
+    // 1 nasceu e está vivo, 9 faltam nascer; a onda 2 pode vir antecipada (1 ativa → +5).
     expect(buildWaveHudModel(sim.state)).toMatchObject({
       label: 'Onda 1/10',
       detail: 'Restam 10',
-      callLabel: 'Chamar antecipada (+6)',
+      callLabel: 'Chamar antecipada (+5)',
       canCall: true,
     });
     // Pausado, não chama.

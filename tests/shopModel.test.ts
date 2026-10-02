@@ -19,7 +19,7 @@ describe('modelo da loja', () => {
     expect(m.interest).toBe(8);
     expect(m.nextWave).toBe(1);
     sim.state.gold = 500;
-    expect(model(sim).interest).toBe(15);
+    expect(model(sim).interest).toBe(10);
   });
 
   it('cada slot traz nome, classes, raridade e preço; sem ouro fica esmaecido', () => {

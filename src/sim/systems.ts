@@ -1,6 +1,6 @@
 /**
  * Lista dos sistemas da partida, na ordem em que rodam a cada tick:
- * ações → nascimentos das ondas (e multiplicador de ouro) → reposição do estresse → movimento →
+ * ações → nascimentos das ondas → reposição do estresse → movimento →
  * chegada ao núcleo → ataque do núcleo → projéteis → torres → gatilhos →
  * ouro → fim da onda → classes.
  *
@@ -68,7 +68,7 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
   const schedules = buildWaveSchedules(waves, ticksPerSecond);
   return [
     createCommandSystem(map, routes, enemies, towers, debug, schedules, economy, nexus),
-    createWaveSpawnSystem(routes, enemies, schedules, waves.maxActiveEnemies, economy),
+    createWaveSpawnSystem(routes, enemies, schedules, waves.maxActiveEnemies),
     createStressSystem(routes, enemies),
     createMovementSystem(routes, enemies, ticksPerSecond),
     createNexusContactSystem(routes, enemies),

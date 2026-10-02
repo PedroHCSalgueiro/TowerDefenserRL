@@ -8,7 +8,7 @@
       "speed": 1.0,
       "armor": 0,
       "nexusDamage": 1,
-      "gold": 1,
+      "gold": 0,
       "movement": "ground"
     },
     "fast": {
@@ -16,7 +16,7 @@
       "speed": 2.0,
       "armor": 0,
       "nexusDamage": 1,
-      "gold": 1,
+      "gold": 0,
       "movement": "ground"
     },
     "armored": {
@@ -24,7 +24,7 @@
       "speed": 0.7,
       "armor": 50,
       "nexusDamage": 2,
-      "gold": 2,
+      "gold": 0,
       "movement": "ground"
     },
     "flying": {
@@ -32,7 +32,7 @@
       "speed": 1.2,
       "armor": 0,
       "nexusDamage": 1,
-      "gold": 2,
+      "gold": 0,
       "movement": "air"
     },
     "boss": {
@@ -40,7 +40,7 @@
       "speed": 0.5,
       "armor": 30,
       "nexusDamage": 0,
-      "gold": 50,
+      "gold": 0,
       "movement": "ground",
       "boss": true
     }

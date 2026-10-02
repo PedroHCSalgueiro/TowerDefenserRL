@@ -20,17 +20,10 @@ export interface WaveState {
    * Fecham em ordem: a primeira é sempre a de número `RunState.wave + 1`.
    */
   active: ActiveWave[];
-  /**
-   * Multiplicador do ouro de abate deste tick, calculado depois dos
-   * nascimentos pelas ondas com inimigo vivo ou por nascer.
-   */
-  goldMultiplier: number;
-  /** Fração de ouro de abate que ainda não virou moeda, em [0, 1). */
-  goldFraction: number;
 }
 
 export function createWaveState(): WaveState {
-  return { active: [], goldMultiplier: 1, goldFraction: 0 };
+  return { active: [] };
 }
 
 /** Número da próxima onda a chamar (a primeira é a 1). */

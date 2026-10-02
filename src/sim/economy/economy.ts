@@ -1,5 +1,5 @@
 /**
- * Regras do ouro: juros e bônus de fim de onda, ouro por abate e o
+ * Regras do ouro: juros e renda de fim de onda, ouro por abate e o
  * fechamento da onda. Sem estado próprio; tudo vive em `RunState`.
  */
 
@@ -17,27 +17,21 @@ export function interestFor(economy: EconomyData, gold: number): number {
   return Math.min(cap, Math.floor((Math.max(0, gold) * percent) / 100));
 }
 
-/** Bônus de fim da onda `wave` (a primeira onda é a 1). */
+/** Renda de fim da onda `wave` (a primeira onda é a 1): `base + perWave × wave`. */
 export function waveBonusFor(economy: EconomyData, wave: number): number {
   return economy.waveBonus.base + economy.waveBonus.perWave * wave;
 }
 
-/** Bônus da chamada antecipada da onda `wave`: porcentagem do bônus dela, arredondada para baixo. */
-export function earlyBonusFor(economy: EconomyData, wave: number): number {
-  return Math.floor((waveBonusFor(economy, wave) * economy.earlyCall.bonusPercent) / 100);
-}
-
 /**
- * Multiplicador do ouro de abate com `liveWaves` ondas com inimigo vivo ou
- * por nascer: `1 + perExtraWave × (liveWaves − 1)`, com teto (1 sem ondas).
+ * Bônus da chamada antecipada: fixo por onda já ativa (chamada e não fechada)
+ * no momento da chamada. Sem onda ativa não é antecipada (0).
  */
-export function killGoldMultiplierFor(economy: EconomyData, liveWaves: number): number {
-  const { perExtraWave, max } = economy.killGoldMultiplier;
-  return Math.min(max, 1 + perExtraWave * Math.max(0, liveWaves - 1));
+export function earlyBonusFor(economy: EconomyData, activeWaves: number): number {
+  return economy.earlyCall.perActiveWave * Math.max(0, activeWaves);
 }
 
 /**
- * Fecha uma onda: juros primeiro, sobre o ouro guardado; depois o bônus; o
+ * Fecha uma onda: juros primeiro, sobre o ouro guardado; depois a renda; o
  * bônus da chamada antecipada daquela onda, se houver; e a loja nova grátis.
  * É o que o fim de cada onda real e o "Encerrar onda" do debug chamam.
  */
@@ -69,10 +63,9 @@ export function endWave(
 
 /**
  * Sistema de ouro, depois dos gatilhos: soma o `gold` de cada inimigo morto
- * no tick (por qualquer autor, inclusive o núcleo), vezes o multiplicador das
- * ondas empilhadas. A fração que sobra fica guardada no estado e entra no
- * próximo abate. Emite `goldChanged` uma vez por tick com o saldo final,
- * nunca um por abate.
+ * no tick (por qualquer autor, inclusive o núcleo). Desde a T19 todo inimigo
+ * tem `gold` 0 nos dados; a soma fica para dar para voltar atrás só nos dados.
+ * Emite `goldChanged` uma vez por tick com o saldo final, nunca um por abate.
  */
 export function createGoldSystem(enemies: EnemyData) {
   return (ctx: TickContext): void => {
@@ -83,13 +76,7 @@ export function createGoldSystem(enemies: EnemyData) {
         killGold += getEnemyType(enemies, event.enemyType).gold;
       }
     }
-    if (killGold > 0) {
-      // Mesma conta em qualquer máquina (e exata com multiplicadores de 0,5 em 0,5).
-      const total = killGold * state.waves.goldMultiplier + state.waves.goldFraction;
-      const whole = Math.floor(total);
-      earnGold(state, whole);
-      state.waves.goldFraction = total - whole;
-    }
+    if (killGold > 0) earnGold(state, killGold);
     if (state.gold !== state.reportedGold) {
       ctx.emit({
         type: 'goldChanged',

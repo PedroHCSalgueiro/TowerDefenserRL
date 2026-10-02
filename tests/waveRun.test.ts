@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { SimEvent } from '../src/sim/engine/events';
+import { economyData } from '../src/sim/economy/economyData';
 import { botSim, playRun, TOTAL_WAVES } from './support/waveBot';
 
 describe('run completa jogada pelo bot', () => {
@@ -23,5 +25,32 @@ describe('run completa jogada pelo bot', () => {
     expect(rb).toEqual(ra);
     expect(b.serialize()).toBe(a.serialize());
     expect(['won', 'lost']).toContain(a.state.status);
+  });
+
+  it('economia da T19: o ouro ganho vem só do fim das ondas (juros, renda e antecipado)', () => {
+    const sim = botSim('bot-economia', true);
+    const ended: Extract<SimEvent, { type: 'waveEnded' }>[] = [];
+    let killed = 0;
+    const drain = sim.drainEvents.bind(sim);
+    sim.drainEvents = () => {
+      const events = drain();
+      for (const e of events) {
+        if (e.type === 'waveEnded') ended.push(e);
+        if (e.type === 'enemyKilled') killed++;
+      }
+      return events;
+    };
+    playRun(sim);
+    expect(killed).toBeGreaterThan(0);
+    expect(ended.map((e) => e.wave)).toEqual(Array.from({ length: TOTAL_WAVES }, (_, i) => i + 1));
+    for (const e of ended) {
+      expect(e.bonus).toBe(15 + 2 * e.wave);
+      expect(e.interest).toBeLessThanOrEqual(economyData.interest.cap);
+    }
+    const fromWaves = ended.reduce((s, e) => s + e.interest + e.bonus + e.earlyBonus, 0);
+    expect(sim.state.stats.goldEarned).toBe(fromWaves);
+    // Renda das 10 ondas: 15 × 10 + 2 × (1 + … + 10) = 260; juros somam no máximo 100.
+    expect(ended.reduce((s, e) => s + e.bonus, 0)).toBe(260);
+    expect(sim.state.stats.goldEarned).toBeLessThanOrEqual(260 + 100);
   });
 });
