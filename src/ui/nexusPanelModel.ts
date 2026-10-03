@@ -5,7 +5,7 @@
  */
 
 import { nextLevelCost } from '../sim/nexus/evolve';
-import { maxNexusLevel, nexusData, towerLimit, type NexusData } from '../sim/nexus/nexusData';
+import { nexusData, towerLimit, type NexusData } from '../sim/nexus/nexusData';
 import type { EconomyData } from '../sim/economy/economyData';
 import { chancesFor } from '../sim/shop/shop';
 import { currentTowerLimit, towerCount } from '../sim/towers/limit';
@@ -14,17 +14,16 @@ import { RARITIES, type Rarity } from '../sim/towers/towerData';
 
 export interface NexusPanelModel {
   level: number;
-  maxLevel: number;
   towers: number;
   towerLimit: number;
-  /** Limite do próximo nível (`null` = nível máximo). */
+  /** Limite do próximo nível (`null` só com dados sem `beyondLevels`). */
   nextTowerLimit: number | null;
   hp: number;
   maxHp: number;
   chances: Readonly<Record<Rarity, number>>;
-  /** Chances do próximo nível (`null` = nível máximo). */
+  /** Chances do próximo nível (`null` só com dados sem `beyondLevels`). */
   nextChances: Readonly<Record<Rarity, number>> | null;
-  /** Custo de evoluir (`null` = nível máximo). */
+  /** Custo de evoluir (`null` só com dados sem `beyondLevels`). */
   cost: number | null;
   canEvolve: boolean;
 }
@@ -38,7 +37,6 @@ export function buildNexusPanelModel(
   const cost = nextLevelCost(nexus, level);
   return {
     level,
-    maxLevel: maxNexusLevel(nexus),
     towers: towerCount(state),
     towerLimit: currentTowerLimit(state, nexus),
     nextTowerLimit: cost === null ? null : towerLimit(nexus, level + 1),

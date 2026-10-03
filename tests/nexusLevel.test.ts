@@ -183,7 +183,7 @@ describe('evoluir o núcleo', () => {
     expect(events.some((e) => e.type === 'nexusEvolved')).toBe(false);
   });
 
-  it('sobe pelos níveis 1 a 5 da tabela pagando cada custo e segue sem teto (experimento)', () => {
+  it('sobe pelos níveis 1 a 5 da tabela pagando cada custo e segue sem teto', () => {
     const sim = shopSim('evo');
     sim.state.gold = 1000;
     for (let i = 0; i < 6; i++) {
@@ -322,7 +322,6 @@ describe('modelos da interface', () => {
     const model = buildNexusPanelModel(sim.state, economyData);
     expect(model).toMatchObject({
       level: 1,
-      maxLevel: Infinity,
       towers: 1,
       towerLimit: 3,
       nextTowerLimit: 4,
@@ -339,7 +338,6 @@ describe('modelos da interface', () => {
     sim.state.gold = 999;
     const model = buildNexusPanelModel(sim.state, economyData);
     expect(model).toMatchObject({
-      maxLevel: Infinity,
       cost: 81,
       nextTowerLimit: 9,
       canEvolve: true,
@@ -354,7 +352,6 @@ describe('modelos da interface', () => {
     sim.state.gold = 999;
     const model = buildNexusPanelModel(sim.state, economyData, capped);
     expect(model).toMatchObject({
-      maxLevel: 5,
       cost: null,
       nextChances: null,
       nextTowerLimit: null,
@@ -386,7 +383,7 @@ describe('flash da fusão', () => {
   });
 });
 
-describe('núcleo com nível infinito (experimento)', () => {
+describe('núcleo sem teto de nível (T22)', () => {
   it('níveis 1 a 5 iguais à tabela de antes', () => {
     expect([1, 2, 3, 4, 5].map((n) => nexusLevel(nexusData, n))).toEqual([
       { cost: 0, towerLimit: 3, maxHp: 20 },
@@ -427,6 +424,28 @@ describe('núcleo com nível infinito (experimento)', () => {
     expect(sim.state.nexus).toMatchObject({ level: 6, maxHp: 45, hp: 35 });
     expect(sim.state.gold).toBe(0);
     expect(deserializeRunState(serializeRunState(sim.state)).nexus.level).toBe(6);
+  });
+
+  it('o comando da tecla E e do botão continua evoluindo acima do 5, e o painel sempre mostra o custo', () => {
+    const sim = shopSim('evo-e');
+    sim.state.nexus.level = 5;
+    sim.state.nexus.maxHp = 40;
+    sim.state.nexus.hp = 40;
+    sim.state.gold = 81 + 109 + 147;
+    for (const [level, nextCost] of [
+      [5, 81],
+      [6, 109],
+      [7, 147],
+    ] as const) {
+      const model = buildNexusPanelModel(sim.state, economyData);
+      expect(model).toMatchObject({ level, cost: nextCost, canEvolve: true });
+      sim.enqueue({ type: 'evolveNexus' });
+      stepOnce(sim);
+    }
+    expect(sim.state.nexus).toMatchObject({ level: 8, maxHp: 55, hp: 55 });
+    expect(sim.state.gold).toBe(0);
+    const model = buildNexusPanelModel(sim.state, economyData);
+    expect(model).toMatchObject({ level: 8, cost: 198, nextTowerLimit: 12, canEvolve: false });
   });
 
   it('recusa beyondLevels inválido', () => {

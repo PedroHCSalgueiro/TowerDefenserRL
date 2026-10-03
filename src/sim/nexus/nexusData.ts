@@ -13,7 +13,7 @@ export interface NexusLevel {
 }
 
 /**
- * Níveis depois da tabela (experimento do núcleo infinito): cada nível custa o
+ * Níveis depois da tabela (T22, núcleo sem teto): cada nível custa o
  * custo do anterior × `costMultiplier` (arredondado) e soma `towerLimitPerLevel`
  * ao limite de torres e `maxHpPerLevel` à vida máxima. Sem teto.
  */

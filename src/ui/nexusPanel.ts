@@ -1,11 +1,10 @@
 /**
  * Painel do núcleo, em HTML sobre o canvas: nível, vida, "Torres 3/4", chances
- * de raridade atuais e do próximo nível e o botão "Evoluir (custo)". No nível
- * máximo o botão mostra "Máx." e não faz nada. A tecla E é tratada pelo
- * controle da loja.
+ * de raridade atuais e do próximo nível e o botão "Evoluir (custo)". O núcleo
+ * não tem teto (T22): o botão sempre mostra o custo do próximo nível. A tecla
+ * E é tratada pelo controle da loja.
  */
 
-import uiData from '../data/ui.json';
 import { economyData } from '../sim/economy/economyData';
 import type { RunState } from '../sim/state';
 import { RARITIES, type Rarity } from '../sim/towers/towerData';
@@ -53,7 +52,7 @@ export class NexusPanel {
     const button = el(
       'button',
       'shop-button nexus-evolve',
-      model.cost === null ? uiData.texts.maxLevel : `Evoluir (E) −${model.cost}`,
+      model.cost === null ? 'Evoluir (E)' : `Evoluir (E) −${model.cost}`,
     );
     button.type = 'button';
     button.disabled = !model.canEvolve;
@@ -62,13 +61,7 @@ export class NexusPanel {
       button.blur();
     });
     this.root.replaceChildren(
-      el(
-        'div',
-        'nexus-title',
-        Number.isFinite(model.maxLevel)
-          ? `Núcleo nível ${model.level}/${model.maxLevel}`
-          : `Núcleo nível ${model.level}`,
-      ),
+      el('div', 'nexus-title', `Núcleo nível ${model.level}`),
       el('div', 'nexus-hp', `Vida ${model.hp}/${model.maxHp}`),
       el(
         'div',
