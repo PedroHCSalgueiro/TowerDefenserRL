@@ -481,6 +481,14 @@ describe('HUD das ondas', () => {
       pendingBonus: '',
       callLabel: 'Chamar onda (Espaço)',
       canCall: true,
+      bonusWindow: null,
+      upcoming: [
+        { wave: 1, kind: 'normal' },
+        { wave: 2, kind: 'normal' },
+        { wave: 3, kind: 'normal' },
+        { wave: 4, kind: 'normal' },
+        { wave: 5, kind: 'elite' },
+      ],
     });
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);

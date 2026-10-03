@@ -4,6 +4,7 @@
  * jogo. Sem DOM, para testar direto.
  */
 
+import uiData from '../data/ui.json';
 import type { ClassData } from '../sim/classes/classData';
 import { clampStar, maxStars } from '../sim/towers/stars';
 import type { TowerType } from '../sim/towers/towerData';
@@ -13,6 +14,8 @@ import { RARITY_LABELS } from './shopModel';
 export interface TowerInfo {
   /** "Relé ★2" */
   title: string;
+  /** Frase simples do que a torre faz (T23), acima da descrição técnica (`null` = sem frase). */
+  summary: string | null;
   /** "Arcana · Mecânica · Comum" */
   subtitle: string;
   /** Ataque normal. */
@@ -107,7 +110,19 @@ function effectText(effect: TriggerEffect): string {
 }
 
 /** Informações da torre `type` na estrela `star` (presa entre ★1 e a última do tipo). */
-export function describeTower(type: TowerType, star: number, classes: ClassData): TowerInfo {
+const summaries: Readonly<Record<string, string>> = uiData.texts.towerSummaries;
+
+/** Frase simples da torre em `ui.json` (`null` = sem frase, como as torres do debug). */
+export function towerSummary(typeId: string): string | null {
+  return Object.hasOwn(summaries, typeId) ? summaries[typeId]! : null;
+}
+
+export function describeTower(
+  type: TowerType,
+  star: number,
+  classes: ClassData,
+  typeId: string | null = null,
+): TowerInfo {
   const s = clampStar(type, star);
   const def = type.trigger ? triggerAt(type.trigger, s) : null;
   const title = maxStars(type) > 1 ? `${type.name} ★${s}` : type.name;
@@ -124,6 +139,7 @@ export function describeTower(type: TowerType, star: number, classes: ClassData)
 
   return {
     title,
+    summary: typeId === null ? null : towerSummary(typeId),
     subtitle,
     attack,
     trigger: def ? `${whenText(def.when)}: ${effectText(def.effect)}.` : null,

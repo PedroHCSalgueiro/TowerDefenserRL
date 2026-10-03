@@ -54,7 +54,14 @@
       "boss": 1.8,
       "bossFinal": 2.4
     },
-    "eliteScale": 1.5
+    "eliteScale": 1.5,
+    "eliteAura": {
+      "color": "#c77dff",
+      "alpha": 0.45,
+      "fillAlpha": 0.18,
+      "radius": 13,
+      "lineWidth": 3
+    }
   },
   "nexus": {
     "healthBar": {
@@ -174,5 +181,21 @@
     "neighborColor": "#7fd7ff",
     "neighborLineWidth": 2,
     "neighborAlpha": 0.95
+  },
+  "linkPreview": {
+    "cellColor": "#7fd7ff",
+    "cellAlpha": 0.55,
+    "cellLineWidth": 1.5,
+    "arrowAlpha": 0.95,
+    "arrowLineWidth": 3,
+    "arrowHeadLength": 11,
+    "arrowHeadWidth": 8,
+    "arrowLift": 14,
+    "arrowInset": 10,
+    "colors": {
+      "activates": "#ffd24a",
+      "charges": "#7fd7ff",
+      "copies": "#c77dff"
+    }
   }
 }

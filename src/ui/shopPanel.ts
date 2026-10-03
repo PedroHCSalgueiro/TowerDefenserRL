@@ -109,6 +109,7 @@ export class ShopPanel {
     }
     node.append(
       el('div', 'shop-name', slot.name),
+      el('div', 'shop-summary', slot.summary),
       el('div', 'shop-classes', slot.classes.join(' · ')),
       el('div', 'shop-rarity', slot.rarityLabel),
       el('div', 'shop-price', `${slot.price}`),

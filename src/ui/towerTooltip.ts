@@ -80,7 +80,9 @@ export class TowerTooltip {
   }
 
   private fill(info: TowerInfo, purchase: PurchasePreview | null): void {
-    const parts = [el('tower-tip-title', info.title), el('tower-tip-sub', info.subtitle)];
+    const parts = [el('tower-tip-title', info.title)];
+    if (info.summary) parts.push(el('tower-tip-summary', info.summary));
+    parts.push(el('tower-tip-sub', info.subtitle));
     parts.push(labelled('Ataque', info.attack));
     if (info.trigger) parts.push(labelled('Gatilho', info.trigger));
     if (purchase?.fusion) parts.push(labelled('Compra', `funde: ${purchase.fusion}`));

@@ -16,7 +16,14 @@ export interface EconomyData {
    * Chamada antecipada: `perActiveWave` × ondas já ativas (chamadas e não
    * fechadas) no momento da chamada, pago quando a onda chamada fecha.
    */
-  readonly earlyCall: { readonly perActiveWave: number };
+  readonly earlyCall: {
+    readonly perActiveWave: number;
+    /**
+     * Janela do bônus (T23): só há bônus enquanto menos desta porcentagem dos
+     * inimigos da onda mais recente já nasceu. Depois, a chamada sai sem bônus.
+     */
+    readonly windowPercent: number;
+  };
   readonly shop: {
     readonly slots: number;
     readonly rerollCost: number;
@@ -58,8 +65,13 @@ export function loadEconomyData(raw: unknown): EconomyData {
   if (!isRecord(waveBonus) || !isInt(waveBonus.base, 0) || !isInt(waveBonus.perWave, 0)) {
     fail('"waveBonus" precisa de base e perWave inteiros >= 0');
   }
-  if (!isRecord(earlyCall) || !isInt(earlyCall.perActiveWave, 0)) {
-    fail('"earlyCall" precisa de perActiveWave inteiro >= 0');
+  if (
+    !isRecord(earlyCall) ||
+    !isInt(earlyCall.perActiveWave, 0) ||
+    !isInt(earlyCall.windowPercent, 1) ||
+    earlyCall.windowPercent > 100
+  ) {
+    fail('"earlyCall" precisa de perActiveWave inteiro >= 0 e windowPercent inteiro de 1 a 100');
   }
   if (
     !isRecord(shop) ||
@@ -90,7 +102,10 @@ export function loadEconomyData(raw: unknown): EconomyData {
     nexusStartLevel,
     interest: { percent: interest.percent, cap: interest.cap },
     waveBonus: { base: waveBonus.base, perWave: waveBonus.perWave },
-    earlyCall: { perActiveWave: earlyCall.perActiveWave },
+    earlyCall: {
+      perActiveWave: earlyCall.perActiveWave,
+      windowPercent: earlyCall.windowPercent,
+    },
     shop: {
       slots: shop.slots,
       rerollCost: shop.rerollCost,

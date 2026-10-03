@@ -22,7 +22,7 @@ describe('dados da economia', () => {
     expect(economyData.startingGold).toBe(10);
     expect(economyData.interest).toEqual({ percent: 10, cap: 10 });
     expect(economyData.waveBonus).toEqual({ base: 15, perWave: 1 });
-    expect(economyData.earlyCall).toEqual({ perActiveWave: 5 });
+    expect(economyData.earlyCall).toEqual({ perActiveWave: 5, windowPercent: 75 });
     expect('killGoldMultiplier' in economyData).toBe(false);
     expect(economyData.shop.slots).toBe(5);
     expect(economyData.shop.rerollCost).toBe(4);

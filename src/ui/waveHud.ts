@@ -5,8 +5,11 @@
  * pausa e despausa.
  */
 
+import uiData from '../data/ui.json';
 import type { RunState } from '../sim/state';
-import { buildWaveHudModel, waveHudKey } from './waveHudModel';
+import { buildWaveHudModel, waveHudKey, type WaveHudModel } from './waveHudModel';
+
+const hudTexts = uiData.waveHud.texts;
 
 export interface WaveHudActions {
   onCall: () => void;
@@ -39,6 +42,12 @@ export class WaveHud {
   private readonly detail: HTMLElement;
   private readonly pending: HTMLElement;
   private readonly callButton: HTMLButtonElement;
+  /** Janela do bônus antecipado: texto e barra embaixo do botão (T23). */
+  private readonly windowBox: HTMLElement;
+  private readonly windowText: HTMLElement;
+  private readonly windowFill: HTMLElement;
+  /** Faixa das próximas ondas, embaixo do HUD (T23). */
+  private readonly upcoming: HTMLElement;
   private readonly speedButton: HTMLButtonElement;
   private readonly pauseButton: HTMLButtonElement;
   private readonly pausedBanner: HTMLElement;
@@ -74,20 +83,30 @@ export class WaveHud {
     this.detail = div('wave-detail');
     this.pending = div('wave-pending');
     this.callButton = hudButton('Chamar onda (Espaço)', 'wave-call', actions.onCall);
+    const callGroup = div('wave-call-group');
+    this.windowBox = div('wave-window');
+    this.windowText = div('wave-window-text');
+    const bar = div('wave-window-bar');
+    this.windowFill = div('wave-window-fill');
+    bar.append(this.windowFill);
+    this.windowBox.append(this.windowText, bar);
+    this.windowBox.hidden = true;
+    callGroup.append(this.callButton, this.windowBox);
+    this.upcoming = div('wave-upcoming');
     this.speedButton = hudButton('1x (Q)', 'wave-speed', actions.onCycleSpeed);
     this.pauseButton = hudButton('Pausar (P)', 'wave-pause', actions.onTogglePause);
     this.root.append(
       this.label,
       this.detail,
       this.pending,
-      this.callButton,
+      callGroup,
       this.speedButton,
       this.pauseButton,
     );
     this.pausedBanner = div('paused-banner');
     this.pausedBanner.textContent = 'Pausado (P)';
     this.pausedBanner.hidden = true;
-    parent.append(this.root, this.pausedBanner);
+    parent.append(this.root, this.upcoming, this.pausedBanner);
     window.addEventListener('keydown', this.onKeyDown);
   }
 
@@ -103,10 +122,40 @@ export class WaveHud {
     this.pending.hidden = model.pendingBonus === '';
     this.callButton.textContent = model.callLabel;
     this.callButton.disabled = !model.canCall;
+    this.windowBox.hidden = model.bonusWindow === null;
+    if (model.bonusWindow) {
+      this.windowText.textContent = model.bonusWindow.text;
+      // A barra mostra o que ainda resta da janela.
+      this.windowFill.style.width = `${Math.round((1 - model.bonusWindow.spent) * 100)}%`;
+    }
+    this.renderUpcoming(model.upcoming);
     this.speedButton.textContent = `${clock.speed}x (Q)`;
     this.pauseButton.textContent = clock.paused ? 'Continuar (P)' : 'Pausar (P)';
     this.pauseButton.classList.toggle('active', clock.paused);
     this.pausedBanner.hidden = !clock.paused;
+  }
+
+  private renderUpcoming(upcoming: WaveHudModel['upcoming']): void {
+    this.upcoming.hidden = upcoming.length === 0;
+    const parts: HTMLElement[] = [];
+    const title = document.createElement('span');
+    title.className = 'wave-upcoming-title';
+    title.textContent = hudTexts.upcoming;
+    parts.push(title);
+    for (const { wave, kind } of upcoming) {
+      const item = document.createElement('span');
+      item.className = `wave-upcoming-item ${kind}`;
+      item.textContent = String(wave);
+      if (kind !== 'normal') {
+        const mark = document.createElement('span');
+        mark.className = 'wave-upcoming-mark';
+        mark.textContent = kind === 'boss' ? hudTexts.bossMark : hudTexts.eliteMark;
+        item.title = kind === 'boss' ? hudTexts.bossTitle : hudTexts.eliteTitle;
+        item.append(mark);
+      }
+      parts.push(item);
+    }
+    this.upcoming.replaceChildren(...parts);
   }
 
   /** Põe mais um controle no fim do HUD (o botão "?" da ajuda, T17). */
@@ -117,6 +166,7 @@ export class WaveHud {
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     this.root.remove();
+    this.upcoming.remove();
     this.pausedBanner.remove();
   }
 }

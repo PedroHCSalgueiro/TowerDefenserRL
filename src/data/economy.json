@@ -3,7 +3,7 @@
   "nexusStartLevel": 1,
   "interest": { "percent": 10, "cap": 10 },
   "waveBonus": { "base": 15, "perWave": 1 },
-  "earlyCall": { "perActiveWave": 5 },
+  "earlyCall": { "perActiveWave": 5, "windowPercent": 75 },
   "shop": {
     "slots": 5,
     "rerollCost": 4,

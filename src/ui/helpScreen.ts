@@ -56,7 +56,20 @@ export class HelpScreen {
     close.className = 'shop-button';
     close.textContent = help.closeLabel;
     close.addEventListener('click', () => this.close());
-    panel.append(title, this.table, note, close);
+    // Seção "Cadeias" (T23): a regra completa, para quem quiser ler.
+    const chains = document.createElement('div');
+    chains.className = 'help-chains';
+    const chainsTitle = document.createElement('h3');
+    chainsTitle.textContent = help.chains.title;
+    chains.append(
+      chainsTitle,
+      ...help.chains.paragraphs.map((text) => {
+        const p = document.createElement('p');
+        p.textContent = text;
+        return p;
+      }),
+    );
+    panel.append(title, this.table, chains, note, close);
     this.overlay.append(panel);
     // Clique fora do painel fecha.
     this.overlay.addEventListener('pointerdown', (event) => {

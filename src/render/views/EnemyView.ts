@@ -1,7 +1,8 @@
 /**
  * Greybox dos inimigos: círculo com a cor do tipo e barra de vida. Voadores
  * são desenhados acima de uma sombra no chão. Chefões têm tamanho próprio
- * (`scales`) e o elite é desenhado `eliteScale` vezes maior.
+ * (`scales`) e o elite é desenhado `eliteScale` vezes maior, com uma aura
+ * própria (anel na cor `eliteAura`, T23) embaixo do corpo.
  *
  * Cada slot do pool de inimigos tem suas imagens (corpo, sombra, fundo e
  * preenchimento da barra), criadas uma vez e reaproveitadas; o slot inativo
@@ -29,10 +30,12 @@ const scales: Readonly<Record<string, number>> = style.scales;
 const TEXTURE_BODY = 'enemy-body';
 const TEXTURE_SHADOW = 'enemy-shadow';
 const TEXTURE_PIXEL = 'enemy-pixel';
+const TEXTURE_AURA = 'enemy-aura';
 // Dentro da mesma profundidade: sombra, corpo e barra, nessa ordem.
 const DEPTH_STEP = 1e-4;
 
 interface SlotImages {
+  aura: Phaser.GameObjects.Image;
   body: Phaser.GameObjects.Image;
   shadow: Phaser.GameObjects.Image;
   barBack: Phaser.GameObjects.Image;
@@ -65,6 +68,15 @@ function createTextures(scene: Phaser.Scene): void {
   g.fillStyle(0xffffff);
   g.fillRect(0, 0, 1, 1);
   g.generateTexture(TEXTURE_PIXEL, 1, 1);
+
+  g.clear();
+  const aura = style.eliteAura;
+  const auraSize = Math.ceil((aura.radius + aura.lineWidth) * 2);
+  g.fillStyle(hexColor(aura.color), aura.fillAlpha);
+  g.fillCircle(auraSize / 2, auraSize / 2, aura.radius);
+  g.lineStyle(aura.lineWidth, hexColor(aura.color), aura.alpha);
+  g.strokeCircle(auraSize / 2, auraSize / 2, aura.radius);
+  g.generateTexture(TEXTURE_AURA, auraSize, auraSize);
   g.destroy();
 }
 
@@ -116,7 +128,13 @@ export class EnemyView {
         images.type = enemy.type;
         images.elite = enemy.elite;
         images.body.setTint(this.colorOf(enemy.type));
-        images.body.setScale((scales[enemy.type] ?? 1) * (enemy.elite ? style.eliteScale : 1));
+        const scale = (scales[enemy.type] ?? 1) * (enemy.elite ? style.eliteScale : 1);
+        images.body.setScale(scale);
+        images.aura.setScale(scale);
+      }
+      images.aura.setVisible(enemy.elite);
+      if (enemy.elite) {
+        images.aura.setPosition(p.x, y).setDepth(depth - DEPTH_STEP / 2);
       }
       images.shadow.setVisible(flying);
       if (flying) images.shadow.setPosition(p.x, p.y).setDepth(depth - DEPTH_STEP);
@@ -140,6 +158,7 @@ export class EnemyView {
     };
     const bar = style.healthBar;
     return {
+      aura: add(TEXTURE_AURA),
       shadow: add(TEXTURE_SHADOW),
       body: add(TEXTURE_BODY),
       barBack: add(TEXTURE_PIXEL)
@@ -158,7 +177,10 @@ export class EnemyView {
     images.body.setVisible(visible);
     images.barBack.setVisible(visible);
     images.barFill.setVisible(visible);
-    if (!visible) images.shadow.setVisible(false);
+    if (!visible) {
+      images.shadow.setVisible(false);
+      images.aura.setVisible(false);
+    }
   }
 
   private colorOf(type: string): number {

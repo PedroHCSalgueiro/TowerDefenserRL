@@ -19,7 +19,7 @@ import { classData } from '../../sim/classes/classData';
 import type { Tower } from '../../sim/towers/placement';
 import { getTowerType, towerData } from '../../sim/towers/towerData';
 import { affectedNeighbors } from '../../sim/triggers/neighborhood';
-import { previewKey, purchasePreview } from '../../ui/classPreview';
+import { previewKey, purchasePreview, type PurchasePreview } from '../../ui/classPreview';
 import { ClassPanel } from '../../ui/classPanel';
 import { NexusPanel } from '../../ui/nexusPanel';
 import { canPlaceAt } from '../../ui/shopModel';
@@ -32,6 +32,11 @@ import { showEndScreen } from '../../ui/endScreen';
 import { HelpScreen } from '../../ui/helpScreen';
 import { summarizeRun } from '../../ui/runReport';
 import { showVersionLabel } from '../../ui/versionLabel';
+import { WaveAnnounce, waveAnnouncementFor } from '../../ui/waveAnnounce';
+import { LinkHint, linkHintLines } from '../../ui/linkHint';
+import { previewLinks, type LinkPreview } from '../../sim/triggers/links';
+import { LinkPreviewView } from '../views/LinkPreviewView';
+import { Tutorial } from '../../ui/tutorial';
 import { WaveHud } from '../../ui/waveHud';
 import { defaultWaveSchedules } from '../../ui/waveHudModel';
 import { CarryView } from '../views/CarryView';
@@ -63,8 +68,12 @@ export class Game extends Phaser.Scene {
   private shop!: ShopController;
   private tooltip!: TowerTooltip;
   private carryView!: CarryView;
+  private linkView!: LinkPreviewView;
+  private linkHint!: LinkHint;
   private towerDrag!: TowerDragController;
   private waveHud!: WaveHud;
+  private waveAnnounce!: WaveAnnounce;
+  private tutorial!: Tutorial;
   private map!: GridMap;
   private removeEndScreen: (() => void) | null = null;
 
@@ -146,8 +155,12 @@ export class Game extends Phaser.Scene {
       debugUnlocked: () => this.gate.unlocked,
     });
     this.waveHud.appendControl(this.help.toggleButton);
+    this.waveAnnounce = new WaveAnnounce(overlayParent);
+    this.tutorial = new Tutorial(overlayParent);
     const removeVersion = showVersionLabel(overlayParent, __APP_VERSION__);
     this.carryView = new CarryView(this, grid.projection, towerData);
+    this.linkView = new LinkPreviewView(this, grid.projection);
+    this.linkHint = new LinkHint(overlayParent);
     this.shop = new ShopController({
       parent: overlayParent,
       map,
@@ -201,6 +214,9 @@ export class Game extends Phaser.Scene {
       this.triggerFx.destroy();
       this.hoverView.destroy();
       this.waveHud.destroy();
+      this.waveAnnounce.destroy();
+      this.tutorial.destroy();
+      this.linkHint.destroy();
       this.help.destroy();
       removeVersion();
       this.panel.destroy();
@@ -238,22 +254,57 @@ export class Game extends Phaser.Scene {
     this.classPanel.update(state.classes);
     this.nexusPanel.update(state);
     this.waveHud.update(state, { speed: this.runner.clock.speed, paused: this.runner.paused });
+    this.waveAnnounce.update(
+      waveAnnouncementFor(events, defaultWaveSchedules, enemyData),
+      performance.now(),
+    );
+    this.tutorial.update(state, performance.now());
     this.shop.update();
     this.towerDrag.update();
     const carrying = this.shop.carrying;
     const dragging = this.towerDrag.dragging;
     const hovered = this.grid.hoveredCell;
     this.updateTooltip(state, carrying !== null || dragging !== null, hovered);
+    let links: LinkPreview | null = null;
+    let purchase: PurchasePreview | null = null;
     if (dragging) {
       // Mover: verde se a casa está livre ou tem outra torre (troca), vermelho se não.
-      this.carryView.draw(dragging.towerType, hovered, canDropAt(this.map, hovered));
+      const valid = canDropAt(this.map, hovered);
+      this.carryView.draw(dragging.towerType, hovered, valid);
+      const moving = state.towers.find((t) => t.id === dragging.towerId);
+      if (valid && hovered && moving) {
+        // Na troca, a outra torre vai para a casa de onde esta saiu.
+        const towers = state.towers.map((t) =>
+          t !== moving && t.x === hovered.x && t.y === hovered.y
+            ? { ...t, x: moving.x, y: moving.y }
+            : t,
+        );
+        links = previewLinks(
+          { towers },
+          { type: moving.type, star: moving.star, ...hovered, movingId: moving.id },
+          towerData,
+          classData,
+          this.map,
+        );
+      }
     } else {
-      this.carryView.draw(
-        carrying?.towerType ?? null,
-        hovered,
-        hovered !== null && canPlaceAt(state, this.map, hovered),
-      );
+      const valid = hovered !== null && canPlaceAt(state, this.map, hovered);
+      this.carryView.draw(carrying?.towerType ?? null, hovered, valid);
+      if (carrying) {
+        purchase = purchasePreview(state.towers, carrying.towerType, towerData, classData);
+        if (valid && hovered && !purchase?.fusion) {
+          links = previewLinks(
+            state,
+            { type: carrying.towerType, star: 1, ...hovered, movingId: null },
+            towerData,
+            classData,
+            this.map,
+          );
+        }
+      }
     }
+    this.linkView.draw(links);
+    this.linkHint.update(carrying || dragging ? linkHintLines(links, purchase) : []);
 
     if (state.status !== 'playing' && !this.removeEndScreen) {
       this.help.close();
@@ -324,7 +375,7 @@ export class Game extends Phaser.Scene {
       }
     }
     this.tooltip.update(
-      type === null ? null : describeTower(getTowerType(towerData, type), star, classData),
+      type === null ? null : describeTower(getTowerType(towerData, type), star, classData, type),
       key,
       performance.now(),
       purchase,

@@ -3,6 +3,7 @@
  * mostrar. Sem DOM, para testar direto.
  */
 
+import { towerSummary } from './towerInfo';
 import type { ClassData } from '../sim/classes/classData';
 import { interestFor } from '../sim/economy/economy';
 import type { EconomyData } from '../sim/economy/economyData';
@@ -26,6 +27,8 @@ export interface ShopSlotModel {
   /** `null` = slot comprado (vazio). */
   towerType: string | null;
   name: string;
+  /** Frase simples da torre (T23); vazio no slot comprado. */
+  summary: string;
   classes: string[];
   rarity: Rarity | null;
   rarityLabel: string;
@@ -72,6 +75,7 @@ export function buildShopModel(
         index,
         towerType,
         name: '',
+        summary: '',
         classes: [],
         rarity: null,
         rarityLabel: '',
@@ -88,6 +92,7 @@ export function buildShopModel(
       index,
       towerType,
       name: type.name,
+      summary: towerSummary(towerType) ?? '',
       classes: type.classes.map((id) => classes.classes[id]?.name ?? id),
       rarity: type.rarity,
       rarityLabel: type.rarity ? RARITY_LABELS[type.rarity] : '',

@@ -116,7 +116,7 @@ const activeNumbers = (state: Readonly<RunState>) => state.waves.active.map((w) 
 
 describe('dados da T14 (bônus antecipado da T19)', () => {
   it('economy.json: bônus antecipado de 5 por onda ativa, sem multiplicador de abate', () => {
-    expect(economyData.earlyCall).toEqual({ perActiveWave: 5 });
+    expect(economyData.earlyCall).toEqual({ perActiveWave: 5, windowPercent: 75 });
     expect(economyJson).not.toHaveProperty('killGoldMultiplier');
   });
 
@@ -225,6 +225,14 @@ describe('chamada antecipada', () => {
       pendingBonus: '+855 ao limpar',
       callLabel: 'Chefão: limpe o mapa',
       canCall: false,
+      bonusWindow: null,
+      upcoming: [
+        { wave: 20, kind: 'boss' },
+        { wave: 21, kind: 'normal' },
+        { wave: 22, kind: 'normal' },
+        { wave: 23, kind: 'normal' },
+        { wave: 24, kind: 'normal' },
+      ],
     });
   });
 
@@ -243,7 +251,7 @@ describe('chamada antecipada', () => {
     expect(hud().pendingBonus).toBe('+15 ao limpar');
   });
 
-  it('onda limpa esperando a anterior fechar ainda conta como ativa', () => {
+  it('onda limpa esperando a anterior fechar ainda conta como ativa (e já nasceu toda: sem bônus, T23)', () => {
     const { sim, control } = stackSim();
     call(sim, 2);
     run(sim, 10);
@@ -251,7 +259,13 @@ describe('chamada antecipada', () => {
     run(sim, 2);
     control.kill = () => false;
     expect(activeNumbers(sim.state)).toEqual([1, 2]);
-    expect(ofType(call(sim), 'waveStarted')[0]).toMatchObject({ wave: 3, earlyBonus: 10 });
+    // A onda 2 (a mais recente) já nasceu toda: a janela do bônus fechou.
+    expect(ofType(call(sim), 'waveStarted')[0]).toMatchObject({
+      wave: 3,
+      early: true,
+      earlyBonus: 0,
+    });
+    expect(activeNumbers(sim.state)).toEqual([1, 2, 3]);
   });
 
   it('inimigo do debug não segura o fechamento da onda', () => {

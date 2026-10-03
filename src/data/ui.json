@@ -7,7 +7,17 @@
   },
   "texts": {
     "limitWarning": "limite",
-    "towersLocked": "Torres travadas durante a onda"
+    "towersLocked": "Torres travadas durante a onda",
+    "towerSummaries": {
+      "mortar": "Atira bombas em área e, de tempos em tempos, tiros extras.",
+      "reaper": "Explode quando um inimigo morre perto.",
+      "relay": "Quando atira, faz as torres encostadas atirarem também.",
+      "obelisk": "Carrega com os abates das torres encostadas e solta um raio que pula entre inimigos.",
+      "ballista": "Quando outra torre a ativa, dispara uma flecha que atravessa a fila.",
+      "clock": "A cada tantos inimigos mortos no alcance, ativa as torres encostadas.",
+      "executioner": "Mata na hora os inimigos com pouca vida.",
+      "mirror": "Quando é ativado, repete o último efeito de uma torre encostada."
+    }
   },
   "towerDrag": {
     "thresholdPx": 6,
@@ -84,6 +94,75 @@
       {
         "keys": "Ctrl+Shift+D",
         "action": "Liberar o debug nesta sessão (build de playtest)"
+      }
+    ],
+    "chains": {
+      "title": "Cadeias",
+      "paragraphs": [
+        "A posição das torres importa: algumas reagem às torres encostadas (nas 4 casas de lado).",
+        "O Relé, quando atira, faz as torres encostadas atirarem também. O Relógio faz o mesmo a cada tantos abates no alcance.",
+        "O Obelisco carrega com os abates das torres encostadas, e o Espelho repete o último efeito de uma torre encostada.",
+        "Uma reação pode disparar outra: é a cadeia. O número \"Cadeia xN!\" mostra quantos gatilhos ela juntou.",
+        "Com o bônus da Arcana, as torres Arcana passam a alcançar também as diagonais.",
+        "Ao posicionar ou mover uma torre, as setas mostram com quem ela vai se ligar naquela casa."
+      ]
+    }
+  },
+  "waveHud": {
+    "upcomingCount": 5,
+    "texts": {
+      "callEarly": "Chamar antecipada (+{bonus})",
+      "callNoBonus": "Chamar próxima onda (sem bônus)",
+      "bonusWindow": "bônus por mais {n} {inimigos}",
+      "upcoming": "Próximas:",
+      "eliteMark": "◆",
+      "bossMark": "◆",
+      "eliteTitle": "Onda de elite",
+      "bossTitle": "Chefão"
+    }
+  },
+  "waveAnnounce": {
+    "durationMs": 2500,
+    "texts": {
+      "elite": "Onda de elite",
+      "boss": "CHEFÃO"
+    }
+  },
+  "linkHint": {
+    "offsetX": 18,
+    "offsetY": -28,
+    "texts": {
+      "none": "sem ligações aqui",
+      "activates": "ativa",
+      "charges": "carga",
+      "copies": "copia"
+    }
+  },
+  "tutorial": {
+    "storageKey": "td-tutorial-done-v1",
+    "autoCloseMs": 9000,
+    "skipLabel": "Pular tutorial",
+    "closeLabel": "Ok",
+    "steps": [
+      {
+        "id": "buy",
+        "text": "Compre uma torre na loja (arraste o slot ou aperte 1 a 5) e coloque perto do caminho."
+      },
+      {
+        "id": "call",
+        "text": "Aperte Espaço (ou o botão no topo) para chamar a onda."
+      },
+      {
+        "id": "income",
+        "text": "O ouro vem no fim de cada onda. Guardar ouro rende juros: 10% do que sobrar, até 10."
+      },
+      {
+        "id": "nexus",
+        "text": "Limite de torres cheio: evolua o núcleo (E) para ter mais torres."
+      },
+      {
+        "id": "positions",
+        "text": "A posição das torres importa: algumas reagem às vizinhas. Experimente!"
       }
     ]
   }

@@ -58,6 +58,46 @@ export function callWaveRefusal(
   return null;
 }
 
+export type WaveKind = 'normal' | 'elite' | 'boss';
+
+/** Tipo da onda pelos dados: com chefão é `boss` (mesmo com elites), com elite é `elite`. */
+export function waveKindOf(schedule: WaveSchedule, enemies: EnemyData): WaveKind {
+  if (bossCountOf(schedule, enemies) > 0) return 'boss';
+  return schedule.entries.some((e) => e.elite) ? 'elite' : 'normal';
+}
+
+export interface EarlyBonusWindow {
+  /** Ainda dá bônus chamar agora (menos de `windowPercent` da onda mais recente nasceu). */
+  readonly open: boolean;
+  /** Nascimentos da onda mais recente que faltam para a janela fechar (0 = fechada). */
+  readonly remaining: number;
+  /** Fração da janela já gasta, de 0 a 1 (para a barra do botão). */
+  readonly spent: number;
+}
+
+/**
+ * Janela do bônus de chamada antecipada (T23), contada pelos nascimentos da
+ * onda mais recente em andamento. `null` sem onda ativa (a chamada não é antecipada).
+ */
+export function earlyBonusWindow(
+  state: Readonly<RunState>,
+  schedules: readonly WaveSchedule[],
+  economy: EconomyData,
+): EarlyBonusWindow | null {
+  const newest = state.waves.active[state.waves.active.length - 1];
+  if (!newest) return null;
+  const total = schedules[newest.wave - 1]?.entries.length ?? 0;
+  const percent = economy.earlyCall.windowPercent;
+  // Fecha no primeiro nascimento que leva a onda a `percent`% ou mais.
+  const closesAt = Math.ceil((total * percent) / 100);
+  const remaining = Math.max(0, closesAt - newest.spawned);
+  return {
+    open: newest.spawned * 100 < total * percent,
+    remaining,
+    spent: closesAt > 0 ? Math.min(1, newest.spawned / closesAt) : 1,
+  };
+}
+
 /** Inimigos das ondas em andamento que ainda não nasceram ou ainda estão vivos (0 sem onda). */
 export function waveRemaining(
   state: Readonly<RunState>,
@@ -90,6 +130,8 @@ function hasUnspawned(wave: ActiveWave, schedules: readonly WaveSchedule[]): boo
 /**
  * Ação do jogador: chama a próxima onda. Com outra onda ativa é chamada
  * antecipada: o bônus fica guardado na onda e só é pago quando ela fechar.
+ * O bônus só vale com a janela aberta (`earlyBonusWindow`); fora dela, a
+ * chamada antecipada sai com bônus 0.
  */
 export function callWave(
   ctx: TickContext,
@@ -105,7 +147,8 @@ export function callWave(
   }
   const wave = nextWaveNumber(state);
   const early = state.waves.active.length > 0;
-  const earlyBonus = earlyBonusFor(economy, state.waves.active.length);
+  const window = earlyBonusWindow(state, schedules, economy);
+  const earlyBonus = window?.open ? earlyBonusFor(economy, state.waves.active.length) : 0;
   state.waves.active.push({ wave, startTick: state.tick, spawned: 0, bossesKilled: 0, earlyBonus });
   ctx.emit({ type: 'waveStarted', tick: state.tick, wave, early, earlyBonus });
 }
