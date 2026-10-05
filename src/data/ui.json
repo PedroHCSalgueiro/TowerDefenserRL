@@ -142,6 +142,7 @@
     "storageKey": "td-tutorial-done-v1",
     "autoCloseMs": 9000,
     "skipLabel": "Pular tutorial",
+    "advanceLabel": "Avançar",
     "closeLabel": "Ok",
     "steps": [
       {

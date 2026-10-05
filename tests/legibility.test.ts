@@ -94,6 +94,23 @@ describe('mini tutorial da primeira partida (T23)', () => {
     expect(tutorial.update(state, 0)).toBeNull();
   });
 
+  it('"Avançar" passa qualquer cartão no ritmo do jogador, inclusive os de ação', () => {
+    const tutorial = new TutorialModel(new MemoryStorage());
+    const state = createRunState('avancar');
+    expect(tutorial.update(state, 0)?.id).toBe('buy');
+    tutorial.advance();
+    expect(tutorial.update(state, 1)?.id).toBe('call');
+    tutorial.advance();
+    // Sem onda fechada nem torres, nenhum outro cartão pode aparecer ainda.
+    expect(tutorial.update(state, 2)).toBeNull();
+    state.wave = 1;
+    expect(tutorial.update(state, 3)?.id).toBe('income');
+    tutorial.advance();
+    expect(tutorial.update(state, 4)).toBeNull();
+    expect(tutorial.over).toBe(false);
+    expect(uiData.tutorial.advanceLabel).toBe('Avançar');
+  });
+
   it('o "Ok" não fecha os passos de ação', () => {
     const tutorial = new TutorialModel(new MemoryStorage());
     const state = createRunState('ok');

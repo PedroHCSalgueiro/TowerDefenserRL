@@ -141,9 +141,9 @@ describe('dados das ondas (T21: 40 ondas em fila única)', () => {
     }
   });
 
-  it('chefões em enemies.json: boss (2.500) e bossFinal (12.000), ouro 0, boss', () => {
+  it('chefões em enemies.json: boss (1.800) e bossFinal (12.000), ouro 0, boss', () => {
     expect(getEnemyType(enemyData, 'boss')).toEqual({
-      hp: 2500,
+      hp: 1800,
       speed: 0.5,
       armor: 30,
       nexusDamage: 0,
@@ -454,7 +454,7 @@ describe('debug: encerrar e pular ondas', () => {
   });
 
   it.each([
-    [20, 'boss', 2500],
+    [20, 'boss', 1800],
     [40, 'bossFinal', 12000],
   ])('o chefão real da onda %i (%s) nasce com a vida dos dados', (wave, type, hp) => {
     const sim = shopSim(`chefao-${wave}`);

@@ -1,7 +1,7 @@
 /**
  * Cartão do mini tutorial (T23), em HTML sobre o canvas. Não pausa o jogo:
  * só mostra o cartão que o `TutorialModel` mandar, com "Ok" nos que fecham
- * com clique e "Pular tutorial" em todos.
+ * com clique e "Avançar" e "Pular tutorial" em todos.
  */
 
 import uiData from '../data/ui.json';
@@ -34,9 +34,10 @@ export class Tutorial {
     const buttons = document.createElement('div');
     buttons.className = 'tutorial-buttons';
     this.ok = this.button(config.closeLabel, () => this.model.close());
+    const advance = this.button(config.advanceLabel, () => this.model.advance());
     const skip = this.button(config.skipLabel, () => this.model.skip());
     skip.classList.add('tutorial-skip');
-    buttons.append(this.ok, skip);
+    buttons.append(this.ok, advance, skip);
     this.root.append(this.text, buttons);
     parent.append(this.root);
   }

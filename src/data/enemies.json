@@ -41,7 +41,7 @@
       "movement": "air"
     },
     "boss": {
-      "hp": 2500,
+      "hp": 1800,
       "speed": 0.5,
       "armor": 30,
       "nexusDamage": 0,

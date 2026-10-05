@@ -7,7 +7,8 @@
  * - `income`: quando a primeira onda fecha.
  * - `nexus`: quando o limite de torres enche.
  * - `positions`: quando há 2 torres no mapa.
- * Os três últimos fecham com clique ou sozinhos depois de `autoCloseMs`. Só
+ * Os três últimos fecham com clique ou sozinhos depois de `autoCloseMs`.
+ * "Avançar" passa qualquer cartão, inclusive os de ação, no ritmo do jogador. Só
  * um cartão por vez: o primeiro da lista que pode aparecer. Terminar (ou
  * "Pular tutorial") grava a marca no navegador; sem a marca, recomeça.
  */
@@ -113,6 +114,11 @@ export class TutorialModel {
   /** Clique no cartão: fecha o passo atual, se ele fecha com clique. */
   close(): void {
     if (this.current !== null && CLOSABLE.has(this.current)) this.done.add(this.current);
+  }
+
+  /** "Avançar": dá o cartão atual por visto, seja qual for, e segue para o próximo. */
+  advance(): void {
+    if (this.current !== null) this.done.add(this.current);
   }
 
   /** "Pular tutorial". */
