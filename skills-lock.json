@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "skills": {
+    "add-3d-assets": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/add-3d-assets/SKILL.md",
+      "computedHash": "dd86664f97d5260aa13484f63ba66414d8d38c0ada923df2715c67101454e7cb"
+    },
+    "add-assets": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/add-assets/SKILL.md",
+      "computedHash": "5f9546ea597c28d695aa1429a0e19a190e8e43ca84113e6e9acb0e01b87ef32c"
+    },
+    "add-audio": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/add-audio/SKILL.md",
+      "computedHash": "183463d6f83b565183caf868e745da9732c5739ba01dcef2e9b45540e351c621"
+    },
+    "add-feature": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/add-feature/SKILL.md",
+      "computedHash": "4f2bfca00f15f15492886ab3c71722724770d7a3a760858166622cd3dc0bfaea"
+    },
+    "add-multiplayer": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/add-multiplayer/SKILL.md",
+      "computedHash": "7f16021bd918314155cfcd00ecdb7010db113fea111e61ceacaca72eff6594ac"
+    },
+    "design-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/design-game/SKILL.md",
+      "computedHash": "ed3c4269349d9119f081725a02e76f3079b45e92615c366eddf86af0cbeaf0f2"
+    },
+    "fetch-tweet": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/fetch-tweet/SKILL.md",
+      "computedHash": "00ca2f5ed3e55ca58ff9ca1c1da33aeee73d2f21c364831b891e62577426574f"
+    },
+    "game-3d-assets": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-3d-assets/SKILL.md",
+      "computedHash": "a86170227cd6267a477700ac0e5b9b7bc65c8fb0f0bbfd9c7c39dece494241a7"
+    },
+    "game-architecture": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-architecture/SKILL.md",
+      "computedHash": "319d2befd2e7d11e484450c49244c91999695a4b66282e553e40ecdf1a558d31"
+    },
+    "game-assets": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-assets/SKILL.md",
+      "computedHash": "3296abec73c2a29d170a6ab4f549b3b31e525f294bb6be0b1c87778100c8241b"
+    },
+    "game-audio": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-audio/SKILL.md",
+      "computedHash": "6375c20972b4c59831ea21be26136851738f46f7902e1bcbba9e350806dd81b3"
+    },
+    "game-deploy": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-deploy/SKILL.md",
+      "computedHash": "6b57fbae8a976f2b7d2f56afe25ffd7d14a58201d3a90a2e7453f50d68a300fb"
+    },
+    "game-designer": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-designer/SKILL.md",
+      "computedHash": "051d3e1e033f0beffeaef7a82af944d23102ef82fc6606aca4064f1100be95b7"
+    },
+    "game-qa": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/game-qa/SKILL.md",
+      "computedHash": "afcc914a5e307f4058917097c65d7cb1bde160a5b27b76cda9cd07594f758045"
+    },
+    "improve-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/improve-game/SKILL.md",
+      "computedHash": "4d4481cd11ec0cf232b790f5c88230d7dffa9ecf6319bd274d91ade955cbaab0"
+    },
+    "make-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/make-game/SKILL.md",
+      "computedHash": "6b006785ee25a4fd09b53e006bbcc0003772e39dc461afc5ed8a106c0863c123"
+    },
+    "meshyai": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/meshyai/SKILL.md",
+      "computedHash": "85bb85266c42205ec4f2dcde4ce85f854a699430ae22fb3529144857f32c4d0e"
+    },
+    "monetize-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/monetize-game/SKILL.md",
+      "computedHash": "604845457093ec5e315a4856cb10d5d2309a2886ec0d7b2c545b509941ba97d5"
+    },
+    "phaser": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/phaser/SKILL.md",
+      "computedHash": "2e8bd40c41fc4b367678e86f02b0eb4ba7aaa1770ad42cfe30b7ce74c4913364"
+    },
+    "promo-video": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/promo-video/SKILL.md",
+      "computedHash": "9a65bbd5f10be424626e772da1c5070811883668ad42930741cb766a04d75272"
+    },
+    "qa-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/qa-game/SKILL.md",
+      "computedHash": "3aab76c844011eff294e3d58dd8261cf0412588d7c363706117f7d07ff9668aa"
+    },
+    "quick-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/quick-game/SKILL.md",
+      "computedHash": "5e2640779d95670664dbd7615c427eb81c6d891f542e834374a18608eadb458f"
+    },
+    "record-promo": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/record-promo/SKILL.md",
+      "computedHash": "e1575abca5e8ed9cefd4fea84f91489149feeeb62d3ee4fa7d377581d2acf07f"
+    },
+    "retrodiffusion": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/retrodiffusion/SKILL.md",
+      "computedHash": "9acafbcdf573d5f2f9439300b2a26ab52d0b1dfd80d1bed2e543417f066d116c"
+    },
+    "review-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/review-game/SKILL.md",
+      "computedHash": "c7229c517788da2b26d369343da9d15d7760a6cbdafda5d26643ece598fc413e"
+    },
+    "scaffold-gateables": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/scaffold-gateables/SKILL.md",
+      "computedHash": "0429188452dfe565c1b28d671b17ed04a7b03eebe357e27e3087de0e553814af"
+    },
+    "threejs-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/threejs-game/SKILL.md",
+      "computedHash": "b0e412bbc67447342750ee7765cb9585e86c883ce16475645a1a99f9101ebb9f"
+    },
+    "threejs-perf": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/threejs-perf/SKILL.md",
+      "computedHash": "8739885b28b57b0eaa82c6ba41ff1c9bd8e0ca2abfe2e09bb495242cd97cf17b"
+    },
+    "use-template": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/use-template/SKILL.md",
+      "computedHash": "867dd347d9d5603da3374eebdc7e7b5fe4f6c2ec2f45d28a74febad3bf45929f"
+    },
+    "viral-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/viral-game/SKILL.md",
+      "computedHash": "767ef22646e368244c3beefef62eb87a0c37f9667ab72017f93222e057d5ec9c"
+    },
+    "worldlabs": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/worldlabs/SKILL.md",
+      "computedHash": "fda41f1dc6716e71db53eb8d6ebb49901b5bd87ff60903ccd2c1b0f7d12aef85"
+    }
+  }
+}
