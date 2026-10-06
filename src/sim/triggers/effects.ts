@@ -37,7 +37,7 @@ export interface EffectEnv {
   readonly towers: TowerData;
   readonly classes: ClassData;
   readonly scores: TargetScores;
-  /** Trava de ativação, em ticks (`activationCooldownSeconds`). */
+  /** Trava de ativação, em ticks (`activationCooldownSeconds` ou o bônus "Fluxo arcano"). */
   readonly activationCooldownTicks: number;
   /** Comprimento das linhas "sem limite", em casas. */
   readonly unlimitedLineLength: number;

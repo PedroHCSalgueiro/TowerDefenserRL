@@ -37,6 +37,11 @@ import { LinkHint, linkHintLines } from '../../ui/linkHint';
 import { previewLinks, type LinkPreview } from '../../sim/triggers/links';
 import { LinkPreviewView } from '../views/LinkPreviewView';
 import { Tutorial } from '../../ui/tutorial';
+import { RewardScreen } from '../../ui/rewardScreen';
+import { rewardCard } from '../../ui/rewardScreenModel';
+import { rewardData } from '../../sim/rewards/rewardData';
+import { rewardMods } from '../../sim/rewards/mods';
+import { rewardScreenOpen } from '../../sim/rewards/rewardState';
 import { WaveHud } from '../../ui/waveHud';
 import { defaultWaveSchedules } from '../../ui/waveHudModel';
 import { CarryView } from '../views/CarryView';
@@ -74,6 +79,7 @@ export class Game extends Phaser.Scene {
   private waveHud!: WaveHud;
   private waveAnnounce!: WaveAnnounce;
   private tutorial!: Tutorial;
+  private rewardScreen!: RewardScreen;
   private map!: GridMap;
   private removeEndScreen: (() => void) | null = null;
 
@@ -131,15 +137,16 @@ export class Game extends Phaser.Scene {
     const overlayParent = this.game.canvas.parentElement ?? document.body;
     this.classPanel = new ClassPanel(overlayParent);
     // A pausa congela tudo, inclusive compras: as ações do jogador são ignoradas.
-    const paused = () => this.runner.paused;
+    // A tela de recompensa (T24) também: loja, Espaço, E e arrasto ficam bloqueados.
+    const blocked = () => this.runner.paused || rewardScreenOpen(this.runner.sim.state);
     const evolveNexus = () => {
-      if (!paused()) this.runner.sim.enqueue({ type: 'evolveNexus' });
+      if (!blocked()) this.runner.sim.enqueue({ type: 'evolveNexus' });
     };
     this.nexusPanel = new NexusPanel(overlayParent, evolveNexus);
     this.tooltip = new TowerTooltip(overlayParent);
     this.waveHud = new WaveHud(overlayParent, {
       onCall: () => {
-        if (!paused()) this.runner.sim.enqueue({ type: 'callWave' });
+        if (!blocked()) this.runner.sim.enqueue({ type: 'callWave' });
       },
       onCycleSpeed: () => this.runner.clock.cycleSpeed(),
       onTogglePause: () => {
@@ -148,7 +155,7 @@ export class Game extends Phaser.Scene {
     });
     this.help = new HelpScreen({
       parent: overlayParent,
-      paused,
+      paused: () => this.runner.paused,
       setPaused: (value) => {
         this.runner.paused = value;
       },
@@ -157,6 +164,15 @@ export class Game extends Phaser.Scene {
     this.waveHud.appendControl(this.help.toggleButton);
     this.waveAnnounce = new WaveAnnounce(overlayParent);
     this.tutorial = new Tutorial(overlayParent);
+    this.rewardScreen = new RewardScreen({
+      parent: overlayParent,
+      state: () => this.runner.sim.state,
+      enqueue: (command) => {
+        if (!this.runner.paused) this.runner.sim.enqueue(command);
+      },
+      paused: () => this.runner.paused,
+      ticksPerSecond: engineConfig.ticksPerSecond,
+    });
     const removeVersion = showVersionLabel(overlayParent, __APP_VERSION__);
     this.carryView = new CarryView(this, grid.projection, towerData);
     this.linkView = new LinkPreviewView(this, grid.projection);
@@ -166,10 +182,10 @@ export class Game extends Phaser.Scene {
       map,
       state: () => this.runner.sim.state,
       enqueue: (command) => {
-        if (!paused()) this.runner.sim.enqueue(command);
+        if (!blocked()) this.runner.sim.enqueue(command);
       },
       evolveNexus,
-      paused,
+      paused: blocked,
       selectedCell: () => grid.selectedCell,
       cellAtClient: (x, y) => grid.cellAtClient(x, y),
     });
@@ -181,9 +197,9 @@ export class Game extends Phaser.Scene {
       parent: overlayParent,
       map,
       state: () => this.runner.sim.state,
-      paused,
+      paused: blocked,
       enqueue: (command) => {
-        if (!paused()) this.runner.sim.enqueue(command);
+        if (!blocked()) this.runner.sim.enqueue(command);
       },
       cellAtClient: (x, y) => grid.cellAtClient(x, y),
       // A seleção acompanha a torre arrastada (vender com S e o alcance).
@@ -216,6 +232,7 @@ export class Game extends Phaser.Scene {
       this.waveHud.destroy();
       this.waveAnnounce.destroy();
       this.tutorial.destroy();
+      this.rewardScreen.destroy();
       this.linkHint.destroy();
       this.help.destroy();
       removeVersion();
@@ -234,8 +251,8 @@ export class Game extends Phaser.Scene {
   update(_time: number, delta: number): void {
     const events = this.runner.update(delta);
     const state = this.runner.sim.state;
-    // Pausado, as animações da renderização também param.
-    const frameDelta = this.runner.paused ? 0 : delta;
+    // Pausado (P, ajuda ou tela de recompensa), as animações da renderização também param.
+    const frameDelta = this.runner.paused || rewardScreenOpen(state) ? 0 : delta;
 
     this.nexusView.handleEvents(events);
     this.projectileView.handleEvents(events);
@@ -251,7 +268,7 @@ export class Game extends Phaser.Scene {
     }
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
-    this.classPanel.update(state.classes);
+    this.classPanel.update(state.classes, rewardMods(state).wildcards);
     this.nexusPanel.update(state);
     this.waveHud.update(state, { speed: this.runner.clock.speed, paused: this.runner.paused });
     this.waveAnnounce.update(
@@ -259,6 +276,7 @@ export class Game extends Phaser.Scene {
       performance.now(),
     );
     this.tutorial.update(state, performance.now());
+    this.rewardScreen.update();
     this.shop.update();
     this.towerDrag.update();
     const carrying = this.shop.carrying;
@@ -280,7 +298,7 @@ export class Game extends Phaser.Scene {
             : t,
         );
         links = previewLinks(
-          { towers },
+          { towers, rewards: state.rewards },
           { type: moving.type, star: moving.star, ...hovered, movingId: moving.id },
           towerData,
           classData,
@@ -291,7 +309,13 @@ export class Game extends Phaser.Scene {
       const valid = hovered !== null && canPlaceAt(state, this.map, hovered);
       this.carryView.draw(carrying?.towerType ?? null, hovered, valid);
       if (carrying) {
-        purchase = purchasePreview(state.towers, carrying.towerType, towerData, classData);
+        purchase = purchasePreview(
+          state.towers,
+          carrying.towerType,
+          towerData,
+          classData,
+          rewardMods(state).wildcards,
+        );
         if (valid && hovered && !purchase?.fusion) {
           links = previewLinks(
             state,
@@ -315,6 +339,7 @@ export class Game extends Phaser.Scene {
           totalWaves: defaultWaveSchedules.length,
           ticksPerSecond: engineConfig.ticksPerSecond,
           towerName: (type) => getTowerType(towerData, type).name,
+          rewardName: (id, classId) => rewardCard({ id, classId }, 0, rewardData, classData).name,
           link: runLink(window.location.href, state.seed, debugConfig.panel.unlockParam),
         }),
         () => this.scene.restart(),
@@ -364,7 +389,13 @@ export class Game extends Phaser.Scene {
     const shopType = this.shop.hoveredTowerType;
     if (shopType !== null) {
       type = shopType;
-      purchase = purchasePreview(state.towers, shopType, towerData, classData);
+      purchase = purchasePreview(
+        state.towers,
+        shopType,
+        towerData,
+        classData,
+        rewardMods(state).wildcards,
+      );
       key = `loja:${shopType}:${previewKey(purchase)}`;
     } else if (!carrying && hovered && this.tooltip.pointerOverCanvas) {
       tower = this.towerUnderPointer(state, hovered) ?? null;
@@ -403,8 +434,11 @@ export class Game extends Phaser.Scene {
     return best ?? state.towers.find((t) => t.x === cell.x && t.y === cell.y);
   }
 
-  /** Fator de interpolação entre o tick anterior e o atual, em [0, 1). */
+  /**
+   * Fator de interpolação entre o tick anterior e o atual, em [0, 1). Com a
+   * tela de recompensa, o tick está congelado: desenha o tick atual parado.
+   */
   get interpolationAlpha(): number {
-    return this.runner.alpha;
+    return rewardScreenOpen(this.runner.sim.state) ? 1 : this.runner.alpha;
   }
 }

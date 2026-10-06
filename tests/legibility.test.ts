@@ -16,6 +16,7 @@ import { TutorialModel, tutorialSeen, type TutorialStorage } from '../src/ui/tut
 import { waveAnnouncementFor } from '../src/ui/waveAnnounce';
 import { buildWaveHudModel, defaultWaveSchedules } from '../src/ui/waveHudModel';
 import { shopSim, stepOnce } from './support/shopSim';
+import { firstReward, resolveRewards } from './support/waveBot';
 
 class MemoryStorage implements TutorialStorage {
   readonly items = new Map<string, string>();
@@ -171,6 +172,7 @@ describe('elite e chefão (T23)', () => {
     const sim = shopSim('faixa');
     sim.enqueue({ type: 'debugSkipToWave', wave: 17 });
     stepOnce(sim);
+    resolveRewards(sim, firstReward);
     expect(buildWaveHudModel(sim.state).upcoming).toEqual([
       { wave: 17, kind: 'normal' },
       { wave: 18, kind: 'normal' },

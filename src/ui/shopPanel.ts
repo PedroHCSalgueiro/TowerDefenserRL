@@ -6,6 +6,8 @@
 import uiData from '../data/ui.json';
 import type { ShopModel, ShopSlotModel } from './shopModel';
 
+const shopTexts = uiData.shop;
+
 export interface ShopPanelHandlers {
   onSlotPointerDown: (slot: number, event: PointerEvent) => void;
   onReroll: () => void;
@@ -60,7 +62,13 @@ export class ShopPanel {
     slots.append(...model.slots.map((slot) => this.renderSlot(slot, carrySlot === slot.index)));
 
     const actions = el('div', 'shop-actions');
-    const reroll = el('button', 'shop-button', `Rerolar (R) −${model.rerollCost}`);
+    const reroll = el(
+      'button',
+      'shop-button',
+      model.rerollCost === 0
+        ? shopTexts.freeRerollLabel
+        : shopTexts.rerollLabel.replace('{cost}', String(model.rerollCost)),
+    );
     reroll.type = 'button';
     reroll.disabled = !model.canReroll;
     reroll.addEventListener('click', () => {

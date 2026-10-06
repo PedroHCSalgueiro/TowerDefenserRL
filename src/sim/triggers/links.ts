@@ -13,6 +13,8 @@
 import { neighborhoodRadius } from '../classes/bonuses';
 import type { ClassData } from '../classes/classData';
 import { countClasses } from '../classes/systems';
+import { rewardMods } from '../rewards/mods';
+import type { RewardsState } from '../rewards/rewardState';
 import type { RunState } from '../state';
 import { clampStar } from '../towers/stars';
 import { getTowerType, type TowerData } from '../towers/towerData';
@@ -87,7 +89,7 @@ function endOf(p: Placed): LinkEnd {
 }
 
 export function previewLinks(
-  state: Pick<RunState, 'towers'>,
+  state: Pick<RunState, 'towers'> & { readonly rewards?: RewardsState },
   candidate: LinkCandidate,
   towers: TowerData,
   classes: ClassData,
@@ -99,7 +101,12 @@ export function previewLinks(
   const self: Placed = { towerId: null, ...candidate };
   // As classes como ficariam com a candidata no mapa (mover não muda os tipos).
   const classState = {
-    classes: countClasses([...others.map((o) => o.type), self.type], towers, classes),
+    classes: countClasses(
+      [...others.map((o) => o.type), self.type],
+      towers,
+      classes,
+      rewardMods(state).wildcards,
+    ),
   };
   const { neighborhood } = towers.triggers;
   const radiusOf = (p: Placed) =>

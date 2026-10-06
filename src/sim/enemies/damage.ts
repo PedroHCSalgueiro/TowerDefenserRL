@@ -47,6 +47,7 @@ export function damageEnemy(
       towerId,
       x: enemy.x,
       y: enemy.y,
+      elite: enemy.elite,
       weight: options?.killWeight ?? 1,
       chainId: chain.chainId,
       originTowerId: chain.originTowerId,

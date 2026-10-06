@@ -7,7 +7,8 @@
 import { nextLevelCost } from '../sim/nexus/evolve';
 import { nexusData, towerLimit, type NexusData } from '../sim/nexus/nexusData';
 import type { EconomyData } from '../sim/economy/economyData';
-import { chancesFor } from '../sim/shop/shop';
+import { rewardMods } from '../sim/rewards/mods';
+import { chancesFor, shopRarityLevel } from '../sim/shop/shop';
 import { currentTowerLimit, towerCount } from '../sim/towers/limit';
 import type { RunState } from '../sim/state';
 import { RARITIES, type Rarity } from '../sim/towers/towerData';
@@ -35,15 +36,18 @@ export function buildNexusPanelModel(
 ): NexusPanelModel {
   const { level } = state.nexus;
   const cost = nextLevelCost(nexus, level);
+  // Bônus das recompensas (T24): limite a mais e raridade de um nível acima.
+  const extraLimit = rewardMods(state).towerLimit;
+  const rarityLevel = shopRarityLevel(state);
   return {
     level,
     towers: towerCount(state),
     towerLimit: currentTowerLimit(state, nexus),
-    nextTowerLimit: cost === null ? null : towerLimit(nexus, level + 1),
+    nextTowerLimit: cost === null ? null : towerLimit(nexus, level + 1) + extraLimit,
     hp: Math.ceil(state.nexus.hp),
     maxHp: state.nexus.maxHp,
-    chances: chancesFor(economy, level),
-    nextChances: cost === null ? null : chancesFor(economy, level + 1),
+    chances: chancesFor(economy, rarityLevel),
+    nextChances: cost === null ? null : chancesFor(economy, rarityLevel + 1),
     cost,
     canEvolve: cost !== null && state.status === 'playing' && state.gold >= cost,
   };

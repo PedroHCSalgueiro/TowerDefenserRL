@@ -97,6 +97,7 @@ describe('relatório da run', () => {
     ],
     nexusLevel: 4,
     goldEarned: 1234,
+    rewards: ['Onda 5: Mais espaço', 'Onda 10: Coringa: Arcana'],
     cheated: true,
     link: 'https://exemplo.dev/?seed=abc',
   };
@@ -115,6 +116,7 @@ describe('relatório da run', () => {
         'Torres finais (2): Morteiro ★3, Relé ★1',
         'Núcleo: nível 4',
         'Ouro ganho: 1234',
+        'Recompensas (2): Onda 5: Mais espaço, Onda 10: Coringa: Arcana',
         'Trapaça: sim',
         'Link: https://exemplo.dev/?seed=abc',
       ].join('\n'),
@@ -122,9 +124,16 @@ describe('relatório da run', () => {
   });
 
   it('vitória, sem torres e sem trapaça', () => {
-    const text = formatRunReport({ ...sample, won: true, towers: [], cheated: false });
+    const text = formatRunReport({
+      ...sample,
+      won: true,
+      towers: [],
+      rewards: [],
+      cheated: false,
+    });
     expect(text).toContain('Resultado: vitória');
     expect(text).toContain('Torres finais (0): nenhuma');
+    expect(text).toContain('Recompensas (0): nenhuma');
     expect(text).toContain('Trapaça: não');
   });
 
@@ -137,6 +146,7 @@ describe('relatório da run', () => {
       totalWaves: TOTAL_WAVES,
       ticksPerSecond: 30,
       towerName: (type) => getTowerType(towerData, type).name,
+      rewardName: (id, classId) => (classId ? `${id}:${classId}` : id),
       link: 'L',
     });
     expect(summary).toMatchObject({
@@ -156,6 +166,13 @@ describe('relatório da run', () => {
     expect(summary.towers).toHaveLength(state.towers.length);
     expect(summary.towers[0]?.name).toBe(getTowerType(towerData, state.towers[0]!.type).name);
     expect(summary.goldEarned).toBeGreaterThan(0);
+    // As 7 telas de recompensa da run, na ordem das ondas.
+    expect(summary.rewards).toEqual(
+      state.rewards.taken.map(
+        (t) => `Onda ${t.wave}: ${t.classId ? `${t.id}:${t.classId}` : t.id}`,
+      ),
+    );
+    expect(state.rewards.taken.map((t) => t.wave)).toEqual([5, 10, 15, 20, 25, 30, 35]);
   });
 
   it('na derrota, a onda é a mais nova em andamento', () => {
@@ -168,6 +185,7 @@ describe('relatório da run', () => {
       totalWaves: TOTAL_WAVES,
       ticksPerSecond: 30,
       towerName: (t) => t,
+      rewardName: (id) => id,
       link: '',
     });
     expect(summary.wave).toBe(2);

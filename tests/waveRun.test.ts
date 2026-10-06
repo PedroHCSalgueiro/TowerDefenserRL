@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SimEvent } from '../src/sim/engine/events';
 import { economyData } from '../src/sim/economy/economyData';
-import { botSim, playRun, TOTAL_WAVES } from './support/waveBot';
+import { botSim, noRewards, playRun, TOTAL_WAVES } from './support/waveBot';
 
 describe('run completa jogada pelo bot', () => {
   it('as 40 ondas terminam sem erro (núcleo invulnerável, para chegar ao fim)', () => {
@@ -28,7 +28,8 @@ describe('run completa jogada pelo bot', () => {
   });
 
   it('economia da T19: o ouro ganho vem só do fim das ondas (juros, renda e antecipado)', () => {
-    const sim = botSim('bot-economia', true);
+    // Sem recompensas: a renda e os juros aqui são os da economia pura.
+    const sim = botSim('bot-economia', true, { rewards: noRewards });
     const ended: Extract<SimEvent, { type: 'waveEnded' }>[] = [];
     let killed = 0;
     const drain = sim.drainEvents.bind(sim);

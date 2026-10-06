@@ -32,6 +32,26 @@ export interface TickContext {
 /** Um sistema lê e altera o estado dentro de um tick. */
 export type System = (ctx: TickContext) => void;
 
+const frozenSafe = new WeakSet<System>();
+
+/**
+ * Marca o sistema para rodar também nos ticks congelados pela tela de
+ * recompensa (T24): ações, relógio e abertura da tela, ouro e classes.
+ */
+export function runsWhileFrozen(system: System): System {
+  frozenSafe.add(system);
+  return system;
+}
+
+/**
+ * Tela de recompensa aberta (T24): o tick fica congelado. O número do tick
+ * não anda (os nascimentos das ondas empilhadas e as travas de ativação não
+ * "atrasam") e só rodam os sistemas marcados com `runsWhileFrozen`.
+ */
+export function isFrozen(state: Readonly<RunState>): boolean {
+  return state.rewards.screen !== null;
+}
+
 export class Simulation {
   private readonly rng: Rng;
   private readonly events = new EventBus();
@@ -61,12 +81,17 @@ export class Simulation {
     this.runState.commandQueue.push(command);
   }
 
-  /** Avança um tick. Depois da derrota ou da vitória a run fica congelada. */
+  /**
+   * Avança um tick. Depois da derrota ou da vitória a run fica congelada.
+   * Com a tela de recompensa aberta no começo do tick, o tick é congelado
+   * (ver `isFrozen`).
+   */
   step(): void {
     const state = this.runState;
     if (state.status !== 'playing') return;
     const commands = state.commandQueue.splice(0);
-    state.tick++;
+    const frozen = isFrozen(state);
+    if (!frozen) state.tick++;
     const tickEvents = this.tickEvents;
     tickEvents.length = 0;
     const ctx: TickContext = {
@@ -81,6 +106,7 @@ export class Simulation {
       allocateId: () => state.nextEntityId++,
     };
     for (const system of this.systems) {
+      if (frozen && !frozenSafe.has(system)) continue;
       system(ctx);
     }
   }
@@ -126,9 +152,14 @@ export class SimulationRunner {
     this.clock = new FixedStepClock(config);
   }
 
-  /** Roda os ticks devidos neste quadro e devolve os eventos emitidos. */
+  /**
+   * Roda os ticks devidos neste quadro e devolve os eventos emitidos. Com a
+   * tela de recompensa aberta, o relógio anda na velocidade base (1x), para
+   * o tempo de escolha ser o tempo real.
+   */
   update(deltaMs: number): SimEvent[] {
-    const ticks = this.paused ? 0 : this.clock.advance(deltaMs);
+    const speed = isFrozen(this.sim.state) ? this.clock.baseSpeed : undefined;
+    const ticks = this.paused ? 0 : this.clock.advance(deltaMs, speed);
     const profiler = this.profiler;
     for (let i = 0; i < ticks; i++) {
       if (profiler) {

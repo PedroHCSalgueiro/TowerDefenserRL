@@ -27,6 +27,7 @@ const cheats: SimCommand[] = [
   { type: 'debugSkipToWave', wave: 3 },
   { type: 'debugAddGold', amount: 500 },
   { type: 'debugSetInfiniteGold', value: false },
+  { type: 'debugOpenReward' },
 ];
 
 const playerCommands: SimCommand[] = [

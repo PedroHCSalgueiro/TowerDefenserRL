@@ -2,22 +2,30 @@
  * Aplica as ações da fila, na ordem em que foram enfileiradas, no início do
  * tick. É o único lugar em que ações do jogador e do debug mudam o estado.
  * Qualquer comando de debug liga `cheated` (T17), mesmo se for recusado.
+ *
+ * Com a tela de recompensa aberta (T24), roda também nos ticks congelados,
+ * mas só aceita as ações de `REWARD_SCREEN_COMMAND_TYPES`; as outras são
+ * ignoradas (a interface também as bloqueia).
  */
 
+import engineConfig from '../data/engine.json';
+import { classData, type ClassData } from './classes/classData';
 import type { SimDebugData } from './debug/debugData';
 import { economyData, type EconomyData } from './economy/economyData';
 import { spawnDebugEnemy } from './debug/stress';
-import { CHEAT_COMMAND_TYPES } from './state';
+import { CHEAT_COMMAND_TYPES, REWARD_SCREEN_COMMAND_TYPES } from './state';
 import { patternTowerType, pickTowerCells } from './debug/towerCells';
 import type { EnemyData } from './enemies/enemyData';
 import { releaseAllEnemies } from './enemies/pool';
 import type { Routes } from './enemies/route';
 import { spawnEnemy } from './enemies/systems';
-import type { System } from './engine/simulation';
+import { runsWhileFrozen, type System } from './engine/simulation';
 import type { GridMap } from './grid/map';
 import { evolveNexus } from './nexus/evolve';
 import { nexusData, type NexusData } from './nexus/nexusData';
 import { releaseAllProjectiles } from './projectiles/pool';
+import { rewardData, type RewardData } from './rewards/rewardData';
+import { chooseReward, rerollRewards } from './rewards/rewards';
 import { buyTower, rerollShop, sellTower } from './shop/shop';
 import { moveTower } from './towers/move';
 import { placeTower } from './towers/placement';
@@ -34,6 +42,9 @@ export function createCommandSystem(
   schedules: readonly WaveSchedule[],
   economy: EconomyData = economyData,
   nexus: NexusData = nexusData,
+  rewards: RewardData = rewardData,
+  classes: ClassData = classData,
+  ticksPerSecond: number = engineConfig.ticksPerSecond,
 ): System {
   /** Quantidade pedida, presa em [0, maxSpawnPerCommand]. */
   const clampCount = (count: number): number =>
@@ -45,10 +56,11 @@ export function createCommandSystem(
       ? Math.min(Math.max(0, Math.floor(amount)), debug.maxGoldPerCommand)
       : 0;
 
-  return (ctx) => {
+  return runsWhileFrozen((ctx) => {
     const { state } = ctx;
     for (const command of ctx.commands) {
       if (CHEAT_COMMAND_TYPES.has(command.type)) state.cheated = true;
+      if (state.rewards.screen !== null && !REWARD_SCREEN_COMMAND_TYPES.has(command.type)) continue;
       switch (command.type) {
         case 'spawnEnemy':
           spawnEnemy(ctx, routes, enemies, command.enemyType);
@@ -80,6 +92,16 @@ export function createCommandSystem(
           break;
         case 'evolveNexus':
           evolveNexus(ctx, nexus);
+          break;
+        case 'chooseReward':
+          chooseReward(ctx, rewards, command.index);
+          break;
+        case 'rerollRewards':
+          rerollRewards(ctx, rewards, economy, classes, ticksPerSecond);
+          break;
+        case 'debugOpenReward':
+          // A tela abre no fim do tick (`createRewardOpenSystem`), ou depois da que estiver aberta.
+          state.rewards.queue.push(state.wave);
           break;
         case 'callWave':
           callWave(ctx, schedules, enemies, economy);
@@ -131,5 +153,5 @@ export function createCommandSystem(
           break;
       }
     }
-  };
+  });
 }

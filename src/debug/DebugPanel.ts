@@ -10,7 +10,7 @@
  * fila de comandos da simulação.
  *
  * T17: trapaças de ouro ("+500 ouro" e "ouro infinito") e velocidades 5x e
- * 10x. Na build de playtest o painel e o F2 só existem depois de liberar o
+ * 10x. T24: "Abrir recompensa" (tela de recompensa extra, conta como trapaça). Na build de playtest o painel e o F2 só existem depois de liberar o
  * debug (Ctrl+Shift+D ou `?debug=1`, ver `unlock.ts`).
  */
 
@@ -289,6 +289,8 @@ export class DebugPanel {
     const skipToWave = button('Pular para onda', () =>
       this.send({ type: 'debugSkipToWave', wave: skipWave.valueAsNumber }),
     );
+    // T24: abre uma tela de recompensa na hora (ou depois da que estiver aberta).
+    const openReward = button('Abrir recompensa', () => this.send({ type: 'debugOpenReward' }));
 
     // Gravação
     const record = button(`Gravar ${perf.recordSeconds} s`, () => this.startRecording());
@@ -314,7 +316,7 @@ export class DebugPanel {
       row('Núcleo', el('label', {}, [this.invulnerable, ' invulnerável'])),
       row('Ouro', addGold, el('label', {}, [this.infiniteGold, ' ouro infinito'])),
       el('div', { className: 'debug-section', textContent: 'Ondas e economia' }),
-      row('', endWave),
+      row('', endWave, openReward),
       row('', skipToWave, skipWave),
       el('div', { className: 'debug-section', textContent: 'Torre' }),
       row('Tipo', towerType.select, towerStar, placeTower),

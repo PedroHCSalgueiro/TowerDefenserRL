@@ -1,0 +1,117 @@
+{
+  "waves": [5, 10, 15, 20, 25, 30, 35],
+  "choices": 3,
+  "chooseSeconds": 15,
+  "reroll": { "baseCost": 5, "costStep": 5 },
+  "rewards": {
+    "artilleryArea": {
+      "name": "Artilharia pesada",
+      "text": "+25% de dano em área (tiro em área e explosões) para torres Artilharia.",
+      "category": "class",
+      "classId": "artillery",
+      "repeatable": true,
+      "effect": { "kind": "areaDamagePercent", "percent": 25 }
+    },
+    "mechanicalCount": {
+      "name": "Engrenagens afiadas",
+      "text": "Contagens \"a cada N\" das torres Mecânica −1 (mínimo 2).",
+      "category": "class",
+      "classId": "mechanical",
+      "repeatable": false,
+      "effect": { "kind": "triggerCountMinus", "amount": 1 }
+    },
+    "arcaneLock": {
+      "name": "Fluxo arcano",
+      "text": "Trava de ativação de todas as torres: 1 s → 0,7 s.",
+      "category": "class",
+      "classId": "arcane",
+      "repeatable": false,
+      "effect": { "kind": "activationCooldownSeconds", "seconds": 0.7 }
+    },
+    "shadowElite": {
+      "name": "Colheita sombria",
+      "text": "Mortes de elite e de chefão valem ×3 nos contadores e cargas das torres Sombria.",
+      "category": "class",
+      "classId": "shadow",
+      "repeatable": false,
+      "effect": { "kind": "eliteKillWeight", "multiplier": 3 }
+    },
+    "classWildcard": {
+      "name": "Coringa",
+      "text": "{classe} conta +1 torre para o bônus de classe.",
+      "category": "class",
+      "repeatable": false,
+      "effect": { "kind": "classWildcard", "count": 1 }
+    },
+    "interestCap": {
+      "name": "Cofre maior",
+      "text": "Teto dos juros: 10 → 15.",
+      "category": "economy",
+      "repeatable": false,
+      "effect": { "kind": "interestCap", "cap": 15 }
+    },
+    "income": {
+      "name": "Renda extra",
+      "text": "+3 de renda por onda até o fim da run.",
+      "category": "economy",
+      "repeatable": true,
+      "effect": { "kind": "incomePerWave", "gold": 3 }
+    },
+    "freeReroll": {
+      "name": "Reroll grátis",
+      "text": "1 reroll grátis em cada loja.",
+      "category": "economy",
+      "repeatable": false,
+      "effect": { "kind": "freeRerollsPerShop", "count": 1 }
+    },
+    "discount": {
+      "name": "Desconto",
+      "text": "Torres 15% mais baratas.",
+      "category": "economy",
+      "repeatable": false,
+      "effect": { "kind": "towerDiscountPercent", "percent": 15 }
+    },
+    "fullRefund": {
+      "name": "Revenda cheia",
+      "text": "Vender devolve 100% do que foi pago (era 70%).",
+      "category": "economy",
+      "repeatable": false,
+      "effect": { "kind": "sellRefundPercent", "percent": 100 }
+    },
+    "towerLimit": {
+      "name": "Mais espaço",
+      "text": "+1 no limite de torres.",
+      "category": "nexus",
+      "repeatable": true,
+      "effect": { "kind": "towerLimit", "amount": 1 }
+    },
+    "nexusHp": {
+      "name": "Núcleo reforçado",
+      "text": "+15 de vida máxima e cura total.",
+      "category": "nexus",
+      "repeatable": true,
+      "effect": { "kind": "nexusMaxHp", "amount": 15 }
+    },
+    "nexusDamage": {
+      "name": "Núcleo armado",
+      "text": "Dano do ataque do núcleo ×3.",
+      "category": "nexus",
+      "repeatable": false,
+      "effect": { "kind": "nexusDamageMultiplier", "multiplier": 3 }
+    },
+    "shopRarity": {
+      "name": "Loja melhor",
+      "text": "Raridade da loja como se o núcleo estivesse um nível acima.",
+      "category": "nexus",
+      "repeatable": false,
+      "effect": { "kind": "shopRarityLevels", "levels": 1 }
+    },
+    "chainGold": {
+      "name": "Cadeia lucrativa",
+      "text": "+1 de ouro a cada 10 gatilhos de uma cadeia (x10, x20, x30…).",
+      "category": "chain",
+      "repeatable": false,
+      "effect": { "kind": "chainGold", "every": 10, "gold": 1 }
+    }
+  }
+}

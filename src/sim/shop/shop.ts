@@ -20,10 +20,14 @@ import {
   type TowerData,
 } from '../towers/towerData';
 import { spendGold } from '../economy/gold';
+import { rewardMods } from '../rewards/mods';
+import type { RunState } from '../state';
 
 export interface ShopState {
   /** Id da torre em cada slot; `null` = comprado. */
   slots: (string | null)[];
+  /** Rerolls grátis que ainda restam nesta loja (bônus "Reroll grátis", T24). */
+  freeRerolls: number;
 }
 
 /** Ids das torres de loja de cada raridade, na ordem dos dados. */
@@ -43,11 +47,41 @@ export function chancesFor(economy: EconomyData, nexusLevel: number) {
   >;
 }
 
-/** Preço da torre (`null` = não é de loja). */
-export function priceOf(economy: EconomyData, towers: TowerData, towerType: string): number | null {
+/**
+ * Preço da torre (`null` = não é de loja). Com desconto (bônus "Desconto",
+ * T24), o preço é arredondado para o inteiro mais próximo (,5 para cima).
+ */
+export function priceOf(
+  economy: EconomyData,
+  towers: TowerData,
+  towerType: string,
+  discountPercent = 0,
+): number | null {
   if (!hasTowerType(towers, towerType)) return null;
   const { rarity } = getTowerType(towers, towerType);
-  return rarity === null ? null : economy.shop.prices[rarity];
+  if (rarity === null) return null;
+  const price = economy.shop.prices[rarity];
+  return discountPercent > 0 ? Math.round((price * (100 - discountPercent)) / 100) : price;
+}
+
+/** Preço da torre na run, com o desconto das recompensas. */
+export function shopPrice(
+  economy: EconomyData,
+  towers: TowerData,
+  state: Pick<RunState, 'rewards'>,
+  towerType: string,
+): number | null {
+  return priceOf(economy, towers, towerType, rewardMods(state).towerDiscountPercent);
+}
+
+/** Nível usado na tabela de raridade da loja: o do núcleo mais o bônus "Loja melhor" (T24). */
+export function shopRarityLevel(state: Pick<RunState, 'nexus' | 'rewards'>): number {
+  return state.nexus.level + rewardMods(state).shopRarityLevels;
+}
+
+/** Custo do próximo reroll da loja: 0 com reroll grátis sobrando. */
+export function shopRerollCost(economy: EconomyData, state: Pick<RunState, 'shop'>): number {
+  return state.shop.freeRerolls > 0 ? 0 : economy.shop.rerollCost;
 }
 
 function drawRarity(rng: Rng, chances: Readonly<Record<Rarity, number>>): Rarity {
@@ -63,6 +97,7 @@ function drawRarity(rng: Rng, chances: Readonly<Record<Rarity, number>>): Rarity
  * Loja nova: por slot, a raridade sai da tabela do nível e depois uma torre
  * da raridade com chance igual. Na primeira loja da run, se nenhum slot
  * trouxer a raridade garantida, um slot sorteado vira uma torre dela.
+ * `freeRerolls`: rerolls grátis da loja (bônus das recompensas).
  */
 export function newShop(
   rng: Rng,
@@ -70,6 +105,7 @@ export function newShop(
   towers: TowerData,
   nexusLevel: number,
   isFirstShop: boolean,
+  freeRerolls = 0,
 ): ShopState {
   const pools = shopPools(towers);
   const chances = chancesFor(economy, nexusLevel);
@@ -89,7 +125,7 @@ export function newShop(
       slots[rng.nextInt(0, slots.length - 1)] = rng.pick(pool);
     }
   }
-  return { slots };
+  return { slots, freeRerolls };
 }
 
 /**
@@ -111,7 +147,7 @@ export function buyTower(
   const { state } = ctx;
   const towerType = Number.isInteger(slot) ? state.shop.slots[slot] : undefined;
   if (typeof towerType !== 'string') return false;
-  const price = priceOf(economy, towers, towerType);
+  const price = shopPrice(economy, towers, state, towerType);
   if (price === null || state.gold < price) return false;
   const plan = planFusion(state.towers, towers, towerType);
   if (!plan && !hasRoomForTower(state, nexus)) {
@@ -141,19 +177,34 @@ export function buyTower(
   return true;
 }
 
-/** Troca os 5 slots por sorteio novo, pagando o reroll. */
+/**
+ * Troca os 5 slots por sorteio novo, pagando o reroll. Com reroll grátis
+ * sobrando, não paga e gasta um deles (a loja nova não ganha outro).
+ */
 export function rerollShop(ctx: TickContext, towers: TowerData, economy: EconomyData): boolean {
   const { state } = ctx;
-  if (state.gold < economy.shop.rerollCost) return false;
-  spendGold(state, economy.shop.rerollCost);
-  state.shop = newShop(ctx.rng, economy, towers, state.nexus.level, false);
+  const free = state.shop.freeRerolls > 0;
+  const cost = shopRerollCost(economy, state);
+  if (state.gold < cost) return false;
+  const freeLeft = free ? state.shop.freeRerolls - 1 : state.shop.freeRerolls;
+  spendGold(state, cost);
+  state.shop = newShop(ctx.rng, economy, towers, shopRarityLevel(state), false, freeLeft);
   ctx.emit({ type: 'shopChanged', tick: state.tick, reason: 'reroll' });
   return true;
 }
 
+/** Porcentagem devolvida na venda: a da economia ou a do bônus "Revenda cheia" (T24). */
+export function sellRefundPercent(economy: EconomyData, state: Pick<RunState, 'rewards'>): number {
+  return rewardMods(state).sellRefundPercent ?? economy.shop.sellRefundPercent;
+}
+
 /** Devolução da venda: a porcentagem do valor investido, arredondada para baixo. */
-export function refundFor(economy: EconomyData, invested: number): number {
-  return Math.floor((invested * economy.shop.sellRefundPercent) / 100);
+export function refundFor(
+  economy: EconomyData,
+  invested: number,
+  percent = economy.shop.sellRefundPercent,
+): number {
+  return Math.floor((invested * percent) / 100);
 }
 
 /** Vende a torre: sai do mapa e devolve parte do valor investido. */
@@ -163,7 +214,7 @@ export function sellTower(ctx: TickContext, economy: EconomyData, towerId: numbe
   if (index < 0) return false;
   const [tower] = state.towers.splice(index, 1);
   if (!tower) return false;
-  const refund = refundFor(economy, tower.invested);
+  const refund = refundFor(economy, tower.invested, sellRefundPercent(economy, state));
   state.gold += refund;
   ctx.emit({
     type: 'towerSold',

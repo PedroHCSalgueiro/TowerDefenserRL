@@ -19,6 +19,33 @@
       "mirror": "Quando é ativado, repete o último efeito de uma torre encostada."
     }
   },
+  "shop": {
+    "rerollLabel": "Rerolar (R) −{cost}",
+    "freeRerollLabel": "Rerolar (R) grátis"
+  },
+  "rewardScreen": {
+    "title": "Recompensa da onda {wave}",
+    "extraTitle": "Recompensa extra",
+    "subtitle": "Escolha 1 bônus permanente para a run (1, 2 ou 3). O jogo fica pausado.",
+    "queued": "+{n} na fila",
+    "rerollKey": "r",
+    "rerollLabel": "Rerolar (R) −{cost}",
+    "seconds": "{s} s",
+    "repeatable": "repetível",
+    "wildcardName": "Coringa: {classe}",
+    "categories": {
+      "class": "Classe",
+      "economy": "Economia",
+      "nexus": "Núcleo",
+      "chain": "Cadeia"
+    },
+    "categoryColors": {
+      "economy": "#ffd24a",
+      "nexus": "#e25555",
+      "chain": "#ffe08a"
+    },
+    "wildcardMember": "Coringa"
+  },
   "towerDrag": {
     "thresholdPx": 6,
     "lockedMessageMs": 1600
@@ -80,6 +107,10 @@
       {
         "keys": "Esc",
         "action": "Cancelar a torre presa ao mouse ou o arrasto"
+      },
+      {
+        "keys": "1 a 3 / R",
+        "action": "Na tela de recompensa: escolher a carta / rerolar as cartas"
       },
       {
         "keys": "H",

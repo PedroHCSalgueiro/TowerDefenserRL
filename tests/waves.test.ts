@@ -18,7 +18,7 @@ import {
   TPS,
 } from './support/enemySim';
 import { realMap, shopSim, stepOnce } from './support/shopSim';
-import { botCells, botMap } from './support/waveBot';
+import { botCells, botMap, firstReward, resolveRewards } from './support/waveBot';
 import { buildRoutes } from '../src/sim/enemies/route';
 
 const TICKS = engineConfig.ticksPerSecond;
@@ -437,6 +437,10 @@ describe('debug: encerrar e pular ondas', () => {
     );
     expect(sim.state.wave).toBe(39);
     expect(buildWaveHudModel(sim.state).label).toBe('Onda 40/40');
+    // As ondas puladas abrem as telas de recompensa (T24): 7 telas, uma por vez.
+    expect(sim.state.rewards.screen?.wave).toBe(5);
+    resolveRewards(sim, firstReward);
+    expect(sim.state.rewards.taken.map((t) => t.wave)).toEqual([5, 10, 15, 20, 25, 30, 35]);
     sim.enqueue({ type: 'callWave' });
     stepOnce(sim);
     expect(sim.state.waves.active.length).toBeGreaterThan(0);
@@ -462,6 +466,7 @@ describe('debug: encerrar e pular ondas', () => {
     sim.enqueue({ type: 'debugSetNexusInvulnerable', value: true });
     sim.enqueue({ type: 'callWave' });
     for (let i = 0; i < 3000 && !activeEnemies(sim.state).some((e) => e.type === type); i++) {
+      if (sim.state.rewards.screen) firstReward(sim);
       sim.step();
     }
     const boss = activeEnemies(sim.state).find((e) => e.type === type)!;

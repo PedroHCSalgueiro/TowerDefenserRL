@@ -24,6 +24,7 @@ import {
   TPS,
 } from './support/enemySim';
 import { realMap, shopSim, stepOnce } from './support/shopSim';
+import { noRewards } from './support/waveBot';
 
 function ofType<K extends SimEvent['type']>(events: SimEvent[], type: K) {
   return events.filter((e): e is Extract<SimEvent, { type: K }> => e.type === type);
@@ -89,14 +90,17 @@ function stackSim(maxActiveEnemies?: number, state: RunState = makeState('pilha'
       }
     }
   };
+  // Sem recompensas (T24): aqui só importa o empilhamento.
   const systems = createGameSystems(smallMap, {
     enemies: stackEnemies,
     nexus: blindNexus,
     waves: stackWaves(maxActiveEnemies),
+    rewards: noRewards,
     ticksPerSecond: TPS,
   });
-  // Depois das ações e dos nascimentos, antes do ouro e do fim das ondas.
-  systems.splice(2, 0, killer);
+  // Depois das ações e dos nascimentos (relógio da recompensa, ações, tempo
+  // esgotado e nascimentos), antes do ouro e do fim das ondas.
+  systems.splice(4, 0, killer);
   const sim = new Simulation(state, systems);
   return { sim, control };
 }
@@ -417,7 +421,9 @@ describe('velocidade e pausa', () => {
       for (let i = 0; i < (plan.get(tick) ?? 0); i++) sim.enqueue({ type: 'callWave' });
     };
 
-    const reference = Simulation.create('velocidade', createGameSystems(realMap));
+    // Sem recompensas: a tela congela os ticks e anda em 1x (testado em rewards.test.ts).
+    const systems = () => createGameSystems(realMap, { rewards: noRewards });
+    const reference = Simulation.create('velocidade', systems());
     setup(reference);
     const referenceDone = new Set<number>();
     while (reference.state.tick < TOTAL) {
@@ -427,10 +433,10 @@ describe('velocidade e pausa', () => {
 
     const frame = 1000 / engineConfig.ticksPerSecond;
     for (const speed of [1, 2, 3]) {
-      const runner = new SimulationRunner(
-        Simulation.create('velocidade', createGameSystems(realMap)),
-        { ...engineConfig, maxTicksPerFrame: 1000 },
-      );
+      const runner = new SimulationRunner(Simulation.create('velocidade', systems()), {
+        ...engineConfig,
+        maxTicksPerFrame: 1000,
+      });
       runner.clock.setSpeed(speed);
       setup(runner.sim);
       const done = new Set<number>();

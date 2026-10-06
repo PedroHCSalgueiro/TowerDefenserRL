@@ -150,6 +150,7 @@ describe('ataque do núcleo', () => {
         towerId: null,
         x: 1,
         y: 2,
+        elite: false,
         weight: 1,
         chainId: 0,
         originTowerId: null,

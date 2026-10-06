@@ -23,6 +23,10 @@
  * Mecânica reduz o N dos "a cada N"; a Arcana amplia a vizinhança de quem a
  * tem; a Sombria multiplica o peso das mortes para as torres Sombria.
  *
+ * Recompensas (T24, lidas a cada tick): trava de ativação menor ("Fluxo
+ * arcano"), morte de elite ou chefão ×3 para a Sombria ("Colheita sombria")
+ * e +1 de ouro a cada 10 gatilhos visíveis de uma cadeia ("Cadeia lucrativa").
+ *
  * **Cadeia (T16):** cada fato de fora do motor (tiro normal, morte) abre uma
  * cadeia nova, com id sequencial (`TriggerState.nextChainId`), alocada só se
  * o fato puser alguma entrada na fila; a origem é a torre que atirou ou que
@@ -43,7 +47,10 @@
 
 import { killWeight, neighborhoodRadius, reducedTriggerCount } from '../classes/bonuses';
 import { classData, type ClassData } from '../classes/classData';
-import type { EnemyData } from '../enemies/enemyData';
+import { getEnemyType, type EnemyData } from '../enemies/enemyData';
+import { earnGold } from '../economy/gold';
+import { rewardMods } from '../rewards/mods';
+import { chainGoldAt } from '../rewards/rewards';
 import type { SimEventOf } from '../engine/events';
 import type { System, TickContext } from '../engine/simulation';
 import type { SpatialIndex } from '../spatial/spatialIndex';
@@ -96,9 +103,11 @@ class TriggerEngine implements EffectEnv {
   readonly towers: TowerData;
   readonly classes: ClassData;
   readonly scores: TargetScores;
-  readonly activationCooldownTicks: number;
+  /** Trava de ativação do tick (a dos dados ou a do bônus "Fluxo arcano"). */
+  activationCooldownTicks: number;
   readonly unlimitedLineLength: number;
   private readonly rules: TriggerRules;
+  private readonly ticksPerSecond: number;
 
   // Montados a cada tick a partir do estado (nada disso vai para o save).
   private tick: TickContext | null = null;
@@ -130,10 +139,8 @@ class TriggerEngine implements EffectEnv {
     this.classes = deps.classes ?? classData;
     this.scores = deps.scores;
     this.rules = deps.towers.triggers;
-    this.activationCooldownTicks = Math.max(
-      1,
-      Math.round(this.rules.activationCooldownSeconds * deps.ticksPerSecond),
-    );
+    this.ticksPerSecond = deps.ticksPerSecond;
+    this.activationCooldownTicks = this.cooldownTicksFor(this.rules.activationCooldownSeconds);
     this.unlimitedLineLength = this.rules.unlimitedLineLength;
   }
 
@@ -186,6 +193,10 @@ class TriggerEngine implements EffectEnv {
       radius,
       percent,
     );
+  }
+
+  private cooldownTicksFor(seconds: number): number {
+    return Math.max(1, Math.round(seconds * this.ticksPerSecond));
   }
 
   private radiusOf(tower: Tower): number {
@@ -285,6 +296,9 @@ class TriggerEngine implements EffectEnv {
   /** Índices do tick: torres por id, torres com gatilho e vizinhanças. */
   private prepare(ctx: TickContext): void {
     const towers = ctx.state.towers;
+    this.activationCooldownTicks = this.cooldownTicksFor(
+      rewardMods(ctx.state).activationCooldownSeconds ?? this.rules.activationCooldownSeconds,
+    );
     this.sorted = towers.length > 1 ? [...towers].sort((a, b) => a.id - b.id) : [...towers];
     this.towerById.clear();
     this.armedById.clear();
@@ -428,6 +442,7 @@ class TriggerEngine implements EffectEnv {
   private onKill(event: SimEventOf<'enemyKilled'>, depth: number, tickDepth: number): void {
     const killer = event.towerId === null ? undefined : this.towerById.get(event.towerId);
     const killerType = killer ? getTowerType(this.towers, killer.type) : null;
+    const eliteOrBoss = event.elite || getEnemyType(this.enemies, event.enemyType).boss;
     for (const armed of this.killListeners) {
       const when = armed.star.when;
       switch (when.kind) {
@@ -439,7 +454,7 @@ class TriggerEngine implements EffectEnv {
         case 'everyNKillsInRange': {
           if (!inRange(armed, event.x, event.y)) break;
           const { tower } = armed;
-          tower.triggerCounter += this.weightFor(armed, killerType, event.weight);
+          tower.triggerCounter += this.weightFor(armed, killerType, event.weight, eliteOrBoss);
           while (tower.triggerCounter >= armed.count) {
             tower.triggerCounter -= armed.count;
             this.enqueue(armed, event.towerId, 1, depth, tickDepth, event);
@@ -451,7 +466,7 @@ class TriggerEngine implements EffectEnv {
             killer &&
             isNeighbor(armed.tower, killer, this.rules.neighborhood, armed.neighborRadius)
           ) {
-            const weight = this.weightFor(armed, killerType, event.weight);
+            const weight = this.weightFor(armed, killerType, event.weight, eliteOrBoss);
             this.enqueue(armed, killer.id, weight, depth, tickDepth, event);
           }
           break;
@@ -462,8 +477,13 @@ class TriggerEngine implements EffectEnv {
   }
 
   /** Peso da morte para o contador ou as cargas de `armed`, com o bônus da Sombria. */
-  private weightFor(armed: Armed, killerType: TowerType | null, base: number): number {
-    return killWeight(this.classes, this.ctx.state, armed.type, killerType, base);
+  private weightFor(
+    armed: Armed,
+    killerType: TowerType | null,
+    base: number,
+    eliteOrBoss: boolean,
+  ): number {
+    return killWeight(this.classes, this.ctx.state, armed.type, killerType, base, eliteOrBoss);
   }
 
   private execute(entry: PendingTrigger): void {
@@ -541,14 +561,31 @@ class TriggerEngine implements EffectEnv {
     return event;
   }
 
-  /** O gatilho teve efeito visível: conta na cadeia (o "x7") e na maior cadeia da run. */
+  /**
+   * O gatilho teve efeito visível: conta na cadeia (o "x7") e na maior cadeia
+   * da run. Com o bônus "Cadeia lucrativa" (T24), cada 10 gatilhos visíveis
+   * da cadeia rendem ouro (no ouro ganho).
+   */
   private countVisible(event: SimEventOf<'triggerFired'>, entry: PendingTrigger): void {
     const chain = this.chainRecord(entry.chainId, entry.originTowerId);
     chain.length++;
     event.visible = true;
     event.chainLength = chain.length;
-    const stats = this.ctx.state.stats;
+    const { state } = this.ctx;
+    const stats = state.stats;
     if (chain.length > stats.longestChain) stats.longestChain = chain.length;
+    const gold = chainGoldAt(state, chain.length);
+    if (gold > 0) {
+      earnGold(state, gold);
+      stats.chainGold += gold;
+      this.ctx.emit({
+        type: 'chainGold',
+        tick: state.tick,
+        chainId: chain.id,
+        chainLength: chain.length,
+        gold,
+      });
+    }
   }
 }
 

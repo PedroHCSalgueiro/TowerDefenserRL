@@ -42,7 +42,12 @@ export interface RunStats {
   longestChain: number;
   /**
    * Ouro ganho na run (T17): juros, bônus, bônus antecipado e ouro de abate.
-   * Fica fora a devolução da venda e o "+500 ouro" do debug.
+   * Fica fora a devolução da venda e o "+500 ouro" do debug. Desde a T24,
+   * inclui o ouro das cadeias (bônus "Cadeia lucrativa").
    */
   goldEarned: number;
+  /** Ouro gasto no reroll das cartas de recompensa (T24; sem o do ouro infinito). */
+  rewardRerollGold: number;
+  /** Ouro ganho pelo bônus "Cadeia lucrativa" (T24); também está em `goldEarned`. */
+  chainGold: number;
 }

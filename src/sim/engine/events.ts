@@ -6,6 +6,7 @@
  * passageiros e não fazem parte do estado salvo.
  */
 
+import type { RewardOption } from '../rewards/rewardState';
 import type { EffectKind, WhenKind } from '../triggers/triggerData';
 
 /** Tiro normal (recarga), de ativação (tiro extra ao ser ativada) ou extra de gatilho (disparo múltiplo). */
@@ -16,7 +17,8 @@ export interface SimEventPayloads {
   /**
    * `towerId` é `null` quando quem matou foi o núcleo. `x`/`y`: onde morreu.
    * `weight`: quanto vale nos contadores de abate (2 = abate duplo da execução).
-   * `wave`: onda dona do inimigo (0 = sem onda).
+   * `wave`: onda dona do inimigo (0 = sem onda). `elite`: versão de elite (T24,
+   * para o bônus "Colheita sombria").
    * `chainId`/`originTowerId`: cadeia do tiro que matou, quando o projétil
    * saiu de um gatilho (tiro de ativação ou extra); `chainId` 0 = sem cadeia.
    */
@@ -27,6 +29,7 @@ export interface SimEventPayloads {
     towerId: number | null;
     x: number;
     y: number;
+    elite: boolean;
     weight: number;
     chainId: number;
     originTowerId: number | null;
@@ -162,6 +165,17 @@ export interface SimEventPayloads {
   callWaveRefused: { reason: 'over' | 'active' | 'enemies' };
   /** A última onda terminou com o chefão morto (`waveEnded` vem antes). */
   runWon: { wave: number };
+  /**
+   * Tela de recompensa aberta (T24): a simulação congela até a escolha.
+   * `queued`: telas ainda na fila depois desta.
+   */
+  rewardOpened: { wave: number; options: RewardOption[]; queued: number };
+  /** As cartas da tela foram trocadas pagando `cost`. */
+  rewardRerolled: { wave: number; cost: number; options: RewardOption[] };
+  /** Um bônus entrou na run. `auto`: o tempo acabou e a simulação escolheu. */
+  rewardChosen: { wave: number; rewardId: string; classId: string | null; auto: boolean };
+  /** Bônus "Cadeia lucrativa" (T24): a cadeia chegou a `chainLength` e rendeu `gold`. */
+  chainGold: { chainId: number; chainLength: number; gold: number };
 }
 
 export type SimEventType = keyof SimEventPayloads;

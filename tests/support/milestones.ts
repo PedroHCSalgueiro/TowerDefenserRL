@@ -1,13 +1,14 @@
 /**
  * Cenários dos marcos da curva (T21): torres fixas, sem loja, numa onda
  * escolhida. A torre vai para a casa que mais vê o caminho com o alcance dela.
+ * Sem recompensas (T24): os marcos medem só as torres.
  */
 
 import { Simulation } from '../../src/sim/engine/simulation';
 import type { GridCoord } from '../../src/sim/grid/map';
 import { createGameSystems } from '../../src/sim/systems';
 import { towerData } from '../../src/sim/towers/towerData';
-import { botMap, playWave, type WaveReport } from './waveBot';
+import { botMap, noRewards, playWave, type WaveReport } from './waveBot';
 
 /** Casas de torre ordenadas pela quantidade de casas do caminho dentro de `range`. */
 export function cellsByCoverage(range: number): GridCoord[] {
@@ -37,7 +38,7 @@ export function playMilestone(
   wave: number,
   towers: readonly Placed[],
 ): WaveReport & { maxNexusHp: number; won: boolean } {
-  const sim = Simulation.create(`marco-${wave}`, createGameSystems(botMap));
+  const sim = Simulation.create(`marco-${wave}`, createGameSystems(botMap, { rewards: noRewards }));
   sim.enqueue({ type: 'debugSkipToWave', wave });
   for (const t of towers) {
     sim.enqueue({ type: 'placeTower', towerType: t.type, x: t.x, y: t.y, star: t.star ?? 1 });

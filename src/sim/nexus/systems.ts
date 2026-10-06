@@ -9,6 +9,7 @@ import { releaseEnemy } from '../enemies/pool';
 import type { Routes } from '../enemies/route';
 import type { System } from '../engine/simulation';
 import type { GridCoord } from '../grid/map';
+import { rewardMods } from '../rewards/mods';
 import { SpatialIndex } from '../spatial/spatialIndex';
 import type { NexusData } from './nexusData';
 
@@ -55,6 +56,7 @@ export function createNexusContactSystem(routes: Routes, data: EnemyData): Syste
  * Ataca o inimigo mais próximo do núcleo dentro do alcance (voadores
  * inclusive), com desempate pelo menor id. Um ataque a cada `cooldownSeconds`.
  * A busca usa o índice espacial (o mesmo das torres, quando compartilhado).
+ * O dano é multiplicado pelo bônus "Núcleo armado" das recompensas (T24).
  */
 export function createNexusAttackSystem(
   nexusCell: GridCoord,
@@ -83,6 +85,6 @@ export function createNexusAttackSystem(
       x: target.x,
       y: target.y,
     });
-    damageEnemy(ctx, enemies, target, damage, null);
+    damageEnemy(ctx, enemies, target, damage * rewardMods(state).nexusDamageMultiplier, null);
   };
 }

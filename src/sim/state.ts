@@ -11,13 +11,16 @@ import { createEnemyPool, type EnemyPool } from './enemies/pool';
 import { Rng, hashSeed } from './engine/rng';
 import { maxNexusLevel, nexusData, nexusLevel } from './nexus/nexusData';
 import { createProjectilePool, type ProjectilePool } from './projectiles/pool';
+import { rewardMods } from './rewards/mods';
+import { rewardData } from './rewards/rewardData';
+import { createRewardsState, type RewardsState } from './rewards/rewardState';
 import { newShop, type ShopState } from './shop/shop';
 import type { Tower } from './towers/placement';
 import { towerData } from './towers/towerData';
 import { createTriggerState, type TriggerState } from './triggers/triggerState';
 import { createWaveState, type ActiveWave, type RunStats, type WaveState } from './waves/waveState';
 
-export const RUN_STATE_VERSION = 14;
+export const RUN_STATE_VERSION = 15;
 
 /**
  * Disposição usada pelo debug:
@@ -157,6 +160,22 @@ export interface EvolveNexusCommand {
   type: 'evolveNexus';
 }
 
+/** Ação do jogador (T24): escolhe a carta `index` (0 a 2) da tela de recompensa. */
+export interface ChooseRewardCommand {
+  type: 'chooseReward';
+  index: number;
+}
+
+/** Ação do jogador (T24): troca as cartas da tela pagando o reroll delas. */
+export interface RerollRewardsCommand {
+  type: 'rerollRewards';
+}
+
+/** Debug (T24): abre uma tela de recompensa extra (entra na fila se já houver uma). */
+export interface DebugOpenRewardCommand {
+  type: 'debugOpenReward';
+}
+
 /** Ação do jogador, aplicada no início do próximo tick. */
 export type SimCommand =
   | SpawnEnemyCommand
@@ -168,6 +187,8 @@ export type SimCommand =
   | EndWaveCommand
   | CallWaveCommand
   | EvolveNexusCommand
+  | ChooseRewardCommand
+  | RerollRewardsCommand
   | DebugSpawnEnemiesCommand
   | DebugSpawnTowersCommand
   | DebugClearCommand
@@ -175,7 +196,8 @@ export type SimCommand =
   | DebugSetNexusInvulnerableCommand
   | DebugSkipToWaveCommand
   | DebugAddGoldCommand
-  | DebugSetInfiniteGoldCommand;
+  | DebugSetInfiniteGoldCommand
+  | DebugOpenRewardCommand;
 
 /**
  * Comandos de debug (trapaças): qualquer um que chegue à fila liga
@@ -193,6 +215,22 @@ export const CHEAT_COMMAND_TYPES: ReadonlySet<SimCommand['type']> = new Set<SimC
   'debugSkipToWave',
   'debugAddGold',
   'debugSetInfiniteGold',
+  'debugOpenReward',
+]);
+
+/**
+ * Ações aceitas com a tela de recompensa aberta (T24): escolher, rerolar as
+ * cartas e as trapaças que não mexem no mapa. As outras são ignoradas.
+ */
+export const REWARD_SCREEN_COMMAND_TYPES: ReadonlySet<SimCommand['type']> = new Set<
+  SimCommand['type']
+>([
+  'chooseReward',
+  'rerollRewards',
+  'debugOpenReward',
+  'debugAddGold',
+  'debugSetInfiniteGold',
+  'debugSetNexusInvulnerable',
 ]);
 
 /** Modo estresse: mantém `count` inimigos ativos, repondo quem morre ou chega. */
@@ -218,6 +256,11 @@ export interface NexusState {
   attackCooldownTicks: number;
   /** Nível do núcleo (limite de torres, vida máxima e chances de raridade da loja). Sobe ao evoluir. */
   level: number;
+}
+
+/** Vida máxima do núcleo no nível, com os bônus de vida das recompensas (T24). */
+export function nexusMaxHpFor(state: Pick<RunState, 'rewards'>, level: number): number {
+  return nexusLevel(nexusData, level).maxHp + rewardMods(state).nexusMaxHp;
 }
 
 export interface RunState {
@@ -248,6 +291,8 @@ export interface RunState {
   waves: WaveState;
   stats: RunStats;
   shop: ShopState;
+  /** Recompensas de escolha (T24): bônus escolhidos, tela aberta, fila e RNG das cartas. */
+  rewards: RewardsState;
   debug: DebugState;
   /** Ações enfileiradas que ainda não foram aplicadas. */
   commandQueue: SimCommand[];
@@ -277,8 +322,9 @@ export function createRunState(seed: string): RunState {
     reportedGold: economyData.startingGold,
     wave: 0,
     waves: createWaveState(),
-    stats: { kills: 0, longestChain: 0, goldEarned: 0 },
-    shop: { slots: [] },
+    stats: { kills: 0, longestChain: 0, goldEarned: 0, rewardRerollGold: 0, chainGold: 0 },
+    shop: { slots: [], freeRerolls: 0 },
+    rewards: createRewardsState(seed),
     debug: { nexusInvulnerable: false, infiniteGold: false, stress: null },
     commandQueue: [],
   };
@@ -334,6 +380,41 @@ function isWaveState(value: unknown, wave: number): boolean {
   );
 }
 
+function isRewardOption(value: unknown): boolean {
+  const o = value as { id?: unknown; classId?: unknown } | null;
+  return (
+    typeof o === 'object' &&
+    o !== null &&
+    typeof o.id === 'string' &&
+    rewardData.byId.has(o.id) &&
+    (o.classId === null || typeof o.classId === 'string')
+  );
+}
+
+function isRewardsState(value: unknown): value is RewardsState {
+  const r = value as Partial<RewardsState> | null;
+  if (typeof r !== 'object' || r === null) return false;
+  const screen = r.screen;
+  return (
+    Number.isInteger(r.rngState) &&
+    Array.isArray(r.taken) &&
+    r.taken.every((t) => isRewardOption(t) && Number.isInteger(t.wave)) &&
+    Array.isArray(r.queue) &&
+    r.queue.every((w) => Number.isInteger(w)) &&
+    (screen === null ||
+      (typeof screen === 'object' &&
+        screen !== undefined &&
+        Number.isInteger(screen.wave) &&
+        Array.isArray(screen.options) &&
+        screen.options.length > 0 &&
+        screen.options.every(isRewardOption) &&
+        Number.isInteger(screen.rerolls) &&
+        screen.rerolls >= 0 &&
+        Number.isInteger(screen.ticksLeft) &&
+        screen.ticksLeft >= 0))
+  );
+}
+
 function isClassState(value: unknown): value is ClassState {
   if (typeof value !== 'object' || value === null) return false;
   return classData.ids.every((id) => {
@@ -358,6 +439,7 @@ export function deserializeRunState(json: string): RunState {
   }
   const { nexus, enemies, projectiles, towers, triggers, classes, debug, shop, waves, stats } =
     state;
+  const rewards = state.rewards;
   if (
     typeof state.seed !== 'string' ||
     !Number.isInteger(state.tick) ||
@@ -371,7 +453,8 @@ export function deserializeRunState(json: string): RunState {
     !Number.isInteger(nexus.level) ||
     nexus.level < 1 ||
     nexus.level > maxNexusLevel(nexusData) ||
-    nexus.maxHp !== nexusLevel(nexusData, nexus.level).maxHp ||
+    !isRewardsState(rewards) ||
+    nexus.maxHp !== nexusMaxHpFor({ rewards }, nexus.level) ||
     nexus.hp > nexus.maxHp ||
     !Number.isInteger(state.gold) ||
     !Number.isInteger(state.reportedGold) ||
@@ -380,8 +463,12 @@ export function deserializeRunState(json: string): RunState {
     !Number.isInteger(stats?.kills) ||
     !Number.isInteger(stats?.longestChain) ||
     !Number.isInteger(stats?.goldEarned) ||
+    !Number.isInteger(stats?.rewardRerollGold) ||
+    !Number.isInteger(stats?.chainGold) ||
     !Array.isArray(shop?.slots) ||
     !shop.slots.every((slot) => slot === null || typeof slot === 'string') ||
+    !Number.isInteger(shop.freeRerolls) ||
+    shop.freeRerolls < 0 ||
     !Array.isArray(enemies?.slots) ||
     !Array.isArray(enemies.free) ||
     !Number.isInteger(enemies.activeCount) ||

@@ -12,13 +12,24 @@
  * - evolui o núcleo quando o limite enche;
  * - rerola com o que sobra acima da reserva, procurando cópias.
  * Chama a próxima onda só com o mapa limpo (não empilha).
+ *
+ * Recompensas (T24): pega a carta mais alta de uma ordem fixa
+ * (`REWARD_PRIORITY`). Rerola as cartas só se nenhuma estiver entre as
+ * `REWARD_TOP` primeiras e o ouro depois do reroll continuar acima da reserva
+ * de juros; no máximo `MAX_REWARD_REROLLS` por tela. A reserva de juros segue
+ * o teto (100, ou 150 com o "Cofre maior"), e as compras usam o preço com
+ * desconto e o reroll grátis.
  */
 
+import { interestCapFor } from '../../src/sim/economy/economy';
 import { economyData } from '../../src/sim/economy/economyData';
 import type { Simulation } from '../../src/sim/engine/simulation';
 import type { GridCoord } from '../../src/sim/grid/map';
 import { maxNexusLevel, nexusData, nexusLevel } from '../../src/sim/nexus/nexusData';
-import { priceOf } from '../../src/sim/shop/shop';
+import { rewardData } from '../../src/sim/rewards/rewardData';
+import { rewardRerollCost } from '../../src/sim/rewards/rewards';
+import type { RunState } from '../../src/sim/state';
+import { shopPrice, shopRerollCost } from '../../src/sim/shop/shop';
 import { planFusion } from '../../src/sim/towers/fusion';
 import { hasRoomForTower } from '../../src/sim/towers/limit';
 import { towerData } from '../../src/sim/towers/towerData';
@@ -28,10 +39,73 @@ import { botCells, botMap } from './waveBot';
 const OPENING_TOWERS = 2;
 /** Teto de rerolls por pausa. */
 const MAX_REROLLS = 4;
-/** Ouro guardado na onda `wave` (a próxima a chamar). */
-export function goodBotReserve(wave: number): number {
-  return wave < 3 ? 0 : Math.min(100, 10 * (wave - 2));
+
+/** Ordem fixa das cartas de recompensa, da preferida para a última. */
+export const REWARD_PRIORITY = [
+  'towerLimit',
+  'classWildcard',
+  'income',
+  'artilleryArea',
+  'mechanicalCount',
+  'arcaneLock',
+  'interestCap',
+  'discount',
+  'shadowElite',
+  'shopRarity',
+  'chainGold',
+  'nexusHp',
+  'freeReroll',
+  'nexusDamage',
+  'fullRefund',
+];
+/** Rerola as cartas só se nenhuma estiver entre as primeiras `REWARD_TOP` da ordem. */
+const REWARD_TOP = 6;
+/** Teto de rerolls de cartas por tela (custos 5 e 10). */
+const MAX_REWARD_REROLLS = 2;
+
+/**
+ * Ouro guardado na onda `wave` (a próxima a chamar): sobe 10 por onda a
+ * partir da 3, até o ouro que rende o teto dos juros (100; 150 com o "Cofre maior").
+ */
+export function goodBotReserve(wave: number, state?: Pick<RunState, 'rewards'>): number {
+  const cap = state ? interestCapFor(economyData, state) : economyData.interest.cap;
+  const full = (cap * 100) / economyData.interest.percent;
+  return wave < 3 ? 0 : Math.min(full, 10 * (wave - 2));
 }
+
+/**
+ * Política de recompensa com uma ordem própria (a medição usa outra ordem
+ * para forçar um bônus): a carta mais alta da ordem, ou reroll (ver acima).
+ */
+export function rewardPolicy(priority: readonly string[]): (sim: Simulation) => void {
+  const rank = (id: string): number => {
+    const r = priority.indexOf(id);
+    return r < 0 ? priority.length : r;
+  };
+  return (sim) => {
+    const { state } = sim;
+    const screen = state.rewards.screen;
+    if (!screen) return;
+    let best = 0;
+    for (let i = 1; i < screen.options.length; i++) {
+      if (rank(screen.options[i]!.id) < rank(screen.options[best]!.id)) best = i;
+    }
+    const cost = rewardRerollCost(rewardData, screen);
+    const reserve = goodBotReserve(state.wave + 1, state);
+    if (
+      rank(screen.options[best]!.id) >= REWARD_TOP &&
+      screen.rerolls < MAX_REWARD_REROLLS &&
+      state.gold - cost >= reserve
+    ) {
+      sim.enqueue({ type: 'rerollRewards' });
+      return;
+    }
+    sim.enqueue({ type: 'chooseReward', index: best });
+  };
+}
+
+/** Tela de recompensa do bot bom: a carta mais alta de `REWARD_PRIORITY`, ou reroll (ver acima). */
+export const goodBotReward = rewardPolicy(REWARD_PRIORITY);
 
 const CELLS = botCells(botMap);
 const COVERAGE = new Map(CELLS.map((c, i) => [botMap.indexOf(c), CELLS.length - i]));
@@ -89,12 +163,12 @@ function towerScore(sim: Simulation, type: string, price: number): number {
 
 function action(sim: Simulation, rerolls: { left: number }): boolean {
   const { state } = sim;
-  const reserve = goodBotReserve(state.wave + 1);
+  const reserve = goodBotReserve(state.wave + 1, state);
   const spendable = state.gold - reserve;
   const slots = state.shop.slots
     .map((type, slot) => ({ type, slot }))
     .filter((s): s is { type: string; slot: number } => s.type !== null)
-    .map((s) => ({ ...s, price: priceOf(economyData, towerData, s.type) ?? Infinity }));
+    .map((s) => ({ ...s, price: shopPrice(economyData, towerData, state, s.type) ?? Infinity }));
 
   const fuses = (type: string) => planFusion(state.towers, towerData, type) !== null;
   const fusing = slots.find((s) => s.price <= state.gold && fuses(s.type));
@@ -127,7 +201,7 @@ function action(sim: Simulation, rerolls: { left: number }): boolean {
       return true;
     }
   }
-  if (rerolls.left > 0 && spendable >= economyData.shop.rerollCost + 10) {
+  if (rerolls.left > 0 && spendable >= shopRerollCost(economyData, state) + 10) {
     rerolls.left--;
     sim.enqueue({ type: 'rerollShop' });
     return true;

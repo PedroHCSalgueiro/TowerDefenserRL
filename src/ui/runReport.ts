@@ -22,6 +22,8 @@ export interface RunSummary {
   nexusLevel: number;
   /** Juros, bônus, bônus antecipado e ouro de abate (sem venda nem trapaça). */
   goldEarned: number;
+  /** Recompensas escolhidas (T24), na ordem: "Onda 5: Mais espaço". */
+  rewards: string[];
   cheated: boolean;
   /** Link com `?seed=`: o mesmo início e as mesmas lojas. */
   link: string;
@@ -32,6 +34,8 @@ export interface RunSummaryContext {
   totalWaves: number;
   ticksPerSecond: number;
   towerName: (type: string) => string;
+  /** Nome da recompensa (com a classe do coringa). */
+  rewardName: (id: string, classId: string | null) => string;
   link: string;
 }
 
@@ -50,6 +54,7 @@ export function summarizeRun(state: Readonly<RunState>, ctx: RunSummaryContext):
     towers: state.towers.map((t) => ({ name: ctx.towerName(t.type), star: t.star })),
     nexusLevel: state.nexus.level,
     goldEarned: state.stats.goldEarned,
+    rewards: state.rewards.taken.map((t) => `Onda ${t.wave}: ${ctx.rewardName(t.id, t.classId)}`),
     cheated: state.cheated,
     link: ctx.link,
   };
@@ -81,6 +86,7 @@ export function formatRunReport(s: RunSummary): string {
     `Torres finais (${s.towers.length}): ${towers}`,
     `Núcleo: nível ${s.nexusLevel}`,
     `Ouro ganho: ${s.goldEarned}`,
+    `Recompensas (${s.rewards.length}): ${s.rewards.length ? s.rewards.join(', ') : 'nenhuma'}`,
     `Trapaça: ${s.cheated ? 'sim' : 'não'}`,
     `Link: ${s.link}`,
   ].join('\n');

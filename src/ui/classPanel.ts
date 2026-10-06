@@ -55,9 +55,12 @@ export class ClassPanel {
     parent.append(this.root);
   }
 
-  /** Chame a cada quadro: só refaz o DOM quando contagem ou nível mudaram. */
-  update(state: Readonly<ClassState>): void {
-    const rows = buildClassRows(state, classData, towerData);
+  /**
+   * Chame a cada quadro: só refaz o DOM quando contagem ou nível mudaram.
+   * `wildcards`: coringas das recompensas por classe (T24).
+   */
+  update(state: Readonly<ClassState>, wildcards: Readonly<Record<string, number>> = {}): void {
+    const rows = buildClassRows(state, classData, towerData, wildcards);
     const key = classRowsKey(rows);
     if (key === this.key) return;
     this.key = key;

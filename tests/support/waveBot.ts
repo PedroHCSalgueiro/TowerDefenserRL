@@ -2,6 +2,7 @@
  * Bot simples para jogar uma run inteira no mapa real: entre as ondas compra
  * o que dá (fusão primeiro, depois a torre mais cara que couber), evolui o
  * núcleo quando o limite enche, rerola um pouco, e chama a próxima onda.
+ * Na tela de recompensa (T24) pega sempre a primeira carta.
  * Não é para jogar bem: é para garantir que as 40 ondas terminam sem erro e
  * para medir as ondas com torres de verdade matando.
  */
@@ -11,8 +12,10 @@ import { economyData } from '../../src/sim/economy/economyData';
 import { Simulation } from '../../src/sim/engine/simulation';
 import { loadMap, type GridCoord, type GridMap } from '../../src/sim/grid/map';
 import { maxNexusLevel, nexusData, nexusLevel } from '../../src/sim/nexus/nexusData';
-import { priceOf } from '../../src/sim/shop/shop';
-import { createGameSystems } from '../../src/sim/systems';
+import { rewardData, type RewardData } from '../../src/sim/rewards/rewardData';
+import { rewardScreenOpen } from '../../src/sim/rewards/rewardState';
+import { shopPrice, shopRerollCost } from '../../src/sim/shop/shop';
+import { createGameSystems, type GameSystemsOptions } from '../../src/sim/systems';
 import { planFusion } from '../../src/sim/towers/fusion';
 import { hasRoomForTower } from '../../src/sim/towers/limit';
 import { towerData } from '../../src/sim/towers/towerData';
@@ -43,8 +46,15 @@ export function botCells(map: GridMap): GridCoord[] {
 
 const CELLS = botCells(botMap);
 
-export function botSim(seed: string, nexusInvulnerable = false): Simulation {
-  const sim = Simulation.create(seed, createGameSystems(botMap));
+/** Recompensas desligadas (nenhuma onda abre a tela): marcos e comparação "sem recompensas". */
+export const noRewards: RewardData = { ...rewardData, waves: [] };
+
+export function botSim(
+  seed: string,
+  nexusInvulnerable = false,
+  options: GameSystemsOptions = {},
+): Simulation {
+  const sim = Simulation.create(seed, createGameSystems(botMap, options));
   if (nexusInvulnerable) sim.enqueue({ type: 'debugSetNexusInvulnerable', value: true });
   return sim;
 }
@@ -60,7 +70,7 @@ function botAction(sim: Simulation, rerolls: { left: number }): boolean {
   const slots = state.shop.slots
     .map((type, slot) => ({ type, slot }))
     .filter((s): s is { type: string; slot: number } => s.type !== null)
-    .map((s) => ({ ...s, price: priceOf(economyData, towerData, s.type) ?? Infinity }))
+    .map((s) => ({ ...s, price: shopPrice(economyData, towerData, state, s.type) ?? Infinity }))
     .filter((s) => s.price <= state.gold);
   const fusing = slots.find((s) => planFusion(state.towers, towerData, s.type) !== null);
   if (fusing) {
@@ -82,12 +92,29 @@ function botAction(sim: Simulation, rerolls: { left: number }): boolean {
     sim.enqueue({ type: 'evolveNexus' });
     return true;
   }
-  if (rerolls.left > 0 && state.gold >= economyData.shop.rerollCost + REROLL_RESERVE) {
+  if (rerolls.left > 0 && state.gold >= shopRerollCost(economyData, state) + REROLL_RESERVE) {
     rerolls.left--;
     sim.enqueue({ type: 'rerollShop' });
     return true;
   }
   return false;
+}
+
+/** Tela de recompensa do bot simples: a primeira carta. */
+export function firstReward(sim: Simulation): void {
+  sim.enqueue({ type: 'chooseReward', index: 0 });
+}
+
+/**
+ * Resolve as telas de recompensa abertas (e as da fila), uma ação por tick.
+ * Se `onReward` não fizer nada, o tempo da tela acaba e a simulação escolhe.
+ */
+export function resolveRewards(sim: Simulation, onReward: (sim: Simulation) => void): void {
+  for (let guard = 0; guard < 10_000 && rewardScreenOpen(sim.state); guard++) {
+    if (sim.state.status !== 'playing') return;
+    onReward(sim);
+    sim.step();
+  }
 }
 
 /** A pausa entre ondas: age até não ter mais o que fazer (um tick por ação). */
@@ -115,13 +142,24 @@ export interface WaveReport {
   peakEnemies: number;
   /** Ouro ganho na run até o fim da onda (juros, renda e antecipado). */
   goldEarned: number;
+  /** Ouro guardado no fim da onda (antes da pausa seguinte). */
+  gold: number;
+  /** Ouro da "Cadeia lucrativa" na run até o fim da onda (T24). */
+  chainGold: number;
+  /** Maior cadeia da run até o fim da onda. */
+  longestChain: number;
+  nexusLevel: number;
 }
 
 /**
  * Chama a próxima onda e roda até ela acabar (ou a run terminar). Devolve as
- * medidas da onda. `beforeTick` permite observar cada tick.
+ * medidas da onda. Tela de recompensa aberta no meio da onda: `onReward`.
  */
-export function playWave(sim: Simulation): WaveReport {
+export function playWave(
+  sim: Simulation,
+  onReward: (sim: Simulation) => void = firstReward,
+): WaveReport {
+  resolveRewards(sim, onReward);
   const wave = sim.state.wave + 1;
   const start = sim.state.tick;
   const droppedBefore = sim.state.triggers.droppedTotal;
@@ -144,6 +182,7 @@ export function playWave(sim: Simulation): WaveReport {
   observe();
   for (let i = 0; i < MAX_WAVE_TICKS && sim.state.waves.active.length > 0; i++) {
     if (sim.state.status !== 'playing') break;
+    if (rewardScreenOpen(sim.state)) onReward(sim);
     sim.step();
     observe();
   }
@@ -159,16 +198,28 @@ export function playWave(sim: Simulation): WaveReport {
     nexusHp: sim.state.nexus.hp,
     peakEnemies,
     goldEarned: sim.state.stats.goldEarned,
+    gold: sim.state.gold,
+    chainGold: sim.state.stats.chainGold,
+    longestChain: sim.state.stats.longestChain,
+    nexusLevel: sim.state.nexus.level,
   };
 }
 
-/** Run inteira: pausa do bot, onda, até a vitória, a derrota ou a última onda. */
-export function playRun(sim: Simulation, onBreak: (sim: Simulation) => void = botBreak) {
+/**
+ * Run inteira: telas de recompensa, pausa do bot, onda, até a vitória, a
+ * derrota ou a última onda.
+ */
+export function playRun(
+  sim: Simulation,
+  onBreak: (sim: Simulation) => void = botBreak,
+  onReward: (sim: Simulation) => void = firstReward,
+) {
   const reports: WaveReport[] = [];
   while (sim.state.status === 'playing' && sim.state.wave < TOTAL_WAVES) {
+    resolveRewards(sim, onReward);
     onBreak(sim);
     sim.drainEvents();
-    reports.push(playWave(sim));
+    reports.push(playWave(sim, onReward));
   }
   return reports;
 }

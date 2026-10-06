@@ -1,8 +1,12 @@
 /**
  * Lista dos sistemas da partida, na ordem em que rodam a cada tick:
- * ações → nascimentos das ondas → reposição do estresse → movimento →
- * chegada ao núcleo → ataque do núcleo → projéteis → torres → gatilhos →
- * ouro → fim da onda → classes.
+ * relógio da recompensa → ações → tempo esgotado da recompensa →
+ * nascimentos das ondas → reposição do estresse → movimento → chegada ao
+ * núcleo → ataque do núcleo → projéteis → torres → gatilhos → ouro → fim
+ * da onda → abertura da recompensa → classes.
+ *
+ * Com a tela de recompensa aberta (T24), o tick é congelado: só rodam os
+ * sistemas da recompensa, as ações, o ouro e as classes (`runsWhileFrozen`).
  *
  * Todo spawn acontece antes do movimento e toda busca por alvo depois dele:
  * é o que permite montar o índice espacial uma única vez por tick. O índice
@@ -39,6 +43,12 @@ import { createTriggerSystem } from './triggers/engine';
 import { buildWaveSchedules } from './waves/schedule';
 import { waveData, type WaveData } from './waves/waveData';
 import { createWaveProgressSystem, createWaveSpawnSystem } from './waves/waves';
+import { rewardData, type RewardData } from './rewards/rewardData';
+import {
+  createRewardClockSystem,
+  createRewardOpenSystem,
+  createRewardTimeoutSystem,
+} from './rewards/rewards';
 
 export interface GameSystemsOptions {
   enemies?: EnemyData;
@@ -48,6 +58,8 @@ export interface GameSystemsOptions {
   debug?: SimDebugData;
   economy?: EconomyData;
   waves?: WaveData;
+  /** Recompensas de escolha (T24); com `waves` vazio, nenhuma tela abre. */
+  rewards?: RewardData;
   ticksPerSecond?: number;
 }
 
@@ -60,6 +72,7 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
     debug = simDebugData,
     economy = economyData,
     waves = waveData,
+    rewards = rewardData,
     ticksPerSecond = engineConfig.ticksPerSecond,
   } = options;
   const routes = buildRoutes(map);
@@ -67,7 +80,21 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
   const scores = createTargetScores(routes, enemies);
   const schedules = buildWaveSchedules(waves, ticksPerSecond);
   return [
-    createCommandSystem(map, routes, enemies, towers, debug, schedules, economy, nexus),
+    createRewardClockSystem(),
+    createCommandSystem(
+      map,
+      routes,
+      enemies,
+      towers,
+      debug,
+      schedules,
+      economy,
+      nexus,
+      rewards,
+      classes,
+      ticksPerSecond,
+    ),
+    createRewardTimeoutSystem(rewards),
     createWaveSpawnSystem(routes, enemies, schedules, waves.maxActiveEnemies),
     createStressSystem(routes, enemies),
     createMovementSystem(routes, enemies, ticksPerSecond),
@@ -78,6 +105,7 @@ export function createGameSystems(map: GridMap, options: GameSystemsOptions = {}
     createTriggerSystem({ index, enemies, towers, classes, scores, ticksPerSecond }),
     createGoldSystem(enemies),
     createWaveProgressSystem(enemies, schedules, economy, towers),
+    createRewardOpenSystem(rewards, economy, classes, ticksPerSecond),
     createClassSystem(towers, classes),
   ];
 }

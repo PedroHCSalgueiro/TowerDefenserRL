@@ -5,8 +5,8 @@
  */
 
 import { it } from 'vitest';
-import { goodBotBreak } from './support/goodBot';
-import { botCells, botMap, botSim } from './support/waveBot';
+import { goodBotBreak, goodBotReward } from './support/goodBot';
+import { botCells, botMap, botSim, resolveRewards } from './support/waveBot';
 import { waveData } from '../src/sim/waves/waveData';
 
 const SEEDS = Array.from({ length: 12 }, (_, i) => `s${i + 1}`);
@@ -33,6 +33,8 @@ function play(seed: string, invulnerable: boolean): RunSummary {
   let finalMs = 0;
   let finalTicks = 0;
   while (sim.state.status === 'playing' && sim.state.wave < waveData.waves.length) {
+    // T24: as telas de recompensa abertas no fim da onda, antes da pausa.
+    resolveRewards(sim, goodBotReward);
     goodBotBreak(sim);
     sim.drainEvents();
     const wave = sim.state.wave + 1;

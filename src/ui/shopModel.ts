@@ -5,11 +5,11 @@
 
 import { towerSummary } from './towerInfo';
 import type { ClassData } from '../sim/classes/classData';
-import { interestFor } from '../sim/economy/economy';
+import { interestCapFor, interestFor } from '../sim/economy/economy';
 import type { EconomyData } from '../sim/economy/economyData';
 import type { GridCoord, GridMap } from '../sim/grid/map';
 import { nexusData, type NexusData } from '../sim/nexus/nexusData';
-import { priceOf, refundFor } from '../sim/shop/shop';
+import { refundFor, sellRefundPercent, shopPrice, shopRerollCost } from '../sim/shop/shop';
 import { hasRoomForTower } from '../sim/towers/limit';
 import { fusionStar } from '../sim/towers/fusion';
 import type { RunState } from '../sim/state';
@@ -53,6 +53,7 @@ export interface ShopModel {
   interest: number;
   /** Número da próxima onda a fechar. */
   nextWave: number;
+  /** Custo do próximo reroll (0 = grátis, bônus das recompensas). */
   rerollCost: number;
   canReroll: boolean;
   slots: ShopSlotModel[];
@@ -86,7 +87,7 @@ export function buildShopModel(
       };
     }
     const type = getTowerType(towers, towerType);
-    const price = priceOf(economy, towers, towerType) ?? 0;
+    const price = shopPrice(economy, towers, state, towerType) ?? 0;
     const fuseStar = fusionStar(state.towers, towers, towerType);
     return {
       index,
@@ -105,19 +106,20 @@ export function buildShopModel(
   const tower = selected
     ? state.towers.find((t) => t.x === selected.x && t.y === selected.y)
     : undefined;
+  const rerollCost = shopRerollCost(economy, state);
   return {
     gold: state.gold,
-    interest: interestFor(economy, state.gold),
+    interest: interestFor(economy, state.gold, interestCapFor(economy, state)),
     // Depois da última onda, o rótulo fica na última.
     nextWave: Math.min(state.wave + 1, waveData.waves.length),
-    rerollCost: economy.shop.rerollCost,
-    canReroll: state.gold >= economy.shop.rerollCost,
+    rerollCost,
+    canReroll: state.gold >= rerollCost,
     slots,
     sell: tower
       ? {
           towerId: tower.id,
           name: towers.types[tower.type]?.name ?? tower.type,
-          refund: refundFor(economy, tower.invested),
+          refund: refundFor(economy, tower.invested, sellRefundPercent(economy, state)),
         }
       : null,
   };
@@ -128,7 +130,7 @@ export function shopModelKey(model: ShopModel, carrySlot: number | null): string
   const slots = model.slots
     .map(
       (s) =>
-        `${s.towerType ?? '-'}:${s.affordable ? 1 : 0}:${s.fuseStar ?? 0}:${s.blockedByLimit ? 1 : 0}`,
+        `${s.towerType ?? '-'}:${s.price}:${s.affordable ? 1 : 0}:${s.fuseStar ?? 0}:${s.blockedByLimit ? 1 : 0}`,
     )
     .join(',');
   const sell = model.sell ? `${model.sell.towerId}:${model.sell.refund}` : '-';
@@ -136,6 +138,7 @@ export function shopModelKey(model: ShopModel, carrySlot: number | null): string
     model.gold,
     model.interest,
     model.nextWave,
+    model.rerollCost,
     model.canReroll ? 1 : 0,
     slots,
     sell,

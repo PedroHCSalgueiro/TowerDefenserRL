@@ -126,13 +126,14 @@ export function firedSummary(events: SimEvent[], names: Record<number, string>):
   );
 }
 
-/** `enemyKilled` sintético (o inimigo não precisa existir). */
+/** `enemyKilled` sintético (o inimigo não precisa existir). `elite`: morte de elite (T24). */
 export function killFact(
   x: number,
   y: number,
   towerId: number | null,
   weight = 1,
   enemyId = 9999,
+  elite = false,
 ): SimEvent {
   return {
     type: 'enemyKilled',
@@ -142,6 +143,7 @@ export function killFact(
     towerId,
     x,
     y,
+    elite,
     weight,
     chainId: 0,
     originTowerId: null,

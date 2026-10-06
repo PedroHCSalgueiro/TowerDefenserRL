@@ -791,3 +791,148 @@ body {
   margin: 4px 0;
   max-width: 560px;
 }
+
+/* T24: tela de recompensa (3 cartas quadradas no centro; a simulação fica pausada). */
+.reward-screen {
+  position: absolute;
+  z-index: 25;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 12, 0.6);
+  font-family: system-ui, sans-serif;
+  color: #eeeeee;
+  animation: end-fade 200ms ease-out;
+}
+
+.reward-screen[hidden] {
+  display: none;
+}
+
+.reward-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.reward-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 24px 18px;
+  border: 1px solid #c08a30;
+  border-radius: 10px;
+  background: #1d1f21;
+}
+
+.reward-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.reward-title {
+  margin: 0;
+  font-size: 24px;
+  color: #ffd84a;
+}
+
+.reward-queued {
+  font-size: 13px;
+  color: #c9b27a;
+}
+
+.reward-subtitle {
+  margin: 4px 0 14px;
+  font-size: 13px;
+  color: #aaaaaa;
+}
+
+.reward-cards {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.reward-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 190px;
+  height: 190px;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 2px solid var(--card-color);
+  border-top-width: 8px;
+  border-radius: 10px;
+  background: #26292c;
+  color: #eeeeee;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 80ms ease-out;
+}
+
+.reward-card:hover,
+.reward-card:focus-visible {
+  transform: translateY(-3px);
+  background: #2f3337;
+}
+
+.reward-card-key {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  font: 700 14px monospace;
+  color: #ffd84a;
+}
+
+.reward-card-category {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--card-color);
+}
+
+.reward-card-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.reward-card-text {
+  font-size: 13px;
+  line-height: 1.35;
+  color: #cccccc;
+}
+
+.reward-card-repeat {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  font-size: 11px;
+  color: #888888;
+}
+
+.reward-timer {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #2a2c2f;
+  overflow: hidden;
+}
+
+.reward-timer-fill {
+  height: 100%;
+  background: #ffd84a;
+}
+
+.reward-timer-text {
+  font: 12px monospace;
+  color: #bbbbbb;
+}

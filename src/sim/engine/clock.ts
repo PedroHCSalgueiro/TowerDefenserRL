@@ -39,6 +39,11 @@ export class FixedStepClock {
     return this.currentSpeed;
   }
 
+  /** A primeira velocidade da lista (1x). */
+  get baseSpeed(): number {
+    return this.config.speeds[0]!;
+  }
+
   setSpeed(speed: number): void {
     if (!this.config.speeds.includes(speed) && !this.config.debugSpeeds?.includes(speed)) {
       throw new RangeError(`Velocidade inválida: ${speed}`);
@@ -74,12 +79,15 @@ export class FixedStepClock {
     return this.accumulator / MS_PER_SECOND;
   }
 
-  /** Avança o tempo real do quadro e devolve quantos ticks rodar. */
-  advance(deltaMs: number): number {
+  /**
+   * Avança o tempo real do quadro e devolve quantos ticks rodar. `speed`
+   * troca a velocidade só neste quadro (a escolhida fica guardada).
+   */
+  advance(deltaMs: number, speed = this.currentSpeed): number {
     if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
       return 0;
     }
-    this.accumulator += deltaMs * this.currentSpeed * this.config.ticksPerSecond;
+    this.accumulator += deltaMs * speed * this.config.ticksPerSecond;
 
     const due = Math.floor(this.accumulator / MS_PER_SECOND + EPSILON);
     // Acima do teto o excedente é descartado (a simulação desacelera em vez
