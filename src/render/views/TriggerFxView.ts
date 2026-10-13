@@ -12,6 +12,10 @@
  *
  * Um Graphics redesenhado por quadro e textos reaproveitados (um pool do
  * tamanho do limite), para o caos do empilhamento não derrubar o FPS.
+ *
+ * Zoom (T25): pulsos, flashes e o anel escalam com o mundo; os textos
+ * ("Cadeia xN!" e os números) ficam do mesmo tamanho na tela, para ler em
+ * qualquer zoom e não borrar ao aproximar.
  */
 
 import Phaser from 'phaser';
@@ -70,6 +74,8 @@ export class TriggerFxView {
   private readonly towers = new Map<number, { x: number; y: number; color: number }>();
   private readonly lookup: TowerLookup = (id) => this.towers.get(id) ?? null;
   private timeMs = 0;
+  /** Zoom da câmera no quadro (os textos usam escala 1/zoom). */
+  private zoom = 1;
 
   constructor(scene: Phaser.Scene, projection: IsoProjection, map: GridMap, data: TowerData) {
     this.projection = projection;
@@ -112,8 +118,10 @@ export class TriggerFxView {
     for (const id of flashedTowers(events)) this.flashes.set(id, fx.flash.durationMs);
   }
 
-  draw(state: Readonly<RunState>, deltaMs: number): void {
+  /** `zoom`: o da câmera, para os textos manterem o tamanho na tela. */
+  draw(state: Readonly<RunState>, deltaMs: number, zoom: number): void {
     this.timeMs += deltaMs;
+    this.zoom = zoom;
     const liveIds = new Set<number>();
     for (const chain of state.triggers.chains) liveIds.add(chain.id);
     this.chains.advance(deltaMs, liveIds);
@@ -172,7 +180,13 @@ export class TriggerFxView {
     const { chain } = fx;
     const { ring } = chain;
     const labels = this.chains.labels();
-    const headTop = towerStyle.height + towerStyle.outlineWidth * 2 + towerStyle.stars.fontSize;
+    const scale = 1 / this.zoom;
+    // Topo da torre no mundo (as estrelas não encolhem ao afastar) + folga em px de tela.
+    const headTop =
+      towerStyle.height +
+      towerStyle.outlineWidth * 2 +
+      towerStyle.stars.fontSize * Math.max(1, scale) +
+      chain.offsetY * scale;
     for (let i = 0; i < this.labelTexts.length; i++) {
       const text = this.labelTexts[i]!;
       const label = labels[i];
@@ -185,7 +199,7 @@ export class TriggerFxView {
       let anchor: Point;
       if (tower) {
         const p = this.projection.toScreen(tower);
-        anchor = { x: p.x, y: p.y - headTop - chain.offsetY };
+        anchor = { x: p.x, y: p.y - headTop };
         // Anel no pé da torre: pulsa enquanto a cadeia está viva.
         const pulse = label.alive
           ? 1 + ring.pulseScale * Math.sin((this.timeMs / ring.pulseMs) * Math.PI * 2)
@@ -209,6 +223,7 @@ export class TriggerFxView {
       }
       text
         .setPosition(anchor.x, anchor.y)
+        .setScale(scale)
         .setAlpha(label.alive ? 1 : 0.6)
         .setVisible(true);
     }
@@ -217,6 +232,7 @@ export class TriggerFxView {
   /** Cada número fica preso a um texto do pool enquanto vive: o texto é feito uma vez só. */
   private drawNumbers(): void {
     const { durationMs, risePx } = fx.numbers;
+    const scale = 1 / this.zoom;
     const owner = this.numberOwner;
     const alive = new Set<number>();
     for (const n of this.numbers.numbers) alive.add(n.id);
@@ -236,7 +252,9 @@ export class TriggerFxView {
       }
       const life = Math.max(0, n.msLeft / durationMs);
       const p = this.projection.toScreen(n.at);
-      this.numberTexts[slot]!.setPosition(p.x, p.y - risePx * (1 - life)).setAlpha(life);
+      this.numberTexts[slot]!.setPosition(p.x, p.y - risePx * scale * (1 - life))
+        .setScale(scale)
+        .setAlpha(life);
     }
   }
 

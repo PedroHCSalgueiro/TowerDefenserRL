@@ -3,6 +3,25 @@
     "width": 64,
     "height": 32
   },
+  "camera": {
+    "zoom": {
+      "min": 0.75,
+      "default": 1,
+      "max": 3,
+      "wheelStep": 1.2,
+      "wheelNotchPx": 100,
+      "wheelLinesPerNotch": 3,
+      "smoothMs": 120
+    },
+    "resetMs": 200,
+    "marginPx": 180,
+    "keyPanSpeedPx": 800,
+    "dragThresholdPx": 6,
+    "edgePan": {
+      "bandPx": 32,
+      "speedPx": 600
+    }
+  },
   "grid": {
     "lineWidth": 1,
     "lineColor": "#1d1f21",

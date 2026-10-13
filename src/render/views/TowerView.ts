@@ -15,6 +15,10 @@
  *
  * Mover ou trocar (`towerMoved`, T15) leva a imagem e as estrelas para a casa
  * nova. Com as torres travadas, `showLocked` treme a torre e mostra um cadeado.
+ *
+ * Zoom (T25, `applyZoom`): o cadeado fica do mesmo tamanho na tela; as
+ * estrelas crescem ao aproximar e não encolhem ao afastar (o texto é feito na
+ * resolução do zoom máximo, para não borrar).
  */
 
 import Phaser from 'phaser';
@@ -29,6 +33,7 @@ import { hexColor } from './color';
 import { fusionFlashes } from './fusionFlash';
 
 const style = renderConfig.towers;
+const maxZoom = renderConfig.camera.zoom.max;
 const classColors: Readonly<Record<string, string>> = style.classColors;
 
 const TEXTURE_BLOCK = 'tower-block';
@@ -73,6 +78,14 @@ export class TowerView {
   /** Torre cujo alcance está desenhado (`null` = nenhuma) e a casa em que ela estava. */
   private rangeTower: Tower | null = null;
   private rangeCell: GridCoord | null = null;
+  /** Zoom da câmera (para o tamanho do cadeado e das estrelas na tela). */
+  private zoom = 1;
+  /** Cadeados na tela: o ícone e o ponto do mundo sobre as estrelas. */
+  private readonly lockIcons = new Set<{
+    icon: Phaser.GameObjects.Graphics;
+    x: number;
+    y: number;
+  }>();
 
   constructor(
     scene: Phaser.Scene,
@@ -134,13 +147,14 @@ export class TowerView {
         onComplete: () => image.setPosition(p.x, p.y),
       });
     }
-    // Cadeado: arco (alça) sobre um retângulo (corpo), acima das estrelas.
+    // Cadeado: arco (alça) sobre um retângulo (corpo), acima das estrelas (`placeLock`).
     const w = locked.iconWidth;
     const h = locked.iconHeight;
     const r = locked.iconShackleRadius;
-    const icon = new Phaser.GameObjects.Graphics(this.scene)
-      .setPosition(p.x, this.labelY(p.y) - locked.iconOffsetY)
-      .setDepth(isoDepth(cell) + 0.6);
+    const icon = new Phaser.GameObjects.Graphics(this.scene).setDepth(isoDepth(cell) + 0.6);
+    const lock = { icon, x: p.x, y: this.labelY(p.y) };
+    this.lockIcons.add(lock);
+    this.placeLock(lock);
     icon.lineStyle(locked.iconLineWidth + 2, hexColor(locked.iconOutlineColor));
     icon.beginPath();
     icon.arc(0, -h, r, Math.PI, 0);
@@ -159,8 +173,37 @@ export class TowerView {
       alpha: { from: 1, to: 0 },
       delay: locked.iconMs / 2,
       duration: locked.iconMs / 2,
-      onComplete: () => icon.destroy(),
+      onComplete: () => {
+        this.lockIcons.delete(lock);
+        icon.destroy();
+      },
     });
+  }
+
+  /**
+   * Zoom da câmera (chame a cada quadro): o cadeado mantém o tamanho na tela e
+   * as estrelas não encolhem ao afastar. Só mexe quando o zoom muda.
+   */
+  applyZoom(zoom: number): void {
+    if (zoom === this.zoom) return;
+    this.zoom = zoom;
+    const starScale = this.starScale();
+    for (const { text } of this.labels.values()) text.setScale(starScale);
+    for (const lock of this.lockIcons) this.placeLock(lock);
+  }
+
+  /** Escala (no mundo) das estrelas: 1 ao aproximar, 1/zoom ao afastar. */
+  private starScale(): number {
+    return Math.max(1, 1 / this.zoom);
+  }
+
+  /**
+   * Cadeado do tamanho de sempre na tela, sobre as estrelas: `iconOffsetY` é a
+   * altura das estrelas, que crescem junto com a escala delas.
+   */
+  private placeLock(lock: { icon: Phaser.GameObjects.Graphics; x: number; y: number }): void {
+    const starsHeight = style.locked.iconOffsetY * this.starScale();
+    lock.icon.setPosition(lock.x, lock.y - starsHeight).setScale(1 / this.zoom);
   }
 
   /** Altura (y na tela) do texto de estrelas de uma torre cuja base está em `baseY`. */
@@ -247,9 +290,10 @@ export class TowerView {
       p.x,
       this.labelY(p.y),
       starsLabel(tower.star),
-      { fontSize: `${stars.fontSize}px`, color: stars.color },
+      { fontSize: `${stars.fontSize}px`, color: stars.color, resolution: maxZoom },
     )
       .setOrigin(0.5, 1)
+      .setScale(this.starScale())
       .setDepth(isoDepth(tower) + 0.1);
     this.layer.add(text);
     this.labels.set(tower.id, { text, star: tower.star });

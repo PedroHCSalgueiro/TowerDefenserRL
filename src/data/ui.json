@@ -77,6 +77,22 @@
         "action": "Selecionar torre (alcance e informações)"
       },
       {
+        "keys": "Rodinha",
+        "action": "Aproximar e afastar a câmera, no ponto do mouse"
+      },
+      {
+        "keys": "Botão direito",
+        "action": "Arrastar move a tela; clique curto (ou no meio de um arrasto) cancela a torre na mão"
+      },
+      {
+        "keys": "Setas",
+        "action": "Mover a tela"
+      },
+      {
+        "keys": "Botão do meio",
+        "action": "Voltar a câmera ao padrão"
+      },
+      {
         "keys": "R",
         "action": "Rerolar a loja"
       },

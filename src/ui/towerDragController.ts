@@ -3,6 +3,8 @@
  * mapa (a cena avisa por `press`), e o arrasto é acompanhado pela janela
  * (`pointermove`/`pointerup`), como o arrasto dos slots da loja. A decisão
  * fica no `TowerDrag`; aqui só entram o DOM e a mensagem de "travada".
+ * Só o botão esquerdo solta a torre; o direito no meio do arrasto cancela,
+ * como o Esc (T25).
  */
 
 import uiConfig from '../data/ui.json';
@@ -45,6 +47,7 @@ export class TowerDragController {
   };
 
   private readonly onPointerUp = (event: PointerEvent): void => {
+    if (event.button !== 0) return;
     const cell = this.deps.cellAtClient(event.clientX, event.clientY);
     const command = this.drag.release(this.deps.state(), this.deps.map, cell);
     this.pressedTowerId = null;
@@ -52,7 +55,7 @@ export class TowerDragController {
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') this.drag.cancel();
+    if (event.key === 'Escape') this.cancel();
   };
 
   constructor(deps: TowerDragDeps) {
@@ -77,6 +80,12 @@ export class TowerDragController {
     if (this.drag.begin(this.deps.state(), this.deps.paused(), tower, clientX, clientY)) {
       this.pressedTowerId = tower.id;
     }
+  }
+
+  /** Cancela o arrasto (Esc e botão direito): a torre fica onde estava. */
+  cancel(): void {
+    this.drag.cancel();
+    this.pressedTowerId = null;
   }
 
   /**

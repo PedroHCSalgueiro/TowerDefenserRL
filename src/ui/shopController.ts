@@ -11,6 +11,8 @@
  * Slot que precisaria de casa nova com o mapa no limite de torres (T12): não
  * pega a torre, e a torre já presa é cancelada se o limite encher.
  * Com o jogo pausado (T14), nada disso funciona e a torre presa é cancelada.
+ * O botão direito (T25) também cancela, como o Esc: no meio do arrasto do slot
+ * ou num clique curto com a torre presa. Só o esquerdo solta a torre.
  */
 
 import { classData } from '../sim/classes/classData';
@@ -75,7 +77,7 @@ export class ShopController {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     const carry = this.carry;
-    if (!carry?.dragging) return;
+    if (!carry?.dragging || event.button !== 0) return;
     carry.dragging = false;
     if (!carry.moved) return; // clique curto no slot: a torre segue presa ao mouse
     const cell = this.deps.cellAtClient(event.clientX, event.clientY);
@@ -148,7 +150,8 @@ export class ShopController {
     this.carry = null;
   }
 
-  private cancel(): void {
+  /** Solta a torre da mão sem comprar (Esc e botão direito). */
+  cancel(): void {
     this.carry = null;
   }
 

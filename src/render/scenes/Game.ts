@@ -44,6 +44,9 @@ import { rewardMods } from '../../sim/rewards/mods';
 import { rewardScreenOpen } from '../../sim/rewards/rewardState';
 import { WaveHud } from '../../ui/waveHud';
 import { defaultWaveSchedules } from '../../ui/waveHudModel';
+import { CameraController } from '../CameraController';
+import { mapWorldBounds } from '../camera';
+import { IsoProjection } from '../iso';
 import { CarryView } from '../views/CarryView';
 import { EnemyView } from '../views/EnemyView';
 import { GridView } from '../views/GridView';
@@ -55,6 +58,7 @@ import { TriggerFxView } from '../views/TriggerFxView';
 
 export class Game extends Phaser.Scene {
   private runner!: SimulationRunner;
+  private camera!: CameraController;
   private grid!: GridView;
   private enemyView!: EnemyView;
   private nexusView!: NexusView;
@@ -95,7 +99,25 @@ export class Game extends Phaser.Scene {
     const sim = Simulation.create(seed, createGameSystems(map));
     this.runner = new SimulationRunner(sim);
 
-    const grid = new GridView(this, map);
+    const viewport = { width: this.cameras.main.width, height: this.cameras.main.height };
+    const projection = IsoProjection.centered(map, renderConfig.tile, viewport);
+    // Câmera (T25): estado da renderização, fora do save e da simulação.
+    this.camera = new CameraController({
+      scene: this,
+      bounds: mapWorldBounds(projection, map),
+      parent: this.game.canvas.parentElement ?? document.body,
+      blocked: () =>
+        this.help.isOpen ||
+        rewardScreenOpen(this.runner.sim.state) ||
+        this.runner.sim.state.status !== 'playing',
+      holdingTower: () => this.shop.carrying !== null || this.towerDrag.dragging !== null,
+      cancelDrag: () => {
+        this.shop.cancel();
+        this.towerDrag.cancel();
+      },
+      onRightClick: () => this.shop.cancel(),
+    });
+    const grid = new GridView(this, map, projection, this.camera);
     this.grid = grid;
     // Torres e inimigos na mesma Layer, para a profundidade isométrica (x + y) valer entre eles.
     const units = this.add.layer();
@@ -211,8 +233,9 @@ export class Game extends Phaser.Scene {
     });
     // Clique no mapa com a torre presa ao mouse (teclas 1 a 5) posiciona; sem
     // ela, apertar sobre uma torre pode virar um arrasto para mover (T15).
+    // Com o botão direito arrastando a tela, o esquerdo é ignorado (T25).
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.leftButtonDown()) return;
+      if (!pointer.leftButtonDown() || this.camera.panning) return;
       const cell = grid.cellAt(pointer);
       if (this.shop.carrying) {
         this.shop.clickCell(cell);
@@ -244,6 +267,7 @@ export class Game extends Phaser.Scene {
       this.tooltip.destroy();
       this.carryView.destroy();
       this.towerDrag.destroy();
+      this.camera.destroy();
       this.monitor.destroy();
     });
   }
@@ -253,18 +277,23 @@ export class Game extends Phaser.Scene {
     const state = this.runner.sim.state;
     // Pausado (P, ajuda ou tela de recompensa), as animações da renderização também param.
     const frameDelta = this.runner.paused || rewardScreenOpen(state) ? 0 : delta;
+    // A câmera anda no tempo real (funciona pausada); depois dela, a casa sob o mouse.
+    this.camera.update(delta);
+    this.grid.update();
+    const { zoom } = this.camera.view;
 
     this.nexusView.handleEvents(events);
     this.projectileView.handleEvents(events);
     this.towerView.handleEvents(events);
     this.handleMoveEvents(events);
+    this.towerView.applyZoom(zoom);
     this.towerView.draw(state, this.grid.selectedCell);
     this.nexusView.draw(state, frameDelta);
     this.enemyView.draw(state, this.interpolationAlpha);
     this.projectileView.draw(state, this.interpolationAlpha, frameDelta);
     if (this.triggerFxOn) {
       this.triggerFx.handleEvents(state, events);
-      this.triggerFx.draw(state, frameDelta);
+      this.triggerFx.draw(state, frameDelta, zoom);
     }
     this.monitor.recordCounts(state.enemies.activeCount, state.projectiles.activeCount);
     this.panel.update();
@@ -423,7 +452,8 @@ export class Game extends Phaser.Scene {
     state: Readonly<RunState>,
     cell: { x: number; y: number },
   ): Tower | undefined {
-    const { worldX, worldY } = this.input.activePointer;
+    const pointer = this.input.activePointer;
+    const { x: worldX, y: worldY } = this.camera.worldAt({ x: pointer.x, y: pointer.y });
     const { width, height } = renderConfig.towers;
     let best: Tower | undefined;
     for (const tower of state.towers) {
