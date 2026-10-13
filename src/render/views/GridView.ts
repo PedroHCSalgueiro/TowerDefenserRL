@@ -10,6 +10,7 @@
 import Phaser from 'phaser';
 import renderConfig from '../../data/render.json';
 import type { GridCoord, GridMap } from '../../sim/grid/map';
+import { isLeftPress } from '../../ui/mouseButtons';
 import type { IsoProjection, Point } from '../iso';
 import { hexColor } from './color';
 
@@ -56,7 +57,7 @@ export class GridView {
       this.setHovered(null);
     });
     scene.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.leftButtonDown() || this.camera.panning) return;
+      if (!isLeftPress(pointer.button, pointer.buttons) || this.camera.panning) return;
       this.selected = this.cellAt(pointer);
       this.refresh();
     });

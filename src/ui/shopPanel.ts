@@ -122,8 +122,10 @@ export class ShopPanel {
       el('div', 'shop-rarity', slot.rarityLabel),
       el('div', 'shop-price', `${slot.price}`),
     );
+    // Sem `preventDefault`: ele cortaria os eventos de mouse até soltar, e o
+    // Phaser não veria o arrasto da loja passar pelo mapa (casa sob o mouse,
+    // fantasma e setas de ligação). O painel já tem `user-select: none`.
     node.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
       this.handlers.onSlotPointerDown(slot.index, event);
     });
     return node;

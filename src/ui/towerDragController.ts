@@ -3,13 +3,15 @@
  * mapa (a cena avisa por `press`), e o arrasto é acompanhado pela janela
  * (`pointermove`/`pointerup`), como o arrasto dos slots da loja. A decisão
  * fica no `TowerDrag`; aqui só entram o DOM e a mensagem de "travada".
- * Só o botão esquerdo solta a torre; o direito no meio do arrasto cancela,
- * como o Esc (T25).
+ * O botão direito no meio do arrasto cancela, como o Esc (T25). Soltar o
+ * esquerdo com outro botão ainda apertado também solta a torre (só chega
+ * como `pointermove`).
  */
 
 import uiConfig from '../data/ui.json';
 import type { GridCoord, GridMap } from '../sim/grid/map';
 import type { RunState, SimCommand } from '../sim/state';
+import { MouseButton, isButtonDown } from './mouseButtons';
 import { TowerDrag } from './towerDragModel';
 
 const { thresholdPx, lockedMessageMs } = uiConfig.towerDrag;
@@ -36,6 +38,10 @@ export class TowerDragController {
   private hideTimer: number | null = null;
 
   private readonly onPointerMove = (event: PointerEvent): void => {
+    if (this.pressedTowerId !== null && !isButtonDown(event.buttons, MouseButton.left)) {
+      this.onPointerUp(event);
+      return;
+    }
     const result = this.drag.pointerMove(
       this.deps.state(),
       event.clientX,
@@ -47,7 +53,6 @@ export class TowerDragController {
   };
 
   private readonly onPointerUp = (event: PointerEvent): void => {
-    if (event.button !== 0) return;
     const cell = this.deps.cellAtClient(event.clientX, event.clientY);
     const command = this.drag.release(this.deps.state(), this.deps.map, cell);
     this.pressedTowerId = null;

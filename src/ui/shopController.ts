@@ -12,7 +12,8 @@
  * pega a torre, e a torre já presa é cancelada se o limite encher.
  * Com o jogo pausado (T14), nada disso funciona e a torre presa é cancelada.
  * O botão direito (T25) também cancela, como o Esc: no meio do arrasto do slot
- * ou num clique curto com a torre presa. Só o esquerdo solta a torre.
+ * ou num clique curto com a torre presa. Soltar o esquerdo com outro botão
+ * ainda apertado também solta a torre (só chega como `pointermove`).
  */
 
 import { classData } from '../sim/classes/classData';
@@ -20,6 +21,7 @@ import { economyData } from '../sim/economy/economyData';
 import type { GridCoord, GridMap } from '../sim/grid/map';
 import type { RunState, SimCommand } from '../sim/state';
 import { towerData } from '../sim/towers/towerData';
+import { MouseButton, isButtonDown } from './mouseButtons';
 import { buildShopModel, canPlaceAt, shopModelKey, type ShopModel } from './shopModel';
 import { ShopPanel } from './shopPanel';
 
@@ -68,6 +70,10 @@ export class ShopController {
   private readonly onPointerMove = (event: PointerEvent): void => {
     const carry = this.carry;
     if (!carry?.dragging) return;
+    if (!isButtonDown(event.buttons, MouseButton.left)) {
+      this.onPointerUp(event);
+      return;
+    }
     if (
       Math.hypot(event.clientX - carry.startX, event.clientY - carry.startY) > DRAG_THRESHOLD_PX
     ) {
@@ -77,7 +83,7 @@ export class ShopController {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     const carry = this.carry;
-    if (!carry?.dragging || event.button !== 0) return;
+    if (!carry?.dragging) return;
     carry.dragging = false;
     if (!carry.moved) return; // clique curto no slot: a torre segue presa ao mouse
     const cell = this.deps.cellAtClient(event.clientX, event.clientY);

@@ -8,6 +8,11 @@ body {
   width: fit-content;
 }
 
+/* Em bloco: em linha, o canvas deixa 4 px abaixo dele e a página rola (setas e rodinha). */
+#app canvas {
+  display: block;
+}
+
 .end-screen {
   position: absolute;
   inset: 0;

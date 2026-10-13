@@ -82,7 +82,7 @@
       },
       {
         "keys": "Botão direito",
-        "action": "Arrastar move a tela; clique curto (ou no meio de um arrasto) cancela a torre na mão"
+        "action": "Arrastar no mapa move a tela; clique curto no mapa (ou no meio de um arrasto) cancela a torre na mão"
       },
       {
         "keys": "Setas",
@@ -90,7 +90,7 @@
       },
       {
         "keys": "Botão do meio",
-        "action": "Voltar a câmera ao padrão"
+        "action": "Voltar a câmera ao padrão (no mapa)"
       },
       {
         "keys": "R",

@@ -17,8 +17,9 @@
  * nova. Com as torres travadas, `showLocked` treme a torre e mostra um cadeado.
  *
  * Zoom (T25, `applyZoom`): o cadeado fica do mesmo tamanho na tela; as
- * estrelas crescem ao aproximar e não encolhem ao afastar (o texto é feito na
- * resolução do zoom máximo, para não borrar).
+ * estrelas crescem ao aproximar e não encolhem ao afastar. O texto das
+ * estrelas é refeito na resolução do zoom arredondado para cima (1, 2 ou 3):
+ * nítido ao aproximar, sem reduzir uma textura grande no zoom 1.
  */
 
 import Phaser from 'phaser';
@@ -42,6 +43,16 @@ const TEXTURE_BLOCK = 'tower-block';
 export function towerColor(data: TowerData, towerType: string): number {
   const mainClass = getTowerType(data, towerType).classes[0] ?? '';
   return hexColor(classColors[mainClass] ?? style.fallbackColor);
+}
+
+/** Escala (no mundo) das estrelas: 1 ao aproximar, 1/zoom ao afastar (não encolhem na tela). */
+export function starsScale(zoom: number): number {
+  return Math.max(1, 1 / zoom);
+}
+
+/** Resolução do texto das estrelas para o zoom: inteira, de 1 ao zoom máximo. */
+export function starsResolution(zoom: number): number {
+  return Math.min(maxZoom, Math.max(1, Math.ceil(zoom)));
 }
 
 /** Estrelas da torre, como texto: ★1 = "★", ★3 = "★★★". */
@@ -80,6 +91,8 @@ export class TowerView {
   private rangeCell: GridCoord | null = null;
   /** Zoom da câmera (para o tamanho do cadeado e das estrelas na tela). */
   private zoom = 1;
+  /** Resolução atual do texto das estrelas (`starsResolution`). */
+  private starsRes = 1;
   /** Cadeados na tela: o ícone e o ponto do mundo sobre as estrelas. */
   private readonly lockIcons = new Set<{
     icon: Phaser.GameObjects.Graphics;
@@ -187,14 +200,15 @@ export class TowerView {
   applyZoom(zoom: number): void {
     if (zoom === this.zoom) return;
     this.zoom = zoom;
-    const starScale = this.starScale();
-    for (const { text } of this.labels.values()) text.setScale(starScale);
+    const scale = starsScale(zoom);
+    const res = starsResolution(zoom);
+    const resChanged = res !== this.starsRes;
+    this.starsRes = res;
+    for (const { text } of this.labels.values()) {
+      text.setScale(scale);
+      if (resChanged) text.setResolution(res);
+    }
     for (const lock of this.lockIcons) this.placeLock(lock);
-  }
-
-  /** Escala (no mundo) das estrelas: 1 ao aproximar, 1/zoom ao afastar. */
-  private starScale(): number {
-    return Math.max(1, 1 / this.zoom);
   }
 
   /**
@@ -202,7 +216,7 @@ export class TowerView {
    * altura das estrelas, que crescem junto com a escala delas.
    */
   private placeLock(lock: { icon: Phaser.GameObjects.Graphics; x: number; y: number }): void {
-    const starsHeight = style.locked.iconOffsetY * this.starScale();
+    const starsHeight = style.locked.iconOffsetY * starsScale(this.zoom);
     lock.icon.setPosition(lock.x, lock.y - starsHeight).setScale(1 / this.zoom);
   }
 
@@ -290,10 +304,10 @@ export class TowerView {
       p.x,
       this.labelY(p.y),
       starsLabel(tower.star),
-      { fontSize: `${stars.fontSize}px`, color: stars.color, resolution: maxZoom },
+      { fontSize: `${stars.fontSize}px`, color: stars.color, resolution: this.starsRes },
     )
       .setOrigin(0.5, 1)
-      .setScale(this.starScale())
+      .setScale(starsScale(this.zoom))
       .setDepth(isoDepth(tower) + 0.1);
     this.layer.add(text);
     this.labels.set(tower.id, { text, star: tower.star });

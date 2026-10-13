@@ -28,6 +28,7 @@ import { TowerDragController } from '../../ui/towerDragController';
 import { canDropAt } from '../../ui/towerDragModel';
 import { describeTower } from '../../ui/towerInfo';
 import { TowerTooltip } from '../../ui/towerTooltip';
+import { isLeftPress } from '../../ui/mouseButtons';
 import { showEndScreen } from '../../ui/endScreen';
 import { HelpScreen } from '../../ui/helpScreen';
 import { summarizeRun } from '../../ui/runReport';
@@ -233,9 +234,9 @@ export class Game extends Phaser.Scene {
     });
     // Clique no mapa com a torre presa ao mouse (teclas 1 a 5) posiciona; sem
     // ela, apertar sobre uma torre pode virar um arrasto para mover (T15).
-    // Com o botão direito arrastando a tela, o esquerdo é ignorado (T25).
+    // Só o aperto do próprio esquerdo; com o direito arrastando a tela, ele é ignorado (T25).
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.leftButtonDown() || this.camera.panning) return;
+      if (!isLeftPress(pointer.button, pointer.buttons) || this.camera.panning) return;
       const cell = grid.cellAt(pointer);
       if (this.shop.carrying) {
         this.shop.clickCell(cell);

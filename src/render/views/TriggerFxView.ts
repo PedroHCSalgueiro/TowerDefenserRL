@@ -33,7 +33,7 @@ import {
 } from '../fx/triggerFx';
 import type { IsoProjection, Point } from '../iso';
 import { hexColor } from './color';
-import { towerColor } from './TowerView';
+import { starsScale, towerColor } from './TowerView';
 
 const fx = renderConfig.triggerFx;
 const towerStyle = renderConfig.towers;
@@ -181,11 +181,13 @@ export class TriggerFxView {
     const { ring } = chain;
     const labels = this.chains.labels();
     const scale = 1 / this.zoom;
-    // Topo da torre no mundo (as estrelas não encolhem ao afastar) + folga em px de tela.
+    // Topo das estrelas no mundo (como no `TowerView`: `iconOffsetY` é a altura
+    // delas, onde o cadeado se apoia), mais a folga em px de tela, acima do cadeado.
     const headTop =
       towerStyle.height +
       towerStyle.outlineWidth * 2 +
-      towerStyle.stars.fontSize * Math.max(1, scale) +
+      towerStyle.stars.offsetY +
+      towerStyle.locked.iconOffsetY * starsScale(this.zoom) +
       chain.offsetY * scale;
     for (let i = 0; i < this.labelTexts.length; i++) {
       const text = this.labelTexts[i]!;

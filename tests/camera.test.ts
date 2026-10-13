@@ -264,7 +264,46 @@ describe('câmera: zoom em volta de um ponto', () => {
   });
 });
 
+describe('câmera: limites durante as animações', () => {
+  it('afastar com a rodinha num canto do mapa não deixa a tela passar da margem', () => {
+    const camera = new CameraModel(config, viewport, bounds);
+    camera.wheel(-50, { x: 640, y: 360 });
+    settle(camera);
+    camera.dragBy(1e5, 1e5); // canto de cima à esquerda
+    camera.wheel(3, { x: 1200, y: 700 });
+    for (let frame = 0; frame < 200 && camera.animating; frame++) {
+      camera.update(16);
+      const margin = config.marginPx / camera.view.zoom;
+      const seen = visibleWorld(camera.view);
+      expect(seen.x).toBeGreaterThanOrEqual(bounds.x - margin - EPS);
+      expect(seen.y).toBeGreaterThanOrEqual(bounds.y - margin - EPS);
+      expect(seen.x + seen.width).toBeLessThanOrEqual(bounds.x + bounds.width + margin + EPS);
+      expect(seen.y + seen.height).toBeLessThanOrEqual(bounds.y + bounds.height + margin + EPS);
+    }
+    expect(camera.view.zoom).toBeCloseTo(3 / 1.2 ** 3, 9);
+  });
+
+  it('o mapa encolheu (setBounds): a vista volta para dentro dos limites novos', () => {
+    const big = squareMap(40);
+    const camera = new CameraModel(config, viewport, big.bounds);
+    camera.dragBy(1e5, 1e5);
+    camera.setBounds(bounds);
+    expect(camera.zoomLimits).toEqual({ min: 0.75, default: 1, max: 3 });
+    // Zoom 0,5 sobe para o mínimo novo; o mapa 14×14 cabe e fica centralizado.
+    expect(camera.view).toEqual({ zoom: 0.75, centerX: 640, centerY: 360 });
+  });
+});
+
 describe('câmera: volta ao padrão (botão do meio)', () => {
+  it('o botão do meio no meio do zoom suave cancela o zoom e volta ao padrão', () => {
+    const camera = new CameraModel(config, viewport, bounds);
+    camera.wheel(-6, { x: 900, y: 200 });
+    camera.update(16);
+    camera.reset();
+    settle(camera);
+    expect(camera.view).toEqual({ zoom: 1, centerX: 640, centerY: 360 });
+  });
+
   it('volta ao zoom padrão com o mapa centralizado, com animação de 200 ms', () => {
     const camera = new CameraModel(config, viewport, bounds);
     camera.wheel(-6, { x: 900, y: 200 });

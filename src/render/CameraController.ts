@@ -9,12 +9,17 @@
  * cartas de recompensa ou a tela de fim (elas cobrem o mapa).
  *
  * Botão direito no meio de um arrasto de torre (esquerdo apertado): cancela o
- * arrasto, como o Esc, e não move a tela. Clique curto do direito: cancela a
- * torre presa ao mouse (teclas 1 a 5).
+ * arrasto, como o Esc, e não move a tela. Clique curto do direito no mapa:
+ * cancela a torre presa ao mouse (teclas 1 a 5).
+ *
+ * Usa eventos de ponteiro, não de mouse: um `preventDefault` no `pointerdown`
+ * (como o do slot da loja) corta os eventos de mouse até soltar. Um 2º botão
+ * apertado ou solto com outro já apertado só chega como `pointermove`.
  */
 
 import Phaser from 'phaser';
 import renderConfig from '../data/render.json';
+import { MouseButton, chordChange, isButtonDown } from '../ui/mouseButtons';
 import {
   CameraModel,
   EdgePan,
@@ -30,7 +35,6 @@ import type { Point, Size } from './iso';
 
 const config: CameraConfig = renderConfig.camera;
 const ARROWS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
-const LEFT_BUTTON_MASK = 1;
 
 export interface CameraControllerDeps {
   scene: Phaser.Scene;
@@ -58,6 +62,13 @@ export class CameraController {
   private readonly heldArrows = new Set<string>();
   /** Último ponto do mouse, em pixels do canvas (`null` antes do primeiro movimento). */
   private pointer: Point | null = null;
+  /**
+   * O botão direito foi apertado no jogo: o próximo menu de contexto é
+   * bloqueado mesmo fora dele (no Windows o menu sai ao soltar, onde o mouse estiver).
+   */
+  private suppressMenu = false;
+  /** Última vista levada para o Phaser (a câmera só é mexida quando ela muda). */
+  private applied: CameraView | null = null;
 
   private readonly onWheel = (event: WheelEvent): void => {
     event.preventDefault();
@@ -67,48 +78,58 @@ export class CameraController {
     this.model.wheel(wheelNotches(event.deltaY, event.deltaMode, config.zoom), point);
   };
 
-  private readonly onMouseDown = (event: MouseEvent): void => {
+  /** Primeiro botão apertado (os seguintes chegam no `pointermove`). */
+  private readonly onPointerDown = (event: PointerEvent): void => {
+    this.suppressMenu = false;
+    this.track(event);
     const onMap = event.target === this.canvas;
-    if (event.button === 1 && onMap) {
-      event.preventDefault(); // sem a rolagem automática do navegador
-      if (!this.deps.blocked()) this.model.reset();
-    } else if (event.button === 2) {
-      // Com o esquerdo apertado, o direito só cancela o arrasto de torre.
-      if ((event.buttons & LEFT_BUTTON_MASK) !== 0) {
-        this.deps.cancelDrag();
-        return;
-      }
-      const point = this.canvasPoint(event);
-      if (onMap && point && !this.deps.blocked()) this.gesture.press(point);
-    }
+    // O Phaser bloqueia o foco no aperto do canvas: sem isto, as setas e os
+    // atalhos seguiriam no campo do painel de debug usado por último.
+    if (onMap && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    this.pressed(event.button, event, onMap);
   };
 
-  private readonly onMouseMove = (event: MouseEvent): void => {
+  private readonly onPointerMove = (event: PointerEvent): void => {
+    this.track(event);
+    const change = chordChange(event.button, event.buttons);
+    if (change?.pressed) this.pressed(change.button, event, event.target === this.canvas);
+    if (!this.gesture.active) return;
+    if (!isButtonDown(event.buttons, MouseButton.right)) {
+      this.releaseGesture();
+      return;
+    }
     const point = this.canvasPoint(event);
     if (!point) return;
-    this.pointer = point;
-    if (!this.gesture.active) return;
     const delta = this.gesture.move(point, config.dragThresholdPx);
     this.model.dragBy(delta.x, delta.y);
   };
 
-  private readonly onMouseUp = (event: MouseEvent): void => {
-    if (event.button !== 2) return;
-    if (this.gesture.release() === 'click' && !this.deps.blocked()) this.deps.onRightClick();
+  /** Todos os botões soltos. */
+  private readonly onPointerUp = (): void => {
+    this.releaseGesture();
+  };
+
+  private readonly onPointerCancel = (): void => {
+    this.gesture.cancel();
   };
 
   private readonly onContextMenu = (event: MouseEvent): void => {
-    event.preventDefault();
+    const inGame = event.target instanceof Node && this.deps.parent.contains(event.target);
+    if (inGame || this.suppressMenu) event.preventDefault();
+    this.suppressMenu = false;
   };
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (!ARROWS.has(event.key) || isTyping(event.target)) return;
     event.preventDefault(); // a página não rola
     this.heldArrows.add(event.key);
   };
 
   private readonly onKeyUp = (event: KeyboardEvent): void => {
-    this.heldArrows.delete(event.key);
+    // No macOS, com o Cmd apertado, o keyup das outras teclas não chega.
+    if (event.key === 'Meta') this.heldArrows.clear();
+    else this.heldArrows.delete(event.key);
   };
 
   private readonly onBlur = (): void => {
@@ -123,10 +144,11 @@ export class CameraController {
     this.model = new CameraModel(config, this.viewport, deps.bounds);
     this.canvas = deps.scene.game.canvas;
     this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
-    deps.parent.addEventListener('contextmenu', this.onContextMenu);
-    window.addEventListener('mousedown', this.onMouseDown);
-    window.addEventListener('mousemove', this.onMouseMove);
-    window.addEventListener('mouseup', this.onMouseUp);
+    window.addEventListener('contextmenu', this.onContextMenu);
+    window.addEventListener('pointerdown', this.onPointerDown);
+    window.addEventListener('pointermove', this.onPointerMove);
+    window.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener('pointercancel', this.onPointerCancel);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
@@ -171,10 +193,38 @@ export class CameraController {
     this.apply();
   }
 
-  /** Leva a vista para a câmera do Phaser. */
+  /** Um botão foi apertado (sozinho ou com outro já apertado). */
+  private pressed(button: number, event: PointerEvent, onMap: boolean): void {
+    if (button === MouseButton.middle) {
+      if (onMap && !this.deps.blocked()) this.model.reset();
+    } else if (button === MouseButton.right) {
+      if (this.deps.parent.contains(event.target as Node)) this.suppressMenu = true;
+      // Com o esquerdo apertado, o direito só cancela o arrasto de torre.
+      if (isButtonDown(event.buttons, MouseButton.left)) {
+        this.deps.cancelDrag();
+        return;
+      }
+      const point = this.canvasPoint(event);
+      if (onMap && point && !this.deps.blocked()) this.gesture.press(point);
+    }
+  }
+
+  private releaseGesture(): void {
+    if (this.gesture.release() === 'click' && !this.deps.blocked()) this.deps.onRightClick();
+  }
+
+  /** Guarda a posição do mouse (para a borda da tela). */
+  private track(event: PointerEvent): void {
+    const point = this.canvasPoint(event);
+    if (point) this.pointer = point;
+  }
+
+  /** Leva a vista para a câmera do Phaser, se ela mudou. */
   private apply(): void {
-    const { zoom, centerX, centerY } = this.model.view;
-    this.deps.scene.cameras.main.setZoom(zoom).centerOn(centerX, centerY);
+    const view = this.model.view;
+    if (view === this.applied) return;
+    this.applied = view;
+    this.deps.scene.cameras.main.setZoom(view.zoom).centerOn(view.centerX, view.centerY);
   }
 
   private canvasPoint(event: MouseEvent): Point | null {
@@ -193,10 +243,11 @@ export class CameraController {
 
   destroy(): void {
     this.canvas.removeEventListener('wheel', this.onWheel);
-    this.deps.parent.removeEventListener('contextmenu', this.onContextMenu);
-    window.removeEventListener('mousedown', this.onMouseDown);
-    window.removeEventListener('mousemove', this.onMouseMove);
-    window.removeEventListener('mouseup', this.onMouseUp);
+    window.removeEventListener('contextmenu', this.onContextMenu);
+    window.removeEventListener('pointerdown', this.onPointerDown);
+    window.removeEventListener('pointermove', this.onPointerMove);
+    window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerCancel);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onBlur);
